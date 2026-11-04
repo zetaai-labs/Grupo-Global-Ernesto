@@ -1,11 +1,15 @@
-
+import './Landing.css'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 function Landing() {
   const navigate = useNavigate()
+
   const [currentTime, setCurrentTime] = useState(new Date())
   const [selectedWorkspace, setSelectedWorkspace] = useState(null)
+  const [progress, setProgress] = useState(0)
+  const [activeFeature, setActiveFeature] = useState(null)
+  const [showWelcome, setShowWelcome] = useState(false)
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -14,6 +18,18 @@ function Landing() {
 
     return () => clearInterval(timer)
   }, [])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowWelcome(true), 150)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const hour = currentTime.getHours()
+
+  const greeting =
+    hour < 12 ? 'Good morning' :
+    hour < 17 ? 'Good afternoon' :
+    'Good evening'
 
   const formattedDate = currentTime.toLocaleDateString('en-GB', {
     weekday: 'long',
@@ -29,17 +45,46 @@ function Landing() {
   })
 
   const enterWorkspace = (workspace) => {
-    setSelectedWorkspace(workspace)
+    if (selectedWorkspace) return
 
-    setTimeout(() => {
-      navigate(`/${workspace}`)
-    }, 350)
+    setSelectedWorkspace(workspace)
+    setProgress(0)
+
+    let value = 0
+
+    const interval = setInterval(() => {
+      value += 10
+      setProgress(Math.min(value, 100))
+
+      if (value >= 100) {
+        clearInterval(interval)
+        navigate(`/${workspace}`)
+      }
+    }, 35)
   }
 
-  return (
-    <main className="landing-page">
+  const features = [
+    {
+      icon: '▤',
+      title: 'Centralised access',
+      description: 'Access your organisation’s workspace and resources from one place.'
+    },
+    {
+      icon: '◇',
+      title: 'Secure collaboration',
+      description: 'A structured environment for internal and external collaboration.'
+    },
+    {
+      icon: '⇄',
+      title: 'Connected teams',
+      description: 'Bring colleagues, partners and collaborators together.'
+    }
+  ]
 
-      {/* Background decoration */}
+  return (
+    <main className={`landing-page ${showWelcome ? 'landing-visible' : ''}`}>
+
+      {/* Background */}
       <div className="landing-grid-bg" />
       <div className="landing-glow landing-glow-one" />
       <div className="landing-glow landing-glow-two" />
@@ -47,7 +92,7 @@ function Landing() {
       <div className="floating-orb orb-two" />
       <div className="floating-orb orb-three" />
 
-      {/* Top navigation */}
+      {/* Navbar */}
       <header className="landing-navbar">
         <div className="landing-nav-brand">
           <div className="landing-logo">GG</div>
@@ -74,14 +119,19 @@ function Landing() {
         </div>
       </header>
 
-      {/* Main hero */}
+      {/* Main */}
       <section className="landing-content">
 
+        {/* Hero */}
         <div className="landing-hero">
           <div className="landing-eyebrow">
             <span className="eyebrow-line" />
             YOUR DIGITAL WORKSPACE
             <span className="eyebrow-line" />
+          </div>
+
+          <div className="landing-greeting">
+            {greeting} <span>✦</span>
           </div>
 
           <h1>
@@ -95,14 +145,45 @@ function Landing() {
           <p>
             Everything your organisation needs to work smarter.
             Access information, collaborate seamlessly and
-            stay connected in one secure environment.
+            stay connected in one connected environment.
           </p>
 
+          {/* Interactive highlights */}
           <div className="hero-highlights">
-            <span><span>✓</span> Centralised access</span>
-            <span><span>✓</span> Secure collaboration</span>
-            <span><span>✓</span> Connected teams</span>
+            {features.map((feature, index) => (
+              <button
+                key={feature.title}
+                className={`hero-highlight ${
+                  activeFeature === index ? 'highlight-active' : ''
+                }`}
+                onClick={() =>
+                  setActiveFeature(activeFeature === index ? null : index)
+                }
+                aria-expanded={activeFeature === index}
+              >
+                <span className="highlight-check">✓</span>
+                {feature.title}
+              </button>
+            ))}
           </div>
+
+          {activeFeature !== null && (
+            <div className="feature-detail">
+              <span className="feature-detail-icon">
+                {features[activeFeature].icon}
+              </span>
+              <div>
+                <strong>{features[activeFeature].title}</strong>
+                <p>{features[activeFeature].description}</p>
+              </div>
+              <button
+                onClick={() => setActiveFeature(null)}
+                aria-label="Close feature information"
+              >
+                ×
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Workspace selection */}
@@ -157,12 +238,18 @@ function Landing() {
               <div className="workspace-card-bottom">
                 <span className="workspace-enter purple-text">
                   {selectedWorkspace === 'intranet'
-                    ? 'Opening workspace...'
+                    ? `Opening... ${progress}%`
                     : 'Enter internal workspace'}
                 </span>
 
                 <span className="workspace-arrow">↗</span>
               </div>
+
+              {selectedWorkspace === 'intranet' && (
+                <div className="workspace-progress">
+                  <div style={{ width: `${progress}%` }} />
+                </div>
+              )}
 
               <div className="workspace-card-decoration purple-decoration" />
             </button>
@@ -191,20 +278,26 @@ function Landing() {
               <div className="workspace-details">
                 <h3>Extranet</h3>
                 <p>
-                  A secure collaboration space for external
-                  partners, clients and authorised collaborators.
+                  A collaboration space for external partners,
+                  clients and authorised collaborators.
                 </p>
               </div>
 
               <div className="workspace-card-bottom">
                 <span className="workspace-enter green-text">
                   {selectedWorkspace === 'extranet'
-                    ? 'Opening workspace...'
+                    ? `Opening... ${progress}%`
                     : 'Enter partner workspace'}
                 </span>
 
                 <span className="workspace-arrow">↗</span>
               </div>
+
+              {selectedWorkspace === 'extranet' && (
+                <div className="workspace-progress">
+                  <div style={{ width: `${progress}%` }} />
+                </div>
+              )}
 
               <div className="workspace-card-decoration green-decoration" />
             </button>
@@ -212,7 +305,7 @@ function Landing() {
           </div>
         </div>
 
-        {/* Bottom information */}
+        {/* Information strip */}
         <div className="landing-information">
           <div className="information-item">
             <span className="information-icon">⌘</span>
@@ -247,7 +340,7 @@ function Landing() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <span>© {new Date().getFullYear()} Global Group</span>
+        <span>© {currentTime.getFullYear()} Global Group</span>
         <span className="footer-separator">·</span>
         <span>Connected Workspace</span>
 

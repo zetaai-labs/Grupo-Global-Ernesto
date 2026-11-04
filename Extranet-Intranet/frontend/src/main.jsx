@@ -11,6 +11,10 @@ import {
 
 import './index.css'
 
+// Landing page
+import Landing from './components/Landing Page/Landing.jsx'
+
+// Portal layouts
 import IntranetPortal from './components/Portals/IntranetPortal.jsx'
 import ExtranetPortal from './components/Portals/ExtranetPortal.jsx'
 
@@ -40,8 +44,10 @@ import ExtranetVideo from './components/Portals/Extranet/Features/VideoConferenc
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
-      <Route path="/" element={<Navigate to="/intranet/overview" replace />} />
+      {/* Landing Page */}
+      <Route path="/" element={<Landing />} />
 
+      {/* Intranet Portal */}
       <Route path="/intranet" element={<IntranetPortal />}>
         <Route index element={<Navigate to="overview" replace />} />
 
@@ -56,10 +62,13 @@ const router = createBrowserRouter(
         <Route path="emails" element={<Emails />} />
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="user-management" element={<UserManagement />} />
+
+        {/* Intranet Communication */}
         <Route path="chat" element={<IntranetChat />} />
         <Route path="video-conferencing" element={<IntranetVideo />} />
       </Route>
 
+      {/* Extranet Portal */}
       <Route path="/extranet" element={<ExtranetPortal />}>
         <Route index element={<Navigate to="overview" replace />} />
 
@@ -67,11 +76,14 @@ const router = createBrowserRouter(
         <Route path="shared-documents" element={<SharedDocuments />} />
         <Route path="my-submissions" element={<MySubmissions />} />
         <Route path="shared-links" element={<SharedLinks />} />
+
+        {/* Extranet Communication */}
         <Route path="chat" element={<ExtranetChat />} />
         <Route path="video-conferencing" element={<ExtranetVideo />} />
       </Route>
 
-      <Route path="*" element={<Navigate to="/intranet/overview" replace />} />
+      {/* Unknown routes */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </>
   )
 )

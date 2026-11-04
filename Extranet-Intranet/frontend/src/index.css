@@ -1,9 +1,11 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 @layer base {
   html {
     scroll-behavior: smooth;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   }
 }
 
@@ -12,20 +14,21 @@
   width: 8px;
   height: 8px;
 }
+
 ::-webkit-scrollbar-track {
   background: #f1f5f9;
 }
+
 ::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 9999px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-
+/* Global styles */
 :root {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
@@ -429,6 +432,8 @@ a {
   border-color: #dc2626;
 }
 
+/* Responsive styles */
+
 @media (max-width: 760px) {
   .communication-page {
     padding: 18px;
@@ -464,5 +469,259 @@ a {
 
   .chat-message {
     max-width: 90%;
+  }
+}
+
+/* Landing page interactive enhancements */
+
+.landing-page {
+  opacity: 0;
+  transition: opacity 0.7s ease;
+}
+
+.landing-page.landing-visible {
+  opacity: 1;
+}
+
+.landing-hero,
+.workspace-section,
+.landing-information {
+  animation: landing-rise 0.8s ease both;
+}
+
+.workspace-section {
+  animation-delay: 0.15s;
+}
+
+.landing-information {
+  animation-delay: 0.3s;
+}
+
+@keyframes landing-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.landing-greeting {
+  margin: 18px 0 5px;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+
+.landing-greeting span {
+  color: #8b5cf6;
+  margin-left: 5px;
+}
+
+.hero-highlight {
+  cursor: pointer;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: 30px;
+  color: inherit;
+  font: inherit;
+  transition: all 0.25s ease;
+}
+
+.hero-highlight:hover,
+.hero-highlight.highlight-active {
+  background: rgba(139, 92, 246, 0.1);
+  border-color: rgba(139, 92, 246, 0.2);
+  transform: translateY(-2px);
+}
+
+.highlight-check {
+  margin-right: 6px;
+  color: #16a34a;
+  font-weight: 800;
+}
+
+.feature-detail {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 500px;
+  margin-top: 18px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
+  animation: landing-rise 0.25s ease both;
+}
+
+.feature-detail-icon {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.feature-detail strong {
+  font-size: 13px;
+}
+
+.feature-detail p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.feature-detail > button {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.workspace-option {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+
+.workspace-option:not(:disabled):hover {
+  transform: translateY(-8px);
+  box-shadow: 0 22px 45px rgba(15, 23, 42, 0.12);
+}
+
+.workspace-option:focus-visible,
+.hero-highlight:focus-visible {
+  outline: 3px solid #818cf8;
+  outline-offset: 4px;
+}
+
+.workspace-option:disabled {
+  cursor: wait;
+  opacity: 0.85;
+}
+
+.workspace-option.workspace-selected {
+  transform: translateY(-5px);
+  box-shadow: 0 18px 45px rgba(79, 70, 229, 0.15);
+}
+
+.workspace-arrow {
+  display: inline-block;
+  transition: transform 0.25s ease;
+}
+
+.workspace-option:not(:disabled):hover .workspace-arrow {
+  transform: translate(5px, -5px);
+}
+
+.workspace-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: rgba(148, 163, 184, 0.2);
+  z-index: 3;
+}
+
+.workspace-progress > div {
+  height: 100%;
+  background: #6366f1;
+  transition: width 0.08s linear;
+}
+
+.extranet-option .workspace-progress > div {
+  background: #16a34a;
+}
+
+.landing-security {
+  transition: background 0.2s ease;
+}
+
+.landing-security:hover {
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.security-pulse {
+  animation: security-pulse 1.8s infinite;
+}
+
+@keyframes security-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0);
+  }
+}
+
+.floating-orb {
+  animation: floating 7s ease-in-out infinite;
+}
+
+.orb-two {
+  animation-delay: 1.5s;
+}
+
+.orb-three {
+  animation-delay: 3s;
+}
+
+@keyframes floating {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (max-width: 650px) {
+  .landing-greeting {
+    font-size: 12px;
+  }
+
+  .feature-detail {
+    max-width: 100%;
+  }
+
+  .landing-information {
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .information-divider {
+    display: none;
+  }
+
+  .workspace-option:not(:disabled):hover {
+    transform: translateY(-3px);
   }
 }
