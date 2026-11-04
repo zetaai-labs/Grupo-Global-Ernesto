@@ -1,4 +1,5 @@
 # 🌐 Global Group Platform
+
 ### A Unified Digital Workspace | Intranet & Extranet
 
 <p align="center">
@@ -11,6 +12,18 @@
 ![Express](https://img.shields.io/badge/Express.js-API-000000?logo=express&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Database-4169E1?logo=postgresql&logoColor=white)
 ![Status](https://img.shields.io/badge/Development-In%20Progress-orange)
+
+</p>
+
+---
+
+## 🎬 Project Demo
+
+Explore the initial frontend interface and workspace navigation through the project demonstration video.
+
+<p align="center">
+
+**[▶ Watch Global Group Platform Demo Video](https://drive.google.com/file/d/1YEFBk3q8lZ2R5NVyE6IYEkPo9z0X_h_1/view)**
 
 </p>
 
@@ -202,13 +215,11 @@ Implemented navigation links with active-route styling and workspace switching.
 
 ---
 
-## 🔹 Day 3 — Backend Development & API Foundation
+## 🔹 Day 3 — Backend Foundation, Database Planning & Business Data Analysis
 
-<sub>Phase 03 · Backend Implementation</sub>
+<sub>Phase 03 · Backend Implementation & Data Preparation</sub>
 
-<badge color="success">Backend setup and installation completed</badge>
-
-**Objective:** Begin backend development by establishing the Express server, preparing the database connection and creating the initial API architecture to connect the frontend with backend services.
+**Objective:** Move towards full-stack development by preparing the backend architecture, analyzing the business datasets supplied by Grupo Global and defining the initial database structure and implementation sequence.
 
 ### 3.1 Backend Environment Setup — Completed
 
@@ -222,74 +233,172 @@ Implemented navigation links with active-route styling and workspace switching.
 | 06 | dotenv | Installed environment variable management. | ✅ |
 | 07 | Socket.IO | Installed the real-time communication dependency. | ✅ |
 | 08 | Nodemon | Installed the development restart utility. | ✅ |
-| 09 | PostgreSQL Planning | Prepared the database integration direction. | 🟡 |
+| 09 | Backend Scripts | Configured development and start scripts in `package.json`. | ✅ |
+| 10 | PostgreSQL Planning | Identified PostgreSQL as the intended database. | 🟡 |
 
-### 3.2 Day 3 Development Plan
+### 3.2 Business Dataset Analysis
+
+As part of the initial backend planning, the datasets provided by Grupo Global were reviewed to understand their structure and determine how they should be represented in the platform database.
+
+#### Dataset Overview
+
+| File | Contents | Assessment |
+|:---|:---|:---|
+| `CANACO BASE DATOS DIRECTORIO 121017 - 220218.xlsx` | Business membership directory containing commercial names, activities, addresses, phone numbers, emails, websites and owner/contact information. | Older business directory, reported as updated through February 2018. |
+| `asociaciones_2025.xlsx` — Sheet 1 | Spanish association registry information. | 64,999 records. |
+| `asociaciones_2025.xlsx` — Sheet 2 | Additional association registry information. | 28,745 records. |
+| `asociaciones_2025_Sheet 2.csv` | CSV copy of Sheet 2. | Duplicate dataset; should not be imported twice. |
+
+**Dataset observations:**
+
+- The two sheets in `asociaciones_2025.xlsx` contain 93,744 records in total.
+- Sheet 1 contains three duplicate rows.
+- The association registry includes fields such as `REGISTRO`, `DENOMINACION`, `PATRONIMICO`, `NIF`, `FECHA_REGISTRO`, `FECHA_CONSTITUCION`, `SEDE`, `DOMICILIO`, `CP`, `PROVINCIA`, `LOCALIDAD` and `WEB`.
+- The CANACO directory has a different structure and includes business and contact information.
+
+> **Data confidentiality:** The supplied datasets contain business and contact information. In accordance with the client's confidentiality instructions, access and processing must be restricted to authorized purposes. Data permissions and import requirements should be confirmed before records are exposed to portal users.
+
+### 3.3 Database Design — Proposed Structure
+
+The initial data model separates user authentication from organization records and individual contacts.
+
+| Entity | Purpose |
+|:---|:---|
+| `users` | Employee, administrator, partner and client login accounts. |
+| `roles` | Defines user roles such as Admin, Employee, Partner and Client. |
+| `user_roles` | Connects users with their assigned roles. |
+| `organizations` | Stores business and association directory records. |
+| `contacts` | Stores contact persons and their organization relationships. |
+| `import_staging` | Temporarily stores imported records for validation and review. |
+
+**Important architectural distinction:**
+
+An organization listed in an Excel directory is not automatically a registered portal user.
+
+For example, an association can exist in the `organizations` table without having any login credentials. If an authorized representative is later invited to the Extranet, a separate user account can be created and linked to that organization.
+
+### 3.4 Revised Backend Development Order
+
+Based on the supplied datasets and the initial business requirements, the recommended implementation sequence is:
 
 | # | Task | Description | Priority |
 |:---:|:---|:---|:---:|
-| 01 | Express Server | Configure the main backend entry point and initialize the server. | High |
-| 02 | Environment Configuration | Configure `.env` variables and separate development settings. | High |
-| 03 | CORS Configuration | Allow communication between the Vite frontend and backend. | High |
-| 04 | API Structure | Organize routes, controllers, middleware and configuration files. | High |
-| 05 | Health Check API | Create an initial endpoint to verify backend availability. | High |
-| 06 | PostgreSQL Connection | Configure the database connection and test connectivity. | High |
-| 07 | Database Structure | Identify initial entities such as users, roles and workspaces. | Medium |
-| 08 | API Testing | Test initial endpoints using Postman or equivalent tools. | Medium |
-| 09 | Frontend Integration | Prepare the frontend to consume backend API endpoints. | Medium |
+| 01 | Database Setup | Configure PostgreSQL connection and database environment. | High |
+| 02 | Data Analysis & Cleaning | Validate spreadsheet columns, missing values, duplicates and formats. | High |
+| 03 | Organization Management | Create the `organizations` table and organization APIs. | High |
+| 04 | Contact Management | Create the `contacts` table and contact APIs. | High |
+| 05 | Data Import System | Build a staging and validation process for Excel/CSV imports. | High |
+| 06 | Authentication | Implement users, password hashing, login and logout. | High |
+| 07 | Authorization | Implement roles, permissions and Intranet/Extranet access rules. | High |
+| 08 | Cloud Folders | Implement folder and file management. | High |
+| 09 | Other Portal Modules | Develop sharing, submissions, links, workflows and communication features. | Medium |
 
-### 3.3 Proposed Backend Architecture
+> An import staging system is proposed so that raw records can be reviewed and validated before being inserted into the main organization and contact tables.
+
+### 3.5 Proposed Database Architecture
 
 ```text
-backend/
+PostgreSQL Database
 │
-├── src/
-│   │
-│   ├── config/
-│   │   └── database.js
-│   │
-│   ├── controllers/
-│   │
-│   ├── middleware/
-│   │
-│   ├── routes/
-│   │
-│   ├── services/
-│   │
-│   ├── utils/
-│   │
-│   └── app.js
+├── users
+│   ├── id
+│   ├── name
+│   ├── email
+│   ├── password_hash
+│   ├── account_type
+│   └── status
 │
-├── .env
-├── .gitignore
-├── index.js
-├── package.json
-└── package-lock.json
+├── roles
+│   ├── id
+│   └── name
+│
+├── user_roles
+│   ├── user_id
+│   └── role_id
+│
+├── organizations
+│   ├── id
+│   ├── registration_number
+│   ├── name
+│   ├── tax_identifier
+│   ├── address
+│   ├── province
+│   ├── locality
+│   ├── website
+│   └── source
+│
+├── contacts
+│   ├── id
+│   ├── organization_id
+│   ├── contact_name
+│   ├── email
+│   ├── phone
+│   └── designation
+│
+└── import_staging
+    ├── id
+    ├── source_file
+    ├── raw_data
+    ├── validation_status
+    └── import_status
 ```
 
-*This is the proposed backend structure and will be finalized as implementation progresses.*
+*This is a proposed initial database structure. The final schema and relationships will be refined after receiving the client's detailed segmentation and access requirements.*
 
-### 3.4 Initial API Development Targets
+### 3.6 Initial API Development Targets
 
 | Method | Endpoint | Purpose |
 |:---:|:---|:---|
-| GET | `/api/health` | Verify backend server availability. |
-| GET | `/api/users` | Initial user retrieval endpoint. |
-| POST | `/api/auth/login` | Future authentication endpoint. |
-| GET | `/api/workspaces` | Future workspace information endpoint. |
+| POST | `/api/organizations` | Create an organization. |
+| GET | `/api/organizations` | List and search organizations. |
+| GET | `/api/organizations/:id` | Retrieve organization details. |
+| PATCH | `/api/organizations/:id` | Update organization information. |
+| POST | `/api/contacts` | Add a contact. |
+| GET | `/api/contacts` | List and search contacts. |
+| POST | `/api/import/preview` | Preview spreadsheet records before importing. |
+| POST | `/api/import/confirm` | Import validated records. |
+| POST | `/api/auth/login` | Future user authentication endpoint. |
+| POST | `/api/auth/logout` | Future logout endpoint. |
 
-These are planned API endpoints; they should be marked implemented only after development and testing.
+These are planned API endpoints and should only be marked as implemented after development and testing.
 
-### 3.5 Expected Day 3 Outcome
+### 3.7 Immediate Development Tasks
 
-- Start the Express backend server.
-- Establish a clean and scalable backend structure.
-- Configure environment variables and CORS.
-- Create and test the initial API endpoint.
-- Establish PostgreSQL connectivity.
-- Prepare the foundation for authentication and frontend-backend integration.
+| # | Task | Description | Status |
+|:---:|:---|:---|:---:|
+| 01 | PostgreSQL Connection | Configure Node.js database connectivity using `pg`. | ⚪ Pending |
+| 02 | Initial Database Tables | Create the organization, contact and import staging tables. | ⚪ Pending |
+| 03 | Organization APIs | Develop initial organization CRUD operations. | ⚪ Pending |
+| 04 | Contact APIs | Develop contact management operations. | ⚪ Pending |
+| 05 | Spreadsheet Validation | Validate a small sample of association records. | ⚪ Pending |
+| 06 | Data Import | Test importing cleaned records into PostgreSQL. | ⚪ Pending |
+| 07 | Authentication | Implement login, logout and password hashing. | ⚪ Planned |
+| 08 | Role-Based Access | Configure user roles and portal-level permissions. | ⚪ Planned |
 
-**Day 3 Focus:** Move from frontend-only development towards a full-stack application architecture.
+### 3.8 Client Requirements & Pending Clarifications
+
+The following requirements need confirmation from Grupo Global before finalizing the database and authorization architecture:
+
+- Which associations and businesses should be represented in the Intranet versus the Extranet?
+- Which organizations should receive portal accounts?
+- Who is authorized to access, view, update or manage each organization's information?
+- What are the detailed user segments, roles and permissions?
+- What are the client's approved data-import and data-retention requirements?
+
+The detailed segmentation document expected from the client will help finalize these decisions.
+
+### 3.9 Expected Day 3 Outcome
+
+- Complete initial backend environment and dependency setup.
+- Review and understand the business datasets supplied by Grupo Global.
+- Identify the distinction between user accounts, organizations and contacts.
+- Define the initial PostgreSQL database structure.
+- Establish the revised backend implementation sequence.
+- Prepare the organization and contact management modules.
+- Plan a controlled spreadsheet import and validation workflow.
+- Identify the client requirements needed for authentication and authorization.
+
+**Day 3 Focus:** Transition from frontend-only development towards a structured full-stack application, with business data management and database architecture as the initial backend priorities.
 
 ---
 
@@ -390,8 +499,13 @@ Global-Group-Platform/
 | Video Conferencing Interface | UI Prototype | 🟡 Implemented |
 | Backend Environment Setup | 100% | ✅ Completed |
 | Backend Dependencies | Installed | ✅ Completed |
-| Express Server Implementation | — | 🟡 Day 3 Plan |
+| Business Dataset Analysis | Initial Review | 🟡 Completed |
+| Backend Architecture Planning | Initial Structure | 🟡 Completed |
 | PostgreSQL Integration | — | ⚪ Pending |
+| Organization Management APIs | — | ⚪ Planned |
+| Contact Management APIs | — | ⚪ Planned |
+| Spreadsheet Import System | — | ⚪ Planned |
+| Express Server Implementation | — | ⚪ Pending |
 | Initial REST APIs | — | ⚪ Pending |
 | User Authentication | — | ⚪ Planned |
 | Role-Based Access Control | — | ⚪ Planned |
@@ -471,6 +585,7 @@ npm run preview
 | Document Security | Controlled folder and document access. |
 | Audit Trail | Traceability of user and administrative activities. |
 | Data Protection | Alignment with GDPR and applicable regional requirements. |
+| Data Confidentiality | Restrict business and contact datasets to authorized purposes and users. |
 | Data Ownership | Grupo Global Plataforma Bilateral retains ownership of platform data and content. |
 
 These are intended architectural capabilities and are subject to implementation and validation.
@@ -484,14 +599,15 @@ These are intended architectural capabilities and are subject to implementation 
 | 01 | Frontend Foundation | Complete the landing page, portal layouts and reusable components. |
 | 02 | Backend Foundation | Configure Express server, environment variables and initial APIs. |
 | 03 | Database Integration | Connect PostgreSQL and establish initial database models. |
-| 04 | Authentication | Develop login, user management and role-based permissions. |
-| 05 | Document Management | Implement Cloud Folders, Recycle Bin, Backups and MetaLinks. |
-| 06 | Collaboration | Integrate External Shares, Linked Folder and Web Received Files. |
-| 07 | Communication | Implement real-time chat, email integration and video conferencing. |
-| 08 | Workflow Automation | Develop AutoFlow and approval workflows. |
-| 09 | Cloud Infrastructure | Integrate AWS and document storage. |
-| 10 | Security & Testing | Perform authorization, security and performance testing. |
-| 11 | Deployment | Prepare the platform for production deployment and regional operations. |
+| 04 | Business Data Management | Develop organization management, contact management and spreadsheet import. |
+| 05 | Authentication | Develop login, user management and role-based permissions. |
+| 06 | Document Management | Implement Cloud Folders, Recycle Bin, Backups and MetaLinks. |
+| 07 | Collaboration | Integrate External Shares, Linked Folder and Web Received Files. |
+| 08 | Communication | Implement real-time chat, email integration and video conferencing. |
+| 09 | Workflow Automation | Develop AutoFlow and approval workflows. |
+| 10 | Cloud Infrastructure | Integrate AWS and document storage. |
+| 11 | Security & Testing | Perform authorization, security and performance testing. |
+| 12 | Deployment | Prepare the platform for production deployment and regional operations. |
 
 ---
 
@@ -545,8 +661,8 @@ git push origin feature/your-feature-name
 | Database Direction | PostgreSQL |
 | Cloud Infrastructure | AWS |
 | Target Regions | Europe, India and Global |
-| Current Development Phase | Backend Foundation |
-| Latest Development Log | Day 3 – Backend Development |
+| Current Development Phase | Backend Foundation & Database Planning |
+| Latest Development Log | Day 3 – Backend Foundation & Business Data Analysis |
 
 ---
 
