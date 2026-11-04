@@ -23,7 +23,7 @@ Explore the initial frontend interface and workspace navigation through the proj
 
 <p align="center">
 
-**[▶ Watch Global Group Platform Demo Video](https://drive.google.com/file/d/1YEFBk3q8lZ2R5NVyE6IYEkPo9z0X_h_1/view)**
+**[▶ Watch Extranet-Intranet Platform Demo Video](https://drive.google.com/file/d/1YEFBk3q8lZ2R5NVyE6IYEkPo9z0X_h_1/view)**
 
 </p>
 
