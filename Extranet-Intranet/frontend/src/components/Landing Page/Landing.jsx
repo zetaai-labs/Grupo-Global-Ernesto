@@ -9,6 +9,7 @@ function Landing() {
   const [selectedWorkspace, setSelectedWorkspace] = useState(null)
   const [progress, setProgress] = useState(0)
   const [activeFeature, setActiveFeature] = useState(null)
+  const [activeRegion, setActiveRegion] = useState(null)
   const [showWelcome, setShowWelcome] = useState(false)
 
   useEffect(() => {
@@ -78,6 +79,74 @@ function Landing() {
       icon: '⇄',
       title: 'Connected teams',
       description: 'Bring colleagues, partners and collaborators together.'
+    }
+  ]
+
+
+  const globalRegions = [
+    {
+      id: 'eu',
+      flag: '🇪🇺',
+      name: 'European Union',
+      label: 'EUROPE',
+      description: 'Connecting organisations and partners across the European Union.',
+      type: 'country-flag'
+    },
+    {
+      id: 'uae',
+      flag: '🇦🇪',
+      name: 'United Arab Emirates',
+      label: 'MIDDLE EAST',
+      description: 'Supporting collaboration and business connections in the UAE.',
+      type: 'country-flag'
+    },
+    {
+      id: 'canada',
+      flag: '🇨🇦',
+      name: 'Canada',
+      label: 'NORTH AMERICA',
+      description: 'Extending our connected workspace to partners across Canada.',
+      type: 'country-flag'
+    },
+    {
+      id: 'india',
+      flag: '🇮🇳',
+      name: 'India',
+      label: 'SOUTH ASIA',
+      description: 'Building stronger connections with teams and organisations in India.',
+      type: 'country-flag'
+    },
+    {
+      id: 'latam',
+      flag: '🌎',
+      name: 'Latin America',
+      label: 'REGIONAL NETWORK',
+      description: 'Connecting businesses and partners throughout Latin America.',
+      type: 'region-symbol'
+    },
+    {
+      id: 'usa',
+      flag: '🇺🇸',
+      name: 'United States',
+      label: 'NORTH AMERICA',
+      description: 'Enabling collaboration with organisations across the United States.',
+      type: 'country-flag'
+    },
+    {
+      id: 'morocco',
+      flag: '🇲🇦',
+      name: 'Morocco',
+      label: 'NORTH AFRICA',
+      description: 'Strengthening business connections with partners in Morocco.',
+      type: 'country-flag'
+    },
+    {
+      id: 'africa',
+      flag: '🌍',
+      name: 'Africa',
+      label: 'REGIONAL NETWORK',
+      description: 'Building a connected network across the African continent.',
+      type: 'region-symbol'
     }
   ]
 
@@ -185,6 +254,83 @@ function Landing() {
             </div>
           )}
         </div>
+
+        {/* Global Presence */}
+        <section className="global-presence">
+          <div className="global-presence-heading">
+            <div>
+              <span className="section-eyebrow">OUR GLOBAL REACH</span>
+              <h2>Connected Across Borders</h2>
+              <p>Building connections across countries and regions.</p>
+            </div>
+
+            <div className="global-presence-indicator">
+              <span className="global-indicator-dot" />
+              GLOBAL NETWORK
+            </div>
+          </div>
+
+          <div className="global-regions-grid">
+            {globalRegions.map((region, index) => (
+              <button
+                key={region.id}
+                type="button"
+                className={`global-region-card ${
+                  activeRegion === region.id ? 'region-active' : ''
+                }`}
+                style={{ '--region-index': index }}
+                onClick={() =>
+                  setActiveRegion(activeRegion === region.id ? null : region.id)
+                }
+                aria-pressed={activeRegion === region.id}
+              >
+                <span className="region-card-number">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+
+                <span
+                  className={`region-flag ${
+                    region.type === 'region-symbol' ? 'regional-symbol' : ''
+                  }`}
+                >
+                  {region.flag}
+                </span>
+
+                <span className="region-name">{region.name}</span>
+                <span className="region-label">{region.label}</span>
+                <span className="region-card-arrow">↗</span>
+                <span className="region-card-glow" />
+              </button>
+            ))}
+          </div>
+
+          {activeRegion && (
+            <div className="global-region-detail">
+              <div className="region-detail-flag">
+                {globalRegions.find(region => region.id === activeRegion)?.flag}
+              </div>
+
+              <div className="region-detail-content">
+                <span>GLOBAL CONNECTION</span>
+                <strong>
+                  {globalRegions.find(region => region.id === activeRegion)?.name}
+                </strong>
+                <p>
+                  {globalRegions.find(region => region.id === activeRegion)?.description}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="region-detail-close"
+                onClick={() => setActiveRegion(null)}
+                aria-label="Close region information"
+              >
+                ×
+              </button>
+            </div>
+          )}
+        </section>
 
         {/* Workspace selection */}
         <div className="workspace-section">
