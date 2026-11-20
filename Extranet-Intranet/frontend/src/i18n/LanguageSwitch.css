@@ -1,0 +1,31 @@
+.language-switch {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.language-switch button {
+  min-width: 34px;
+  height: 30px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: #77798a;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.language-switch button.active {
+  background: var(--purple, #1e3a8a);
+  color: #fff;
+}
+
+.language-switch--login {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+}

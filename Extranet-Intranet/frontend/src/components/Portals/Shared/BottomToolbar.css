@@ -1,0 +1,73 @@
+.portal-content {
+  padding-bottom: 70px;
+}
+
+.bottom-toolbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #e2e8f0;
+  font-size: 12px;
+}
+
+.bottom-toolbar button,
+.bottom-toolbar a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.bottom-toolbar button:hover,
+.bottom-toolbar a:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.toolbar-popover {
+  position: absolute;
+  bottom: 52px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 8px;
+  min-width: 220px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #fff;
+  color: #0b1f3a;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
+}
+
+.toolbar-popover button,
+.toolbar-popover a {
+  padding: 8px;
+  border-radius: 8px;
+  background: #eef3fa;
+  color: #0a2f6b;
+}
+
+.sync-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+.sync-dot--connecting { background: #f59e0b; }
+.sync-dot--offline { background: #ef4444; }

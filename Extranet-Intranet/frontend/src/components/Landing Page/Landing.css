@@ -153,6 +153,25 @@
   gap: 30px;
 }
 
+.landing-signin {
+  padding: 10px 22px;
+  border: 0;
+  border-radius: 10px;
+  background: #0a2f6b;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(10, 47, 107, 0.18);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.landing-signin:hover {
+  background: #0b3b86;
+  transform: translateY(-1px);
+}
+
 .landing-security {
   display: flex;
   align-items: center;

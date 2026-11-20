@@ -1,0 +1,21 @@
+.overview-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 6px 12px 18px;
+}
+
+.overview-links a {
+  padding: 10px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  color: #4338ca;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.overview-links a:hover {
+  background: #eef2ff;
+}

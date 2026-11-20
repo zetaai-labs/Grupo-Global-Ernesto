@@ -1,0 +1,243 @@
+.autoflow-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.autoflow-form input {
+  flex: 1;
+  min-width: 200px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.autoflow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.autoflow-row:last-child {
+  border-bottom: 0;
+}
+
+.autoflow-row button {
+  padding: 7px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.autoflow-row .cloud-remove {
+  border-color: #fecdd3;
+  color: #be123c;
+}
+
+/* ------------------------- Approval chains ------------------------- */
+
+.autoflow-form--grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+.autoflow-form select,
+.autoflow-form textarea {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.autoflow-form textarea {
+  grid-column: 1 / -1;
+  resize: vertical;
+}
+
+.autoflow-date {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.autoflow-date input {
+  min-width: 0;
+}
+
+.autoflow-chain-hint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.autoflow-form--grid .primary-action {
+  justify-self: start;
+}
+
+.autoflow-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.autoflow-filters button {
+  padding: 6px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.autoflow-filters button.active {
+  border-color: var(--purple);
+  background: var(--purple-soft);
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.autoflow-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.autoflow-card:last-child {
+  border-bottom: 0;
+}
+
+.autoflow-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.autoflow-description {
+  margin: 0;
+  color: #5d6072;
+  font-size: 12px;
+}
+
+.autoflow-status-approved,
+.autoflow-status-completed {
+  background: var(--green-soft);
+  color: var(--green-dark);
+}
+
+.autoflow-status-rejected {
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.autoflow-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.autoflow-steps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px 6px 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.step-dot {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--background);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.step-copy {
+  display: grid;
+  font-size: 11px;
+}
+
+.step-copy small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.autoflow-steps .step-approved .step-dot {
+  background: var(--green);
+  color: #fff;
+}
+
+.autoflow-steps .step-rejected .step-dot {
+  background: #e11d48;
+  color: #fff;
+}
+
+.autoflow-steps .step-current {
+  border-color: var(--purple);
+  background: var(--purple-soft);
+}
+
+.autoflow-steps .step-current .step-dot {
+  background: var(--purple);
+  color: #fff;
+}
+
+.autoflow-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.autoflow-actions input {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.autoflow-actions button {
+  padding: 7px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.autoflow-actions .cloud-remove {
+  border-color: #fecdd3;
+  color: #be123c;
+}

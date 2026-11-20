@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gg_postgres
+    environment:
+      POSTGRES_DB: grupo_global
+      POSTGRES_USER: grupo_global
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
+    ports:
+      - "5435:5432"
+    volumes:
+      - gg_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grupo_global -d grupo_global"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: gg_backend
+    command: sh -c "npm run db:init && npm run db:seed && npm run dev"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      FRONTEND_ORIGIN: http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in your environment}
+      DATABASE_URL: postgres://grupo_global:${DB_PASSWORD:-change-me}@db:5432/grupo_global
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:?set SEED_USER_PASSWORD in your environment}
+      BACKUP_CONTAINER: gg_postgres
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ./backend/storage:/app/storage
+
+  frontend:
+    build: ./frontend
+    container_name: gg_frontend
+    environment:
+      BACKEND_URL: http://backend:5000
+      VITE_SOCKET_URL: http://localhost:5000
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  gg_pgdata:

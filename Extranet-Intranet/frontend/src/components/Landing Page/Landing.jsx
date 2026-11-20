@@ -173,6 +173,22 @@ function Landing() {
         </div>
 
         <div className="landing-nav-right">
+          <button
+            type="button"
+            className="landing-signin"
+            onClick={() => navigate('/upload')}
+          >
+            Send files
+          </button>
+
+          <button
+            type="button"
+            className="landing-signin"
+            onClick={() => navigate('/login')}
+          >
+            Sign In
+          </button>
+
           <div className="landing-security">
             <span className="security-pulse" />
             Secure environment

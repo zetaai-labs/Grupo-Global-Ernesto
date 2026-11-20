@@ -1,4 +1,4 @@
-
+import { useT } from '../../../i18n'
 function FeaturePage({
   eyebrow,
   title,
@@ -9,18 +9,19 @@ function FeaturePage({
   items = [],
   emptyMessage = 'Your records will appear here.'
 }) {
+  const t = useT()
   return (
     <section className="feature-page">
       <div className="feature-heading">
         <div>
-          <div className="feature-eyebrow">{eyebrow}</div>
-          <h1>{title}</h1>
-          <p>{description}</p>
+          <div className="feature-eyebrow">{t(eyebrow)}</div>
+          <h1>{t(title)}</h1>
+          <p>{t(description)}</p>
         </div>
 
         {action && (
           <button className="primary-action">
-            <span>＋</span> {action}
+            <span>＋</span> {t(action)}
           </button>
         )}
       </div>
@@ -30,7 +31,7 @@ function FeaturePage({
           {stats.map((stat) => (
             <div className="stat-card" key={stat.label}>
               <div className="stat-top">
-                <span>{stat.label}</span>
+                <span>{t(stat.label)}</span>
                 <span className="stat-icon">{stat.icon}</span>
               </div>
               <strong>{stat.value}</strong>

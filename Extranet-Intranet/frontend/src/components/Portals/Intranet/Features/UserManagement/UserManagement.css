@@ -1,0 +1,49 @@
+.users-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.users-form input,
+.users-form select {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.users-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.users-row:last-child {
+  border-bottom: 0;
+}
+
+.item-status.status-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.users-row button {
+  padding: 7px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.users-row .users-erase {
+  border-color: #fecdd3;
+  color: #be123c;
+}

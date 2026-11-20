@@ -3,3 +3,6 @@ dist/
 coverage/
 .env
 *.log
+backend/storage/uploads/
+backend/storage/backups/
+backend/storage/**/*.enc-tmp

@@ -1,2 +1,10 @@
-export const recycleBinroutes = Object.freeze({ status: 'template', name: 'Recycle Bin.routes' })
-export default recycleBinroutes
+import { Router } from 'express'
+import { listDeleted, restoreItem, purgeItem } from '../controllers/recycleBin.controller.js'
+
+const router = Router()
+
+router.get('/', listDeleted)
+router.post('/:type/:id/restore', restoreItem)
+router.delete('/:type/:id', purgeItem)
+
+export default router

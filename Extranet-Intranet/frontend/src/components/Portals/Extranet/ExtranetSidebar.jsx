@@ -1,5 +1,7 @@
 
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
+import { getUser } from '../../../api/auth'
+import { useT } from '../../../i18n'
 
 const navigation = [
   {
@@ -26,14 +28,22 @@ const navigation = [
   {
     label: 'COMMUNICATION',
     items: [
-      { name: 'Partner Chat', path: '/extranet/chat', icon: '💬' },
+      { name: 'Team Chat', path: '/extranet/chat', icon: '💬' },
       { name: 'Video Meetings', path: '/extranet/video-conferencing', icon: '📹' }
     ]
   }
 ]
 
+const WORKSPACE_LABELS = {
+  partner: 'PARTNER WORKSPACE',
+  client: 'CLIENT WORKSPACE',
+  supplier: 'SUPPLIER WORKSPACE',
+}
+
 function ExtranetSidebar() {
-  const navigate = useNavigate()
+  const t = useT()
+  const role = String(getUser()?.role || '').toLowerCase()
+  const workspaceLabel = WORKSPACE_LABELS[role] || 'EXTERNAL WORKSPACE'
 
   return (
     <aside className="portal-sidebar">
@@ -41,19 +51,19 @@ function ExtranetSidebar() {
         <div className="sidebar-logo">GG</div>
         <div>
           <h2>GLOBAL GROUP</h2>
-          <span>PARTNER WORKSPACE</span>
+          <span>{t(workspaceLabel)}</span>
         </div>
       </div>
 
       <div className="sidebar-workspace-label">
         <span className="status-dot green-dot" />
-        EXTRANET
+        {t('EXTRANET')}
       </div>
 
       <nav className="sidebar-navigation">
         {navigation.map((group) => (
           <div className="nav-group" key={group.label}>
-            <p className="nav-group-label">{group.label}</p>
+            <p className="nav-group-label">{t(group.label)}</p>
 
             {group.items.map((item) => (
               <NavLink
@@ -64,7 +74,7 @@ function ExtranetSidebar() {
                 }
               >
                 <span className="sidebar-link-icon">{item.icon}</span>
-                <span>{item.name}</span>
+                <span>{t(item.name)}</span>
               </NavLink>
             ))}
           </div>
@@ -75,17 +85,10 @@ function ExtranetSidebar() {
         <div className="sidebar-help">
           <div className="help-icon">?</div>
           <div>
-            <strong>Partner support</strong>
-            <span>Get help with your workspace</span>
+            <strong>{t('Support')}</strong>
+            <span>{t('Get help with your workspace')}</span>
           </div>
         </div>
-
-        <button
-          className="switch-workspace"
-          onClick={() => navigate('/intranet')}
-        >
-          <span>⇄</span> Switch to Intranet
-        </button>
 
         <div className="sidebar-version">
           GLOBAL GROUP · WORKSPACE

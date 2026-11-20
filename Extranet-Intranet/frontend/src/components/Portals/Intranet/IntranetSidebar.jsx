@@ -1,5 +1,7 @@
 
 import { NavLink, useNavigate } from 'react-router-dom'
+import { getUser } from '../../../api/auth'
+import { useT } from '../../../i18n'
 
 const navigation = [
   {
@@ -15,7 +17,7 @@ const navigation = [
       { name: 'Linked Folder', path: '/intranet/linked-folder', icon: '⇄' },
       { name: 'MetaLinks', path: '/intranet/metalinks', icon: '↗' },
       { name: 'Web Received Files', path: '/intranet/web-received-files', icon: '⇩' },
-      { name: 'Backups', path: '/intranet/backups', icon: '◷' },
+      { name: 'Backups', path: '/intranet/backups', icon: '◷', roles: ['admin'] },
       { name: 'Recycle Bin', path: '/intranet/recycle-bin', icon: '▧' }
     ]
   },
@@ -23,6 +25,7 @@ const navigation = [
     label: 'COLLABORATION',
     items: [
       { name: 'AutoFlow', path: '/intranet/autoflow', icon: '⟳' },
+      { name: 'Calendar', path: '/intranet/calendar', icon: '◷' },
       { name: 'Emails', path: '/intranet/emails', icon: '✉' },
       { name: 'External Shares', path: '/intranet/external-shares', icon: '♧' }
     ]
@@ -38,13 +41,25 @@ const navigation = [
     label: 'ADMINISTRATION',
     items: [
       { name: 'System Web Page', path: '/intranet/system-web-page', icon: '▣' },
-      { name: 'User Management', path: '/intranet/user-management', icon: '♙' }
+      { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin'] },
+      { name: 'User Management', path: '/intranet/user-management', icon: '♙', roles: ['admin', 'hr'] },
+      { name: 'Security (MFA)', path: '/intranet/security', icon: '✓' }
     ]
   }
 ]
 
 function IntranetSidebar() {
+  const t = useT()
   const navigate = useNavigate()
+  const user = getUser()
+  const role = String(user?.role || '').toLowerCase()
+  // Hide screens this role cannot use (the API enforces the same rules).
+  const visibleNavigation = navigation
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.roles || item.roles.includes(role)),
+    }))
+    .filter((group) => group.items.length)
 
   return (
     <aside className="portal-sidebar">
@@ -52,19 +67,19 @@ function IntranetSidebar() {
         <div className="sidebar-logo">GG</div>
         <div>
           <h2>GLOBAL GROUP</h2>
-          <span>INTERNAL WORKSPACE</span>
+          <span>{t('INTERNAL WORKSPACE')}</span>
         </div>
       </div>
 
       <div className="sidebar-workspace-label">
         <span className="status-dot purple-dot" />
-        INTRANET
+        {t('INTRANET')}
       </div>
 
       <nav className="sidebar-navigation">
-        {navigation.map((group) => (
+        {visibleNavigation.map((group) => (
           <div className="nav-group" key={group.label}>
-            <p className="nav-group-label">{group.label}</p>
+            <p className="nav-group-label">{t(group.label)}</p>
 
             {group.items.map((item) => (
               <NavLink
@@ -75,7 +90,7 @@ function IntranetSidebar() {
                 }
               >
                 <span className="sidebar-link-icon">{item.icon}</span>
-                <span>{item.name}</span>
+                <span>{t(item.name)}</span>
               </NavLink>
             ))}
           </div>
@@ -86,17 +101,19 @@ function IntranetSidebar() {
         <div className="sidebar-help">
           <div className="help-icon">?</div>
           <div>
-            <strong>Need assistance?</strong>
-            <span>Contact your administrator</span>
+            <strong>{t('Need assistance?')}</strong>
+            <span>{t('Contact your administrator')}</span>
           </div>
         </div>
 
-        <button
-          className="switch-workspace"
-          onClick={() => navigate('/extranet')}
-        >
-          <span>⇄</span> Switch to Extranet
-        </button>
+        {user?.role === 'admin' && (
+          <button
+            className="switch-workspace"
+            onClick={() => navigate('/extranet')}
+          >
+            <span>⇄</span> {t('Switch to Extranet')}
+          </button>
+        )}
 
         <div className="sidebar-version">
           GLOBAL GROUP · WORKSPACE

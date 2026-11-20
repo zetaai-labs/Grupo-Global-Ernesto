@@ -1,12 +1,7 @@
+import VideoWorkspace from '../../../Shared/VideoWorkspace'
 
-import VideoConferencing from '../../../Intranet/Features/VideoConferencing/VideoConferencing'
-
-function ExtranetVideoConferencing() {
-  return (
-    <div className="extranet-communication">
-      <VideoConferencing />
-    </div>
-  )
+function VideoConferencing() {
+  return <VideoWorkspace portal="extranet" />
 }
 
-export default ExtranetVideoConferencing
+export default VideoConferencing

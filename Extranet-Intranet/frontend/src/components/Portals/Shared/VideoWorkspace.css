@@ -1,0 +1,65 @@
+.video-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.video-tile {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #0f172a;
+}
+
+.video-tile video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.video-tile span {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+@media (max-width: 760px) {
+  .video-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Group meeting grid: columns grow with participants. */
+.video-grid--1 {
+  grid-template-columns: minmax(0, 720px);
+  justify-content: center;
+}
+
+.video-grid--3,
+.video-grid--4 {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.video-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+@media (max-width: 760px) {
+  .video-grid--1,
+  .video-grid--3,
+  .video-grid--4 {
+    grid-template-columns: 1fr;
+  }
+}

@@ -17,5 +17,9 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Feature pages fetch on mount via async load(); state is set after await, not synchronously.
+      'react-hooks/set-state-in-effect': 'off',
+    },
   },
 ])

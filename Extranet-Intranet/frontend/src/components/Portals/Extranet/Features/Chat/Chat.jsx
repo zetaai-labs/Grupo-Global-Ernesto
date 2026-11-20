@@ -1,12 +1,7 @@
+import ChatWorkspace from '../../../Shared/ChatWorkspace'
 
-import Chat from '../../../Intranet/Features/Chat/Chat'
-
-function ExtranetChat() {
-  return (
-    <div className="extranet-communication">
-      <Chat />
-    </div>
-  )
+function Chat() {
+  return <ChatWorkspace portal="extranet" />
 }
 
-export default ExtranetChat
+export default Chat

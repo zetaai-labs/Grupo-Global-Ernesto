@@ -1,17 +1,82 @@
-import cors from 'cors'
 import express from 'express'
+import cors from 'cors'
 
-const app = express()
+import { config } from './config/env.js'
+import authRoutes from './routes/auth.routes.js'
+import userRoutes from './routes/users.routes.js'
+import folderRoutes from './routes/folders.routes.js'
+import fileRoutes from './routes/files.routes.js'
+import recycleBinRoutes from './routes/recycleBin.routes.js'
+import auditLogRoutes from './routes/auditLogs.routes.js'
+import metaLinkRoutes from './routes/metaLinks.routes.js'
+import publicLinkRoutes from './routes/publicLinks.routes.js'
+import workflowRoutes from './routes/workflows.routes.js'
+import chatRoutes from './routes/chat.routes.js'
+import emailRoutes from './routes/emails.routes.js'
+import dashboardRoutes from './routes/dashboard.routes.js'
+import receivedRoutes, { publicReceivedRoutes } from './routes/receivedFiles.routes.js'
+import externalShareRoutes from './routes/externalShares.routes.js'
+import backupRoutes from './routes/backups.routes.js'
+import contentRoutes from './routes/content.routes.js'
+import notificationRoutes from './routes/notifications.routes.js'
+import { authenticate } from './middleware/authenticate.js'
+import { requireAdmin, requireIntranet, requireRole } from './middleware/authorize.js'
 
-app.use(cors({ origin: process.env.FRONTEND_ORIGIN || 'http://localhost:5173' }))
-app.use(express.json())
+const allowedOrigins = config.frontendOrigin.split(',').map((origin) => origin.trim())
 
-app.get('/', (_request, response) => {
-  response.json({ status: 'ok', message: 'Extranet-Intranet backend template is running.' })
-})
+export const isAllowedOrigin = (origin) => {
+  if (!origin || allowedOrigins.includes(origin)) return true
+  // Development convenience only — never allow arbitrary localhost ports in production.
+  return process.env.NODE_ENV !== 'production' && /^https?:\/\/localhost:\d+$/.test(origin)
+}
 
-app.get('/api/health', (_request, response) => {
-  response.json({ status: 'ok' })
-})
+export const corsOrigin = (origin, callback) =>
+  isAllowedOrigin(origin)
+    ? callback(null, true)
+    : callback(new Error('Origin not allowed by CORS'))
 
-export default app
+export function createApp() {
+  const app = express()
+
+  app.use(cors({ origin: corsOrigin, credentials: true }))
+  app.use(express.json())
+
+  app.get('/', (_req, res) => res.send('Extranet-Intranet backend is running!'))
+
+  app.get('/api/health', (_req, res) => {
+    res.json({ status: 'success', message: 'Intranet/Extranet backend is running' })
+  })
+
+  app.use('/api/auth', authRoutes)
+
+  // Admin-only routes.
+  app.use('/api/users', authenticate, requireRole('admin', 'hr'), userRoutes)
+  app.use('/api/audit-logs', authenticate, requireAdmin, auditLogRoutes)
+  app.use('/api/backups', authenticate, requireAdmin, backupRoutes)
+
+  // Internal workspace routes.
+  app.use('/api/folders', authenticate, requireIntranet, folderRoutes)
+  app.use('/api/files', authenticate, requireIntranet, fileRoutes)
+  app.use('/api/recycle-bin', authenticate, requireIntranet, recycleBinRoutes)
+  app.use('/api/metalinks', authenticate, requireIntranet, metaLinkRoutes)
+  app.use('/api/workflows', authenticate, requireIntranet, workflowRoutes)
+  app.use('/api/emails', authenticate, requireIntranet, emailRoutes)
+  app.use('/api/dashboard', authenticate, requireIntranet, dashboardRoutes)
+  app.use('/api/received-files', authenticate, requireIntranet, receivedRoutes)
+  app.use('/api/external-shares', authenticate, externalShareRoutes)
+
+  app.use('/api/chat', authenticate, chatRoutes)
+  app.use('/api/content', authenticate, contentRoutes)
+  app.use('/api/notifications', authenticate, notificationRoutes)
+
+  // Token-based public links and public file submission (no JWT).
+  app.use('/api/links', publicLinkRoutes)
+  app.use('/api/public/received-files', publicReceivedRoutes)
+
+  app.use((error, _req, res, _next) => {
+    const status = error.status || 500
+    res.status(status).json({ message: status === 500 ? 'Server error' : error.message })
+  })
+
+  return app
+}

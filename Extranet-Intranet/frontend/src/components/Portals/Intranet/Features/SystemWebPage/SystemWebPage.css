@@ -1,0 +1,19 @@
+.announcement-form {
+  display: grid;
+  gap: 10px;
+}
+
+.announcement-form input,
+.announcement-form textarea {
+  padding: 11px 13px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  resize: vertical;
+}
+
+.announcement-form button {
+  justify-self: start;
+}

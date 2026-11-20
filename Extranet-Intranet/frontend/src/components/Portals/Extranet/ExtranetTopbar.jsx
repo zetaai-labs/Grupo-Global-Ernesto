@@ -1,5 +1,15 @@
 
 import { useLocation } from 'react-router-dom'
+import { getUser } from '../../../api/auth'
+import NotificationBell from '../Shared/NotificationBell'
+import LanguageSwitch from '../../../i18n/LanguageSwitch'
+import { useT } from '../../../i18n'
+
+const ROLE_LABELS = {
+  partner: 'Partner',
+  client: 'Client',
+  supplier: 'Supplier',
+}
 
 const pageNames = {
   overview: 'Overview',
@@ -11,37 +21,37 @@ const pageNames = {
 }
 
 function ExtranetTopbar() {
+  const t = useT()
   const location = useLocation()
+  const user = getUser()
   const currentPage = location.pathname.split('/').filter(Boolean).pop()
   const title = pageNames[currentPage] || 'Overview'
 
   return (
     <header className="portal-topbar">
       <div className="topbar-breadcrumb">
-        <span>Extranet</span>
+        <span>{t('Extranet')}</span>
         <span className="breadcrumb-divider">/</span>
-        <strong>{title}</strong>
+        <strong>{t(title)}</strong>
       </div>
 
       <div className="topbar-actions">
         <div className="topbar-search">
           <span>⌕</span>
-          <input type="search" placeholder="Search shared workspace..." />
+          <input type="search" placeholder={t('Search shared workspace...')} />
           <kbd>⌘ K</kbd>
         </div>
 
-        <button className="topbar-icon-btn" title="Notifications">
-          ♧
-          <span className="notification-dot green-notification" />
-        </button>
+        <LanguageSwitch />
+        <NotificationBell accent="green" />
 
         <div className="topbar-divider" />
 
         <div className="topbar-profile">
-          <div className="profile-avatar green-avatar">P</div>
+          <div className="profile-avatar green-avatar">{(user?.name || 'P').charAt(0).toUpperCase()}</div>
           <div className="profile-copy">
-            <strong>Partner User</strong>
-            <span>External collaborator</span>
+            <strong>{user?.name || t('External user')}</strong>
+            <span>{t(ROLE_LABELS[user?.role] || 'External collaborator')}</span>
           </div>
           <span className="profile-chevron">⌄</span>
         </div>

@@ -2,6 +2,7 @@
 import { Outlet } from 'react-router-dom'
 import IntranetSidebar from './IntranetSidebar'
 import IntranetTopbar from './IntranetTopbar'
+import BottomToolbar from '../Shared/BottomToolbar'
 import '../Portal.css'
 
 function IntranetLayout() {
@@ -16,6 +17,7 @@ function IntranetLayout() {
           <Outlet />
         </main>
       </div>
+      <BottomToolbar portal="intranet" />
     </div>
   )
 }
