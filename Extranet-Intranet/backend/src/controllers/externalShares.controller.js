@@ -6,6 +6,7 @@ import { config } from '../config/env.js'
 import { writeAudit } from '../services/audit.js'
 import { sendStoredFile } from '../services/storage.service.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
+import { SHARE_RECIPIENT_ROLES } from '../config/roles.js'
 
 const shareSchema = z.object({
   folder_id: z.coerce.number().int().positive(),
@@ -34,10 +35,10 @@ export async function createShare(req, res) {
 
   const partner = await query(
     `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id
-     WHERE u.id = $1 AND r.name IN ('partner', 'client', 'supplier') AND u.status = 'active'`,
-    [user_id],
+     WHERE u.id = $1 AND r.name = ANY($2::text[]) AND u.status = 'active'`,
+    [user_id, SHARE_RECIPIENT_ROLES],
   )
-  if (!partner.rowCount) return res.status(400).json({ message: 'User is not an active external (partner, client or supplier) account.' })
+  if (!partner.rowCount) return res.status(400).json({ message: 'User is not an active external account (partner, client, supplier or investor).' })
 
   try {
     const { rows } = await query(
@@ -122,8 +123,9 @@ export async function listRecipients(_req, res) {
   const { rows } = await query(
     `SELECT u.id, u.name, u.email, r.name AS role
      FROM users u JOIN roles r ON r.id = u.role_id
-     WHERE r.name IN ('partner', 'client', 'supplier') AND u.status = 'active'
+     WHERE r.name = ANY($1::text[]) AND u.status = 'active'
      ORDER BY u.name`,
+    [SHARE_RECIPIENT_ROLES],
   )
   return res.json({ data: rows })
 }

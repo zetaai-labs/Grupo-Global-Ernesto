@@ -4,34 +4,49 @@ import { writeAudit } from '../services/audit.js'
 import { exportUserData, eraseUser } from '../services/gdpr.service.js'
 
 const USER_LIST_QUERY = `
-  SELECT u.id, u.name, u.email, u.status, r.name AS role, rg.code AS region, u.created_at
+  SELECT u.id, u.uuid, u.name, u.email, u.status, r.name AS role, r.code AS role_code, rg.code AS region,
+         u.org_id, o.legal_name AS organization, u.mfa_enabled, u.created_at
   FROM users u
   JOIN roles r ON r.id = u.role_id
   LEFT JOIN regions rg ON rg.id = u.region_id
-  ORDER BY u.id
+  LEFT JOIN organizations o ON o.org_id = u.org_id
 `
 
 export async function listMetadata(_req, res) {
-  const [roles, regions] = await Promise.all([
-    query('SELECT id, name FROM roles ORDER BY id'),
+  const [roles, regions, organizations] = await Promise.all([
+    query('SELECT id, name, code, authority_level FROM roles ORDER BY id'),
     query('SELECT id, code, name FROM regions ORDER BY id'),
+    query(`SELECT org_id, legal_name, org_type FROM organizations
+           WHERE verification_status = 'VERIFIED' ORDER BY (org_type IN ('PARENT', 'BUSINESS_UNIT')) DESC, legal_name`),
   ])
-  return res.json({ data: { roles: roles.rows, regions: regions.rows } })
+  return res.json({ data: { roles: roles.rows, regions: regions.rows, organizations: organizations.rows } })
 }
 
+/** Only the Super Administrator may create privileged accounts (Schema Document §3). */
+const PRIVILEGED_ROLES = ['admin', 'tech_admin']
+
 export async function createUser(req, res) {
-  const { name, email, password, role_id, region_id } = req.body || {}
+  const { name, email, password, role_id, region_id, org_id } = req.body || {}
   if (!name || !email || !password || !role_id) {
     return res.status(400).json({ message: 'Name, email, password and role are required.' })
+  }
+  if (String(password).length < 10) {
+    return res.status(400).json({ message: 'Password must be at least 10 characters.' })
+  }
+
+  const role = await query('SELECT name FROM roles WHERE id = $1', [role_id])
+  if (!role.rows[0]) return res.status(400).json({ message: 'Unknown role.' })
+  if (PRIVILEGED_ROLES.includes(role.rows[0].name) && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only the Super Administrator can create administrator accounts.' })
   }
 
   const passwordHash = await bcrypt.hash(String(password), 12)
   try {
     const { rows } = await query(
-      `INSERT INTO users (name, email, password_hash, role_id, region_id)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, name, email, role_id, region_id, status`,
-      [name, email, passwordHash, role_id, region_id || null],
+      `INSERT INTO users (name, email, password_hash, role_id, region_id, org_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, uuid, name, email, role_id, region_id, org_id, status`,
+      [name, email, passwordHash, role_id, region_id || null, org_id || null],
     )
     await writeAudit(req.user.sub, 'USER_CREATED', 'users', rows[0].id, { email })
     return res.status(201).json({ data: rows[0] })
@@ -44,7 +59,7 @@ export async function createUser(req, res) {
 }
 
 export async function listUsers(_req, res) {
-  const { rows } = await query(USER_LIST_QUERY)
+  const { rows } = await query(`${USER_LIST_QUERY} ORDER BY u.id`)
   return res.json({ data: rows })
 }
 

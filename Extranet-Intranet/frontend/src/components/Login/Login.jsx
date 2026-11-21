@@ -3,7 +3,7 @@ import LanguageSwitch from '../../i18n/LanguageSwitch'
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
-import { saveSession } from '../../api/auth'
+import { saveSession, PORTAL_ROLES } from '../../api/auth'
 import './Login.css'
 
 const REGIONS = [
@@ -135,7 +135,7 @@ function ShieldIcon() {
 
 function destinationFor(role, requested) {
   if (requested === 'intranet' || requested === 'extranet') return `/${requested}`
-  if (['partner', 'client', 'supplier'].includes(String(role))) return '/extranet'
+  if (PORTAL_ROLES.extranet.includes(String(role))) return '/extranet'
   return '/intranet'
 }
 
@@ -169,6 +169,12 @@ function Login() {
       }
 
       if (payload.token) saveSession(payload.token, payload.user, remember)
+
+      // Privileged roles must enable MFA before using the workspace (Technical Spec §3.1).
+      if (payload.mfa_setup_required) {
+        navigate('/intranet/security?required=1', { replace: true })
+        return
+      }
 
       navigate(destinationFor(payload.user?.role, requestedWorkspace), { replace: true })
     } catch (err) {

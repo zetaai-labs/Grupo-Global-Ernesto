@@ -8,11 +8,14 @@ import { useT } from '../../../../../i18n'
 function UserManagement() {
   const t = useT()
   // HR sees a read-only directory; only admins can create or suspend accounts.
-  const isAdmin = getUser()?.role === 'admin'
+  // Super Admin and Technical Admin manage accounts; only the Super Admin exports/erases (GDPR).
+  const isAdmin = ['admin', 'tech_admin'].includes(getUser()?.role)
+  const isSuperAdmin = getUser()?.role === 'admin'
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
   const [regions, setRegions] = useState([])
-  const [form, setForm] = useState({ name: '', email: '', password: '', role_id: '', region_id: '' })
+  const [organizations, setOrganizations] = useState([])
+  const [form, setForm] = useState({ name: '', email: '', password: '', role_id: '', region_id: '', org_id: '' })
   const [notice, setNotice] = useState('')
 
   const load = useCallback(async () => {
@@ -25,6 +28,7 @@ function UserManagement() {
       const meta = metaResponse.data?.data || {}
       setRoles(meta.roles || [])
       setRegions(meta.regions || [])
+      setOrganizations(meta.organizations || [])
       if (!form.role_id && meta.roles?.length) {
         setForm((current) => ({ ...current, role_id: String(meta.roles[0].id) }))
       }
@@ -47,8 +51,9 @@ function UserManagement() {
         ...form,
         role_id: Number(form.role_id),
         region_id: form.region_id ? Number(form.region_id) : null,
+        org_id: form.org_id || null,
       })
-      setForm({ name: '', email: '', password: '', role_id: String(roles[0]?.id || ''), region_id: '' })
+      setForm({ name: '', email: '', password: '', role_id: String(roles[0]?.id || ''), region_id: '', org_id: '' })
       await load()
     } catch (error) {
       setNotice(error.response?.data?.message || 'Could not create the user.')
@@ -131,13 +136,19 @@ function UserManagement() {
         <form className="users-form" onSubmit={addUser}>
           <input value={form.name} onChange={change('name')} placeholder="Full name" required />
           <input type="email" value={form.email} onChange={change('email')} placeholder="Email address" required />
-          <input type="password" value={form.password} onChange={change('password')} placeholder="Password" required />
-          <select value={form.role_id} onChange={change('role_id')} required>
-            {roles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+          <input type="password" value={form.password} onChange={change('password')} placeholder="Password (min. 10 characters)" minLength={10} required />
+          <select value={form.role_id} onChange={change('role_id')} required aria-label="Role">
+            {roles
+              .filter((role) => isSuperAdmin || !['admin', 'tech_admin'].includes(role.name))
+              .map((role) => <option key={role.id} value={role.id}>{role.name}{role.code ? ` — ${role.code}` : ''}</option>)}
           </select>
-          <select value={form.region_id} onChange={change('region_id')}>
-            <option value="">No region</option>
+          <select value={form.region_id} onChange={change('region_id')} aria-label="Corridor">
+            <option value="">No corridor</option>
             {regions.map((region) => <option key={region.id} value={region.id}>{region.code}</option>)}
+          </select>
+          <select value={form.org_id} onChange={change('org_id')} aria-label="Organisation">
+            <option value="">No organisation</option>
+            {organizations.map((org) => <option key={org.org_id} value={org.org_id}>{org.legal_name}</option>)}
           </select>
           <button type="submit" className="primary-action">＋ Add user</button>
         </form>
@@ -157,14 +168,16 @@ function UserManagement() {
               <span className="list-item-icon">♙</span>
               <span className="list-item-copy">
                 <strong>{user.name}</strong>
-                <span>{user.email} · {user.role}{user.region ? ` · ${user.region}` : ''}</span>
+                <span>{user.email} · {user.role_code || user.role}{user.region ? ` · ${user.region}` : ''}{user.organization ? ` · ${user.organization}` : ''}</span>
               </span>
               <span className={`item-status ${user.status === 'active' ? 'status-active' : ''}`}>{user.status}</span>
               {isAdmin && user.status !== 'erased' && (
+                <button type="button" onClick={() => toggleStatus(user)}>
+                  {user.status === 'active' ? 'Suspend' : 'Activate'}
+                </button>
+              )}
+              {isSuperAdmin && user.status !== 'erased' && (
                 <>
-                  <button type="button" onClick={() => toggleStatus(user)}>
-                    {user.status === 'active' ? 'Suspend' : 'Activate'}
-                  </button>
                   <button type="button" onClick={() => exportData(user)} title="GDPR data export">Export data</button>
                   <button type="button" className="users-erase" onClick={() => erase(user)} title="GDPR right to erasure">Erase</button>
                 </>

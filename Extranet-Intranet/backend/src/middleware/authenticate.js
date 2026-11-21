@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken'
 import { config } from '../config/env.js'
 import { query } from '../config/database.js'
+import { isExternal } from '../config/roles.js'
+
+const MFA_SETUP_PATHS = ['/api/auth/mfa/', '/api/auth/me', '/api/auth/logout', '/api/notifications']
 
 /**
  * Verifies the JWT, then reloads the account from the database on every request.
@@ -28,10 +31,12 @@ export async function authenticate(req, res, next) {
   }
 
   const { rows } = await query(
-    `SELECT u.id, u.name, u.email, u.status, r.name AS role, rg.code AS region
+    `SELECT u.id, u.uuid, u.name, u.email, u.status, u.org_id, r.name AS role, r.code AS role_code, rg.code AS region,
+            o.verification_status AS org_status
      FROM users u
      JOIN roles r ON r.id = u.role_id
      LEFT JOIN regions rg ON rg.id = u.region_id
+     LEFT JOIN organizations o ON o.org_id = u.org_id
      WHERE u.id = $1`,
     [claims.sub],
   )
@@ -41,12 +46,25 @@ export async function authenticate(req, res, next) {
     return res.status(401).json({ message: 'Account is not active.' })
   }
 
+  // External accounts lose access as soon as their organisation is suspended or rejected.
+  if (isExternal(user.role) && ['SUSPENDED', 'REJECTED'].includes(user.org_status)) {
+    return res.status(401).json({ message: "Your organisation's access is suspended." })
+  }
+
   req.user = {
     sub: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
     region: user.region || 'GLOBAL',
+    uuid: user.uuid,
+    org_id: user.org_id,
+    role_code: user.role_code,
+  }
+
+  // Sessions issued for mandatory MFA setup may only reach the MFA and session endpoints.
+  if (claims.mfa_setup && !MFA_SETUP_PATHS.some((path) => req.originalUrl.startsWith(path))) {
+    return res.status(403).json({ code: 'MFA_SETUP_REQUIRED', message: 'Set up multi-factor authentication to continue.' })
   }
   return next()
 }

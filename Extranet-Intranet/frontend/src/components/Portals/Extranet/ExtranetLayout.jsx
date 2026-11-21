@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import ExtranetSidebar from './ExtranetSidebar'
 import ExtranetTopbar from './ExtranetTopbar'
 import BottomToolbar from '../Shared/BottomToolbar'
+import NdaBanner from '../Shared/NdaBanner'
 import '../Portal.css'
 
 function ExtranetLayout() {
@@ -14,6 +15,7 @@ function ExtranetLayout() {
         <ExtranetTopbar />
 
         <main className="portal-content">
+          <NdaBanner />
           <Outlet />
         </main>
       </div>

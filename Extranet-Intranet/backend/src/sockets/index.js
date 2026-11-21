@@ -21,7 +21,7 @@ export function registerSockets(io) {
   io.use(async (socket, next) => {
     try {
       const claims = jwt.verify(socket.handshake.auth?.token, config.jwtSecret)
-      if (claims.purpose) return next(new Error('Unauthorized'))
+      if (claims.purpose || claims.mfa_setup) return next(new Error("Unauthorized"))
 
       const { rows } = await query(
         `SELECT u.id, u.name, u.status FROM users u WHERE u.id = $1`,

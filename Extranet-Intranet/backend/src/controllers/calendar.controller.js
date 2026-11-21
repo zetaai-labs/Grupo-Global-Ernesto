@@ -3,8 +3,8 @@ import { z } from 'zod'
 import { query, withTransaction } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { notify } from '../services/notification.service.js'
+import { EXTERNAL_ROLES } from '../config/roles.js'
 
-const EXTERNAL_ROLES = ['partner', 'client', 'supplier']
 
 const eventSchema = z
   .object({

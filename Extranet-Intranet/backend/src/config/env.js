@@ -27,6 +27,14 @@ export const config = {
       kmsKeyId: process.env.S3_KMS_KEY_ID || '',
     },
   },
+  integrations: {
+    // Shared secret for HMAC-SHA256 signed webhooks from the WordPress site (Technical Spec §2.1).
+    webhookSecret: process.env.WEBHOOK_SECRET || '',
+  },
+  security: {
+    // Technical Spec §3.1 — mandatory MFA for Super Admin, Tech Admin and HR.
+    enforceMfa: process.env.MFA_ENFORCE === 'true',
+  },
   jobs: {
     backupIntervalHours: Number(process.env.BACKUP_INTERVAL_HOURS || 24),
     recycleBinRetentionDays: Math.max(1, Number(process.env.RECYCLE_BIN_RETENTION_DAYS || 30)),

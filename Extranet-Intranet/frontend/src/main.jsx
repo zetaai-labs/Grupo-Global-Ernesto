@@ -20,6 +20,9 @@ import ResetPassword from './components/Login/ResetPassword.jsx'
 import ProtectedRoute from './components/Auth/ProtectedRoute.jsx'
 import Unauthorized from './components/Auth/Unauthorized.jsx'
 import ReceivedFileUpload from './components/Public/ReceivedFileUpload.jsx'
+import Onboarding from './components/Public/Onboarding.jsx'
+import Organizations from './components/Portals/Intranet/Features/Organizations/Organizations.jsx'
+import Crm from './components/Portals/Intranet/Features/Crm/Crm.jsx'
 import MfaSettings from './components/Auth/MfaSettings.jsx'
 
 // Portal layouts
@@ -65,6 +68,7 @@ const router = createBrowserRouter(
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/upload" element={<ReceivedFileUpload />} />
+      <Route path="/onboarding" element={<Onboarding />} />
 
       {/* Intranet Portal — employees and administrators only */}
       <Route
@@ -89,10 +93,19 @@ const router = createBrowserRouter(
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
         <Route path="security" element={<MfaSettings />} />
+        <Route path="crm" element={<Crm />} />
+        <Route
+          path="organizations"
+          element={
+            <ProtectedRoute roles={['admin', 'tech_admin', 'hr', 'manager']}>
+              <Organizations />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="backups"
           element={
-            <ProtectedRoute roles={['admin']}>
+            <ProtectedRoute roles={['admin', 'tech_admin']}>
               <Backups />
             </ProtectedRoute>
           }
@@ -100,7 +113,7 @@ const router = createBrowserRouter(
         <Route
           path="audit-log"
           element={
-            <ProtectedRoute roles={['admin']}>
+            <ProtectedRoute roles={['admin', 'tech_admin']}>
               <AuditLog />
             </ProtectedRoute>
           }
@@ -108,7 +121,7 @@ const router = createBrowserRouter(
         <Route
           path="user-management"
           element={
-            <ProtectedRoute roles={['admin', 'hr']}>
+            <ProtectedRoute roles={['admin', 'tech_admin', 'hr']}>
               <UserManagement />
             </ProtectedRoute>
           }

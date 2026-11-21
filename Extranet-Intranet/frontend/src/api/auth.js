@@ -1,9 +1,21 @@
 const TOKEN_KEY = 'gg_token'
 const USER_KEY = 'gg_user'
 
+// Mirrors backend/src/config/roles.js (STAFF_ROLES / EXTERNAL_ROLES).
 export const PORTAL_ROLES = {
-  intranet: ['admin', 'employee', 'hr', 'manager'],
-  extranet: ['partner', 'client', 'supplier'],
+  intranet: ['admin', 'tech_admin', 'hr', 'manager', 'employee'],
+  extranet: ['partner', 'client', 'supplier', 'investor'],
+}
+
+/** Roles allowed to open the organisation registry (backend REGISTRY_READ_ROLES). */
+export const REGISTRY_ROLES = ['admin', 'tech_admin', 'hr', 'manager']
+/** Compliance Office: KYC screening and approval (backend COMPLIANCE_ROLES). */
+export const COMPLIANCE_ROLES = ['admin', 'hr']
+/** Super Admin + Technical Admin (backend SYSTEM_ADMIN_ROLES). */
+export const SYSTEM_ADMIN_ROLES = ['admin', 'tech_admin']
+
+export function hasRole(user, roles) {
+  return roles.includes(String(user?.role || '').toLowerCase())
 }
 
 function read(storage) {

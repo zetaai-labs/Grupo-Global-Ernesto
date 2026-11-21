@@ -3,6 +3,7 @@ import { query } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
 import { withRegion } from '../services/scope.js'
+import { STAFF_ROLES, OPERATIONS_ROLES } from '../config/roles.js'
 
 export async function listMySubmissions(req, res) {
   const { rows } = await query(
@@ -32,7 +33,7 @@ export async function createMySubmission(req, res) {
     ],
   )
   await writeAudit(req.user.sub, 'SUBMISSION_UPLOADED', 'received_files', rows[0].id)
-  await notifyRoles(['admin', 'manager'], {
+  await notifyRoles(OPERATIONS_ROLES, {
     type: 'received-file',
     title: `New submission: ${req.file.originalname}`,
     body: `From ${req.user.name || req.user.email}`,
@@ -63,7 +64,7 @@ export async function createAnnouncement(req, res) {
     [parsed.data.title, parsed.data.body, req.user.region, req.user.sub],
   )
   await writeAudit(req.user.sub, 'ANNOUNCEMENT_CREATED', 'announcements', rows[0].id)
-  await notifyRoles(['admin', 'employee', 'hr', 'manager'], {
+  await notifyRoles(STAFF_ROLES, {
     type: 'announcement',
     title: `Announcement: ${parsed.data.title}`,
     body: parsed.data.body.slice(0, 140),

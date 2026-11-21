@@ -19,8 +19,10 @@ import externalShareRoutes from './routes/externalShares.routes.js'
 import backupRoutes from './routes/backups.routes.js'
 import contentRoutes from './routes/content.routes.js'
 import notificationRoutes from './routes/notifications.routes.js'
+import organizationRoutes, { publicOnboardingRoutes } from './routes/organizations.routes.js'
+import crmRoutes, { crmWebhookRoutes } from './routes/crm.routes.js'
 import { authenticate } from './middleware/authenticate.js'
-import { requireAdmin, requireIntranet, requireRole } from './middleware/authorize.js'
+import { requireIntranet, requireRole, requireSystemAdmin } from './middleware/authorize.js'
 
 const allowedOrigins = config.frontendOrigin.split(',').map((origin) => origin.trim())
 
@@ -39,7 +41,8 @@ export function createApp() {
   const app = express()
 
   app.use(cors({ origin: corsOrigin, credentials: true }))
-  app.use(express.json())
+  // Keep the raw body so signed webhooks (HMAC-SHA256) can be verified byte-for-byte.
+  app.use(express.json({ limit: '1mb', verify: (req, _res, buffer) => { req.rawBody = buffer.toString('utf8') } }))
 
   app.get('/', (_req, res) => res.send('Extranet-Intranet backend is running!'))
 
@@ -50,9 +53,9 @@ export function createApp() {
   app.use('/api/auth', authRoutes)
 
   // Admin-only routes.
-  app.use('/api/users', authenticate, requireRole('admin', 'hr'), userRoutes)
-  app.use('/api/audit-logs', authenticate, requireAdmin, auditLogRoutes)
-  app.use('/api/backups', authenticate, requireAdmin, backupRoutes)
+  app.use('/api/users', authenticate, requireRole('admin', 'tech_admin', 'hr'), userRoutes)
+  app.use('/api/audit-logs', authenticate, requireSystemAdmin, auditLogRoutes)
+  app.use('/api/backups', authenticate, requireSystemAdmin, backupRoutes)
 
   // Internal workspace routes.
   app.use('/api/folders', authenticate, requireIntranet, folderRoutes)
@@ -68,10 +71,14 @@ export function createApp() {
   app.use('/api/chat', authenticate, chatRoutes)
   app.use('/api/content', authenticate, contentRoutes)
   app.use('/api/notifications', authenticate, notificationRoutes)
+  app.use('/api/organizations', authenticate, organizationRoutes)
+  app.use('/api/crm', authenticate, requireIntranet, crmRoutes)
 
   // Token-based public links and public file submission (no JWT).
   app.use('/api/links', publicLinkRoutes)
   app.use('/api/public/received-files', publicReceivedRoutes)
+  app.use('/api/public/onboarding', publicOnboardingRoutes)
+  app.use('/api/webhooks', crmWebhookRoutes)
 
   app.use((error, _req, res, _next) => {
     const status = error.status || 500

@@ -3,8 +3,8 @@ import { query, withTransaction } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { withRegion } from '../services/scope.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
+import { APPROVER_ROLES, STAFF_ROLES } from '../config/roles.js'
 
-const APPROVER_ROLES = ['admin', 'manager', 'hr']
 
 /** Ready-made approval chains. Each step is approved by a role (any active user with it). */
 export const TEMPLATES = {
@@ -285,8 +285,9 @@ export async function listPeople(_req, res) {
   const { rows } = await query(
     `SELECT u.id, u.name, r.name AS role
      FROM users u JOIN roles r ON r.id = u.role_id
-     WHERE u.status = 'active' AND r.name IN ('admin', 'employee', 'hr', 'manager')
+     WHERE u.status = 'active' AND r.name = ANY($1::text[])
      ORDER BY u.name`,
+    [STAFF_ROLES],
   )
   return res.json({ data: rows })
 }

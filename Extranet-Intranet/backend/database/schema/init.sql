@@ -296,3 +296,149 @@ CREATE INDEX IF NOT EXISTS idx_event_attendees_user ON event_attendees(user_id);
 
 -- Off-site (S3) copy of a backup, when enabled.
 ALTER TABLE backups ADD COLUMN IF NOT EXISTS offsite_key TEXT;
+
+-- =====================================================================
+-- Schema Document (Nov 2026) — foundation / schema lock
+-- =====================================================================
+
+-- §4.1 organizations: legal entities, business units, partners, clients, vendors, investors.
+CREATE TABLE IF NOT EXISTS organizations (
+  org_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  legal_name VARCHAR(255) NOT NULL,
+  pic_code VARCHAR(64),
+  tax_id VARCHAR(64) NOT NULL,
+  country VARCHAR(3) NOT NULL,
+  region_corridor VARCHAR(50) NOT NULL,
+  verification_status TEXT NOT NULL DEFAULT 'PENDING'
+    CHECK (verification_status IN ('PENDING', 'VERIFIED', 'REJECTED', 'SUSPENDED')),
+  onboarding_stage INT NOT NULL DEFAULT 1 CHECK (onboarding_stage BETWEEN 1 AND 5),
+  org_type TEXT NOT NULL DEFAULT 'STRATEGIC_PARTNER'
+    CHECK (org_type IN ('PARENT', 'BUSINESS_UNIT', 'CLIENT', 'STRATEGIC_PARTNER', 'DELEGATION_NODE', 'VENDOR', 'INVESTOR')),
+  parent_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_organizations_legal_name ON organizations (LOWER(legal_name));
+
+-- §4.2 users: public UUID, organisation link, video bio.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS uuid UUID NOT NULL DEFAULT gen_random_uuid();
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_uuid ON users(uuid);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS video_bio_url VARCHAR(512);
+CREATE INDEX IF NOT EXISTS idx_users_org ON users(org_id);
+
+-- §3 RBAC: document role codes and authority levels.
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS code TEXT;
+ALTER TABLE roles ADD COLUMN IF NOT EXISTS authority_level TEXT;
+INSERT INTO roles (name, description) VALUES
+  ('tech_admin', 'Technical Administrator — infrastructure, security policy, integrations'),
+  ('investor', 'Confidential Investor — isolated investor vault access')
+ON CONFLICT (name) DO NOTHING;
+UPDATE roles r SET code = v.code, authority_level = v.level
+FROM (VALUES
+  ('admin', 'ROLE_SUPER_ADMIN', '0'), ('tech_admin', 'ROLE_TECH_ADMIN', '1'), ('hr', 'ROLE_HR_MGR', '2'),
+  ('manager', 'ROLE_EMPLOYEE_DELEGATE', '3'), ('employee', 'ROLE_EMPLOYEE_DELEGATE', '3'),
+  ('partner', 'ROLE_CLIENT_PARTNER', '4'), ('client', 'ROLE_CLIENT_PARTNER', '4'),
+  ('supplier', 'ROLE_CLIENT_PARTNER', '4'), ('investor', 'ROLE_INVESTOR_VAULT', '0-S')
+) AS v(name, code, level)
+WHERE r.name = v.name;
+
+-- §2.2 corridors: EUROPE becomes SPAIN_EU (data migrated), plus the new corridors.
+UPDATE regions SET code = 'SPAIN_EU', name = 'Spain / European Union'
+WHERE code = 'EUROPE' AND NOT EXISTS (SELECT 1 FROM regions WHERE code = 'SPAIN_EU');
+UPDATE folders SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+UPDATE files SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+UPDATE metalinks SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+UPDATE workflows SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+UPDATE emails SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+UPDATE announcements SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+UPDATE calendar_events SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+UPDATE received_files SET region = 'SPAIN_EU' WHERE region = 'EUROPE';
+INSERT INTO regions (code, name) VALUES
+  ('GLOBAL', 'Global (all corridors)'), ('SPAIN_EU', 'Spain / European Union'), ('INDIA', 'India'),
+  ('UAE_DUBAI', 'UAE / Dubai'), ('LATAM', 'Latin America'), ('USA_CAN', 'United States & Canada'),
+  ('MOROCCO', 'Morocco')
+ON CONFLICT (code) DO NOTHING;
+
+-- §2.4 KYC / KYB onboarding (5 steps).
+CREATE TABLE IF NOT EXISTS kyc_applications (
+  application_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  access_token_hash TEXT NOT NULL UNIQUE,
+  contact_name VARCHAR(255) NOT NULL,
+  contact_email VARCHAR(255) NOT NULL,
+  contact_phone VARCHAR(64),
+  submitted_at TIMESTAMPTZ,
+  decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_at TIMESTAMPTZ,
+  decision_notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_kyc_application_org ON kyc_applications(org_id);
+
+CREATE TABLE IF NOT EXISTS kyc_documents (
+  document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  doc_type TEXT NOT NULL CHECK (doc_type IN ('INCORPORATION_CERTIFICATE', 'LEGAL_REPRESENTATION', 'DIRECTOR_ID', 'OPERATING_LICENSE', 'OTHER')),
+  original_name TEXT NOT NULL,
+  stored_name TEXT NOT NULL,
+  mime_type TEXT,
+  size_bytes BIGINT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_kyc_documents_org ON kyc_documents(org_id);
+
+CREATE TABLE IF NOT EXISTS kyc_checks (
+  check_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  check_type TEXT NOT NULL CHECK (check_type IN ('AUTO_VALIDATION', 'SANCTIONS', 'PEP', 'ADVERSE_MEDIA')),
+  result TEXT NOT NULL CHECK (result IN ('PASS', 'FAIL', 'CLEAR', 'HIT')),
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  performed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_kyc_checks_org ON kyc_checks(org_id, created_at DESC);
+
+-- §2.4 step 5: NDA issued on approval (document hash), accepted by the organisation's user.
+CREATE TABLE IF NOT EXISTS nda_records (
+  nda_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  nda_version TEXT NOT NULL,
+  document_hash CHAR(64) NOT NULL,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  accepted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  accepted_at TIMESTAMPTZ,
+  acceptance_hash CHAR(64),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_nda_records_org ON nda_records(org_id);
+
+-- §4.3 crm_relationships: business relationships and pipelines across corridors.
+CREATE TABLE IF NOT EXISTS crm_relationships (
+  rel_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  entity_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  contact_type TEXT NOT NULL CHECK (contact_type IN ('CLIENT', 'STRATEGIC_PARTNER', 'DELEGATION_NODE', 'VENDOR')),
+  confidentiality_level TEXT NOT NULL DEFAULT 'RESTRICTED'
+    CHECK (confidentiality_level IN ('PUBLIC', 'INTERNAL', 'RESTRICTED', 'HIGHLY_CONFIDENTIAL')),
+  assigned_manager INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  pipeline_stage VARCHAR(50) NOT NULL DEFAULT 'LEAD'
+    CHECK (pipeline_stage IN ('LEAD', 'PROPOSAL', 'DUE_DILIGENCE', 'ACTIVE_CONTRACT', 'ARCHIVED')),
+  title VARCHAR(255) NOT NULL,
+  estimated_value_eur NUMERIC(15, 2),
+  next_action_at TIMESTAMPTZ,
+  source TEXT NOT NULL DEFAULT 'manual',
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_crm_stage ON crm_relationships(pipeline_stage);
+CREATE INDEX IF NOT EXISTS idx_crm_entity ON crm_relationships(entity_id);
+
+CREATE TABLE IF NOT EXISTS crm_activities (
+  activity_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  rel_id UUID NOT NULL REFERENCES crm_relationships(rel_id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('NOTE', 'STAGE_CHANGE', 'ASSIGNMENT', 'SYSTEM')),
+  body TEXT NOT NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_crm_activities_rel ON crm_activities(rel_id, created_at DESC);

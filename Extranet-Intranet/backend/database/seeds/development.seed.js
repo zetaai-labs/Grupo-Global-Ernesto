@@ -16,12 +16,39 @@ const roles = [
   ['manager', 'Department manager — intranet access and AutoFlow approvals'],
   ['client', 'External client — extranet access'],
   ['supplier', 'External supplier/vendor — extranet access'],
+  ['tech_admin', 'Technical Administrator — infrastructure, security policy, integrations'],
+  ['investor', 'Confidential Investor — isolated investor vault access'],
 ]
 
+// Operational corridors (Schema Document §2.2).
 const regions = [
-  ['GLOBAL', 'Global'],
-  ['EUROPE', 'Europe'],
+  ['GLOBAL', 'Global (all corridors)'],
+  ['SPAIN_EU', 'Spain / European Union'],
   ['INDIA', 'India'],
+  ['UAE_DUBAI', 'UAE / Dubai'],
+  ['LATAM', 'Latin America'],
+  ['USA_CAN', 'United States & Canada'],
+  ['MOROCCO', 'Morocco'],
+]
+
+// Organisation structure (Schema Document §1–§2). Parent entity and EU PICs come from the document;
+// the external companies are fictional demo records (tax IDs marked DEMO).
+const PARENT = 'Grupo Global Plataforma Bilateral (A.M.M. Servicios)'
+const organizations = [
+  // [legal_name, org_type, tax_id, pic_code, country, corridor, status, stage, parent]
+  [PARENT, 'PARENT', 'G29837838', '861161733', 'ESP', 'SPAIN_EU', 'VERIFIED', 5, null],
+  ['Grupo Global Nexus', 'BUSINESS_UNIT', 'G29837838', null, 'ESP', 'SPAIN_EU', 'VERIFIED', 5, PARENT],
+  ['Grupo Global Ciber Seguridad', 'BUSINESS_UNIT', 'G29837838', null, 'ESP', 'SPAIN_EU', 'VERIFIED', 5, PARENT],
+  ['Financiera Grupo Global', 'BUSINESS_UNIT', 'G29837838', null, 'ESP', 'SPAIN_EU', 'VERIFIED', 5, PARENT],
+  ['Grupo Global Inmobiliaria', 'BUSINESS_UNIT', 'G29837838', null, 'ESP', 'SPAIN_EU', 'VERIFIED', 5, PARENT],
+  ['Grupo Global Clínica Dental World', 'BUSINESS_UNIT', 'G29837838', null, 'ESP', 'SPAIN_EU', 'VERIFIED', 5, PARENT],
+  ['Grupo Global Net', 'BUSINESS_UNIT', 'G29837838', null, 'ESP', 'SPAIN_EU', 'VERIFIED', 5, PARENT],
+  ['Zeta AI Labs Pvt. Ltd.', 'STRATEGIC_PARTNER', 'TO-BE-PROVIDED', '862494222', 'IND', 'INDIA', 'VERIFIED', 5, null],
+  ['Iberia Retail S.L.', 'CLIENT', 'DEMO-ES-0001', null, 'ESP', 'SPAIN_EU', 'VERIFIED', 5, null],
+  ['Mumbai Textiles Pvt. Ltd.', 'VENDOR', 'DEMO-IN-0001', null, 'IND', 'INDIA', 'VERIFIED', 5, null],
+  ['Vikas Metal Works', 'STRATEGIC_PARTNER', 'DEMO-IN-0002', null, 'IND', 'INDIA', 'VERIFIED', 5, null],
+  ['Atlas Gulf Capital', 'INVESTOR', 'DEMO-AE-0001', null, 'ARE', 'UAE_DUBAI', 'VERIFIED', 5, null],
+  ['Andes Trade Partners S.A.', 'STRATEGIC_PARTNER', 'DEMO-CO-0001', null, 'COL', 'LATAM', 'PENDING', 2, null],
 ]
 
 async function upsert(table, columns, values, conflictColumn) {
@@ -47,15 +74,31 @@ async function seed() {
     regionIds[code] = await upsert('regions', ['code', 'name'], [code, name], 'code')
   }
 
+  const orgIds = {}
+  for (const [legalName, orgType, taxId, pic, country, corridor, status, stage, parent] of organizations) {
+    const { rows } = await query(
+      `INSERT INTO organizations
+         (legal_name, org_type, tax_id, pic_code, country, region_corridor, verification_status, onboarding_stage, parent_org_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       ON CONFLICT (LOWER(legal_name)) DO UPDATE SET org_type = EXCLUDED.org_type, parent_org_id = EXCLUDED.parent_org_id
+       RETURNING org_id`,
+      [legalName, orgType, taxId, pic, country, corridor, status, stage, parent ? orgIds[parent] : null],
+    )
+    orgIds[legalName] = rows[0].org_id
+  }
+
   const passwordHash = await bcrypt.hash(config.seedUserPassword, 12)
+  // [name, email, role, corridor, organisation]
   const users = [
-    ['Ernesto Morilla Campos', 'admin@gmail.com', roleIds.admin, regionIds.GLOBAL],
-    ['Wade Warren', 'employee@gmail.com', roleIds.employee, regionIds.EUROPE],
-    ['Vikas Metal Works', 'partner@gmail.com', roleIds.partner, regionIds.INDIA],
-    ['Laura Gómez', 'hr@gmail.com', roleIds.hr, regionIds.EUROPE],
-    ['Rahul Sharma', 'manager@gmail.com', roleIds.manager, regionIds.GLOBAL],
-    ['Iberia Retail S.L.', 'customer@gmail.com', roleIds.client, regionIds.EUROPE],
-    ['Mumbai Textiles Pvt. Ltd.', 'supplier@gmail.com', roleIds.supplier, regionIds.INDIA],
+    ['Ernesto Morilla Campos', 'admin@gmail.com', roleIds.admin, regionIds.GLOBAL, PARENT],
+    ['Wade Warren', 'employee@gmail.com', roleIds.employee, regionIds.SPAIN_EU, 'Grupo Global Net'],
+    ['Vikas Metal Works', 'partner@gmail.com', roleIds.partner, regionIds.INDIA, 'Vikas Metal Works'],
+    ['Laura Gómez', 'hr@gmail.com', roleIds.hr, regionIds.SPAIN_EU, PARENT],
+    ['Rahul Sharma', 'manager@gmail.com', roleIds.manager, regionIds.GLOBAL, 'Grupo Global Nexus'],
+    ['Iberia Retail S.L.', 'customer@gmail.com', roleIds.client, regionIds.SPAIN_EU, 'Iberia Retail S.L.'],
+    ['Mumbai Textiles Pvt. Ltd.', 'supplier@gmail.com', roleIds.supplier, regionIds.INDIA, 'Mumbai Textiles Pvt. Ltd.'],
+    ['Chaitanya Rana', 'techadmin@gmail.com', roleIds.tech_admin, regionIds.GLOBAL, 'Zeta AI Labs Pvt. Ltd.'],
+    ['Atlas Gulf Capital', 'investor@gmail.com', roleIds.investor, regionIds.UAE_DUBAI, 'Atlas Gulf Capital'],
   ]
 
   // One-time rename of the earlier demo emails, so existing chats/approvals/shares stay linked.
@@ -76,11 +119,11 @@ async function seed() {
     )
   }
 
-  for (const [name, email, roleId, regionId] of users) {
+  for (const [name, email, roleId, regionId, orgName] of users) {
     await upsert(
       'users',
-      ['name', 'email', 'password_hash', 'role_id', 'region_id', 'status'],
-      [name, email, passwordHash, roleId, regionId, 'active'],
+      ['name', 'email', 'password_hash', 'role_id', 'region_id', 'status', 'org_id'],
+      [name, email, passwordHash, roleId, regionId, 'active', orgIds[orgName]],
       'email',
     )
   }

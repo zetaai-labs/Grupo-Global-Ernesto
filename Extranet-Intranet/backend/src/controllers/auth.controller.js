@@ -5,17 +5,35 @@ import { config } from '../config/env.js'
 import { query } from '../config/database.js'
 import { generateSecret, otpauthUrl, verifyCode } from '../services/totp.js'
 import { sendMail, smtpConfigured } from '../services/email.service.js'
+import { MFA_REQUIRED_ROLES, roleCode } from '../config/roles.js'
 
-const USER_QUERY = `
-  SELECT u.id, u.name, u.email, u.password_hash, u.mfa_secret, u.mfa_enabled,
-         r.name AS role, rg.code AS region
+const USER_FIELDS = `
+  SELECT u.id, u.uuid, u.name, u.email, u.password_hash, u.mfa_secret, u.mfa_enabled, u.org_id,
+         r.name AS role, r.code AS role_code, rg.code AS region, o.legal_name AS organization
   FROM users u
   JOIN roles r ON r.id = u.role_id
   LEFT JOIN regions rg ON rg.id = u.region_id
-  WHERE LOWER(u.email) = LOWER($1) AND u.status = 'active'
+  LEFT JOIN organizations o ON o.org_id = u.org_id
 `
 
-const publicUser = ({ id, name, email, role, region }) => ({ id, name, email, role, region })
+const USER_QUERY = `${USER_FIELDS} WHERE LOWER(u.email) = LOWER($1) AND u.status = 'active'`
+
+const publicUser = (user) => ({
+  id: user.id,
+  uuid: user.uuid,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  role_code: user.role_code || roleCode(user.role),
+  region: user.region,
+  org_id: user.org_id,
+  organization: user.organization,
+  mfa_enabled: Boolean(user.mfa_enabled),
+})
+
+/** Technical Spec §3.1: privileged roles must use MFA (enforced when MFA_ENFORCE=true). */
+const mustSetUpMfa = (user) =>
+  config.security.enforceMfa && MFA_REQUIRED_ROLES.includes(user.role) && !user.mfa_enabled
 
 async function audit(userId, action, details = {}) {
   await query(
@@ -24,9 +42,9 @@ async function audit(userId, action, details = {}) {
   )
 }
 
-function signToken(user) {
+function signToken(user, extra = {}) {
   return jwt.sign(
-    { sub: user.id, name: user.name, email: user.email, role: user.role },
+    { sub: user.id, name: user.name, email: user.email, role: user.role, ...extra },
     config.jwtSecret,
     { expiresIn: '8h' },
   )
@@ -54,6 +72,17 @@ export async function login(req, res) {
       expiresIn: '5m',
     })
     return res.json({ data: { mfa_required: true, mfa_token: mfaToken } })
+  }
+
+  if (mustSetUpMfa(user)) {
+    await audit(user.id, 'MFA_SETUP_REQUIRED')
+    return res.json({
+      data: {
+        token: signToken(user, { mfa_setup: true }),
+        user: publicUser(user),
+        mfa_setup_required: true,
+      },
+    })
   }
 
   return res.json({
@@ -87,10 +116,18 @@ export async function mfaEnable(req, res) {
   }
   await query('UPDATE users SET mfa_enabled = true WHERE id = $1', [req.user.sub])
   await audit(req.user.sub, 'MFA_ENABLED')
-  return res.json({ message: 'Multi-factor authentication enabled.' })
+  // A session that was limited to MFA setup becomes a full session.
+  const { rows } = await query(`${USER_FIELDS} WHERE u.id = $1`, [req.user.sub])
+  return res.json({
+    message: 'Multi-factor authentication enabled.',
+    data: { token: signToken(rows[0]), user: publicUser(rows[0]) },
+  })
 }
 
 export async function mfaDisable(req, res) {
+  if (config.security.enforceMfa && MFA_REQUIRED_ROLES.includes(req.user.role)) {
+    return res.status(403).json({ message: 'MFA is mandatory for your role and cannot be disabled.' })
+  }
   const secret = await currentSecret(req.user.sub)
   if (!secret || !verifyCode(secret, req.body?.code)) {
     return res.status(400).json({ message: 'Invalid authentication code.' })
@@ -112,12 +149,7 @@ export async function mfaVerify(req, res) {
     return res.status(401).json({ message: 'Invalid MFA token.' })
   }
 
-  const { rows } = await query(
-    `SELECT u.id, u.name, u.email, u.mfa_secret, r.name AS role, rg.code AS region
-     FROM users u JOIN roles r ON r.id = u.role_id
-     LEFT JOIN regions rg ON rg.id = u.region_id WHERE u.id = $1 AND u.status = 'active'`,
-    [claims.sub],
-  )
+  const { rows } = await query(`${USER_FIELDS} WHERE u.id = $1 AND u.status = 'active'`, [claims.sub])
   const user = rows[0]
   if (!user || !verifyCode(user.mfa_secret, code)) {
     return res.status(401).json({ message: 'Invalid authentication code.' })
@@ -193,14 +225,7 @@ export async function confirmPasswordReset(req, res) {
 }
 
 export async function me(req, res) {
-  const { rows } = await query(
-    `SELECT u.id, u.name, u.email, r.name AS role, rg.code AS region
-     FROM users u
-     JOIN roles r ON r.id = u.role_id
-     LEFT JOIN regions rg ON rg.id = u.region_id
-     WHERE u.id = $1 AND u.status = 'active'`,
-    [req.user.sub],
-  )
+  const { rows } = await query(`${USER_FIELDS} WHERE u.id = $1 AND u.status = 'active'`, [req.user.sub])
 
   if (!rows[0]) {
     return res.status(401).json({ message: 'Account no longer exists.' })

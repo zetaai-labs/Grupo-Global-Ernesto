@@ -7,6 +7,7 @@ import { writeAudit } from '../services/audit.js'
 import { sendStoredFile } from '../services/storage.service.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
 import { withRegion } from '../services/scope.js'
+import { OPERATIONS_ROLES } from '../config/roles.js'
 
 const publicSchema = z.object({
   sender_name: z.string().trim().min(1).max(150),
@@ -35,7 +36,7 @@ export async function publicUpload(req, res) {
       parsed.data.message || null,
     ],
   )
-  await notifyRoles(['admin', 'manager'], {
+  await notifyRoles(OPERATIONS_ROLES, {
     type: 'received-file',
     title: `File received: ${req.file.originalname}`,
     body: `From ${parsed.data.sender_name} <${parsed.data.sender_email}>`,

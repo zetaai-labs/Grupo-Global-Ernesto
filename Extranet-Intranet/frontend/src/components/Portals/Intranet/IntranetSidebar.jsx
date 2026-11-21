@@ -11,13 +11,20 @@ const navigation = [
     ]
   },
   {
+    label: 'BUSINESS',
+    items: [
+      { name: 'Organizations & KYC', path: '/intranet/organizations', icon: '◈', roles: ['admin', 'tech_admin', 'hr', 'manager'] },
+      { name: 'CRM Pipeline', path: '/intranet/crm', icon: '€' }
+    ]
+  },
+  {
     label: 'DOCUMENT MANAGEMENT',
     items: [
       { name: 'Cloud Folders', path: '/intranet/cloud-folders', icon: '▤' },
       { name: 'Linked Folder', path: '/intranet/linked-folder', icon: '⇄' },
       { name: 'MetaLinks', path: '/intranet/metalinks', icon: '↗' },
       { name: 'Web Received Files', path: '/intranet/web-received-files', icon: '⇩' },
-      { name: 'Backups', path: '/intranet/backups', icon: '◷', roles: ['admin'] },
+      { name: 'Backups', path: '/intranet/backups', icon: '◷', roles: ['admin', 'tech_admin'] },
       { name: 'Recycle Bin', path: '/intranet/recycle-bin', icon: '▧' }
     ]
   },
@@ -41,8 +48,8 @@ const navigation = [
     label: 'ADMINISTRATION',
     items: [
       { name: 'System Web Page', path: '/intranet/system-web-page', icon: '▣' },
-      { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin'] },
-      { name: 'User Management', path: '/intranet/user-management', icon: '♙', roles: ['admin', 'hr'] },
+      { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin', 'tech_admin'] },
+      { name: 'User Management', path: '/intranet/user-management', icon: '♙', roles: ['admin', 'tech_admin', 'hr'] },
       { name: 'Security (MFA)', path: '/intranet/security', icon: '✓' }
     ]
   }
