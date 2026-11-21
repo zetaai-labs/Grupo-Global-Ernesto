@@ -22,6 +22,7 @@ import Unauthorized from './components/Auth/Unauthorized.jsx'
 import ReceivedFileUpload from './components/Public/ReceivedFileUpload.jsx'
 import Onboarding from './components/Public/Onboarding.jsx'
 import Organizations from './components/Portals/Intranet/Features/Organizations/Organizations.jsx'
+import Ethics from './components/Portals/Intranet/Features/Ethics/Ethics.jsx'
 import InvestorVault from './components/Portals/Intranet/Features/InvestorVault/InvestorVault.jsx'
 import Projects from './components/Portals/Intranet/Features/Projects/Projects.jsx'
 import Crm from './components/Portals/Intranet/Features/Crm/Crm.jsx'
@@ -96,6 +97,7 @@ const router = createBrowserRouter(
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
         <Route path="security" element={<MfaSettings />} />
+        <Route path="ethics" element={<Ethics />} />
         <Route
           path="investor-vault"
           element={

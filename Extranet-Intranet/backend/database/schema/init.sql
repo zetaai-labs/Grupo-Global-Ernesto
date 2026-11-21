@@ -537,3 +537,30 @@ CREATE TABLE IF NOT EXISTS vault_documents (
   uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- §4.6 governance_compliance: Code of Ethics acknowledgements and contract linkage.
+CREATE TABLE IF NOT EXISTS governance_compliance (
+  record_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  ethics_code_tier TEXT NOT NULL CHECK (ethics_code_tier IN ('TIER_1_BASIC', 'TIER_2_EXECUTIVE', 'TIER_3_CRITICAL_VAULT')),
+  employment_contract_ref VARCHAR(128) NOT NULL,
+  audit_timestamp TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, ethics_code_tier)
+);
+
+-- §5.2 Code of Ethics disciplinary regime (three escalating tiers).
+CREATE TABLE IF NOT EXISTS governance_sanctions (
+  sanction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tier INT NOT NULL CHECK (tier IN (1, 2, 3)),
+  reason TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'CLEARED', 'PERMANENT')),
+  remediation_due DATE,
+  suspended_until DATE,
+  issued_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  cleared_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  cleared_at TIMESTAMPTZ,
+  clearance_notes TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_sanctions_user ON governance_sanctions(user_id, issued_at DESC);

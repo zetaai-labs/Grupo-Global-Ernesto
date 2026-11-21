@@ -52,7 +52,8 @@ const navigation = [
       { name: 'System Web Page', path: '/intranet/system-web-page', icon: '▣' },
       { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin', 'tech_admin'] },
       { name: 'User Management', path: '/intranet/user-management', icon: '♙', roles: ['admin', 'tech_admin', 'hr'] },
-      { name: 'Security (MFA)', path: '/intranet/security', icon: '✓' }
+      { name: 'Security (MFA)', path: '/intranet/security', icon: '✓' },
+      { name: 'Ethics & Compliance', path: '/intranet/ethics', icon: '⚖' }
     ]
   }
 ]

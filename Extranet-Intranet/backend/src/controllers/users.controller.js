@@ -75,7 +75,18 @@ export async function updateUserStatus(req, res) {
     return res.status(400).json({ message: 'Status must be active or suspended.' })
   }
 
-  const { rowCount } = await query("UPDATE users SET status = $1 WHERE id = $2 AND status <> 'erased'", [
+  // A Code of Ethics suspension can only be lifted through HR clearance (Schema Document §5.2).
+  if (status === 'active') {
+    const sanctioned = await query(
+      "SELECT 1 FROM governance_sanctions WHERE user_id = $1 AND tier = 2 AND status = 'ACTIVE'",
+      [req.params.id],
+    )
+    if (sanctioned.rowCount) {
+      return res.status(409).json({ message: 'This account is under a Tier 2 suspension. Clear it in Ethics & Compliance.' })
+    }
+  }
+
+  const { rowCount } = await query("UPDATE users SET status = $1 WHERE id = $2 AND status NOT IN ('erased', 'expelled')", [
     status,
     req.params.id,
   ])

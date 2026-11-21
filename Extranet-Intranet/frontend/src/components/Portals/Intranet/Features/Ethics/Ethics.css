@@ -1,0 +1,221 @@
+.eth-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.eth-notice button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.eth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.eth-code,
+.eth-regime {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.eth-code h3,
+.eth-regime h3,
+.eth-form h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.eth-code h3 small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.eth-code ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+}
+
+.eth-signed {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--green-soft);
+  color: var(--green-dark);
+  font-size: 12px;
+}
+
+.eth-signed small {
+  font-size: 9px;
+  word-break: break-all;
+}
+
+.eth-sign {
+  display: grid;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.eth-sign label {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.eth-sign .primary-action {
+  justify-self: start;
+}
+
+.eth-sign .primary-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.eth-regime dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.eth-regime dt {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.eth-regime dd {
+  margin: 2px 0 0;
+  color: #5d6072;
+  font-size: 12px;
+}
+
+.eth-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.eth-form h3,
+.eth-form textarea {
+  grid-column: 1 / -1;
+}
+
+.eth-form .primary-action {
+  justify-self: start;
+}
+
+.eth-form select,
+.eth-form input,
+.eth-form textarea,
+.eth-clear input {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.eth-days {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.eth-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.eth-list li {
+  display: grid;
+  gap: 3px;
+  padding: 9px 11px;
+  border-left: 3px solid var(--border);
+  border-radius: 0 8px 8px 0;
+  background: var(--background);
+  font-size: 12px;
+}
+
+.eth-list small,
+.eth-muted {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.eth-t1 { border-left-color: #f59e0b !important; }
+.eth-t2 { border-left-color: #ea580c !important; }
+.eth-t3 { border-left-color: #be123c !important; }
+
+.eth-clear {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.eth-clear input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.eth-clear button {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #4338ca;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.eth-table-wrap {
+  overflow-x: auto;
+}
+
+.eth-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.eth-table th,
+.eth-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.eth-table th {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.eth-pill {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.eth-pill.ok { background: var(--green-soft); color: var(--green-dark); }
+.eth-pill.warn { background: #fff4e5; color: #a35b00; }

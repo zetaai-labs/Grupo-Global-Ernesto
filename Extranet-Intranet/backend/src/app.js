@@ -21,6 +21,7 @@ import contentRoutes from './routes/content.routes.js'
 import notificationRoutes from './routes/notifications.routes.js'
 import organizationRoutes, { publicOnboardingRoutes } from './routes/organizations.routes.js'
 import crmRoutes, { crmWebhookRoutes } from './routes/crm.routes.js'
+import governanceRoutes from './routes/governance.routes.js'
 import vaultRoutes from './routes/vault.routes.js'
 import projectRoutes from './routes/projects.routes.js'
 import { authenticate } from './middleware/authenticate.js'
@@ -75,6 +76,7 @@ export function createApp() {
   app.use('/api/notifications', authenticate, notificationRoutes)
   app.use('/api/organizations', authenticate, organizationRoutes)
   app.use('/api/crm', authenticate, requireIntranet, crmRoutes)
+  app.use('/api/governance', authenticate, governanceRoutes)
   app.use('/api/vault', authenticate, vaultRoutes)
   app.use('/api/projects', authenticate, projectRoutes)
 
