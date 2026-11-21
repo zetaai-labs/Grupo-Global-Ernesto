@@ -18,7 +18,19 @@ const pageNames = {
   emails: 'Emails',
   'external-shares': 'External Shares',
   'system-web-page': 'System Web Page',
-  'user-management': 'User Management'
+  'user-management': 'User Management',
+  organizations: 'Organizations & KYC',
+  crm: 'CRM Pipeline',
+  projects: 'Projects & Programs',
+  'investor-vault': 'Investor Vault',
+  ethics: 'Ethics & Compliance',
+  community: 'Community',
+  courses: 'Courses & Events',
+  calendar: 'Calendar',
+  chat: 'Team Chat',
+  'video-conferencing': 'Video Conferencing',
+  'audit-log': 'Audit Log',
+  security: 'Security'
 }
 
 function IntranetTopbar() {

@@ -182,6 +182,56 @@ const es = {
   'No account is required. Our staff will review the file you submit.': 'No necesitas cuenta. Nuestro equipo revisará el archivo que envíes.',
   'Access restricted': 'Acceso restringido',
   'Your account does not have permission to open this workspace.': 'Tu cuenta no tiene permiso para abrir este espacio.',
+  // ---- Business modules (Schema & Technical documents) ----
+  BUSINESS: 'NEGOCIO',
+  CONFIDENTIAL: 'CONFIDENCIAL',
+  COMPLIANCE: 'CUMPLIMIENTO',
+  GOVERNANCE: 'GOBERNANZA',
+  COMMUNITY: 'COMUNIDAD',
+  'LEARNING & EVENTS': 'FORMACIÓN Y EVENTOS',
+  'INVESTOR WORKSPACE': 'ESPACIO DE INVERSORES',
+  'Confidential Investor': 'Inversor confidencial',
+  investor: 'Inversor',
+  tech_admin: 'Administrador técnico',
+  'Organizations & KYC': 'Organizaciones y KYC',
+  'CRM Pipeline': 'Embudo CRM',
+  'Projects & Programs': 'Proyectos y programas',
+  'Investor Vault': 'Bóveda de inversores',
+  'Ethics & Compliance': 'Ética y cumplimiento',
+  Community: 'Comunidad',
+  'Courses & Events': 'Cursos y eventos',
+  'Registry of business units, partners, clients, vendors and investors, with the 5-step KYC/KYB verification.':
+    'Registro de unidades de negocio, socios, clientes, proveedores e inversores, con verificación KYC/KYB en 5 pasos.',
+  'Business relationships across corridors, from first lead to active contract, with confidentiality controls.':
+    'Relaciones de negocio en todos los corredores, del primer contacto al contrato activo, con controles de confidencialidad.',
+  'Joint ventures, corporate initiatives, real estate developments and software deployments across the corridors.':
+    'Empresas conjuntas, iniciativas corporativas, promociones inmobiliarias y despliegues de software en los corredores.',
+  'Isolated, separately encrypted investor records and tier-1 deal rooms. Every access is logged.':
+    'Registros de inversores aislados y cifrados por separado, y salas de operaciones de nivel 1. Cada acceso queda registrado.',
+  'Platform access is conditioned on the corporate Code of Ethics, with a three-tier disciplinary regime.':
+    'El acceso a la plataforma está condicionado al Código Ético corporativo, con un régimen disciplinario de tres niveles.',
+  'Activity feed, corporate directory and sector committees across all delegations.':
+    'Actividad, directorio corporativo y comités sectoriales de todas las delegaciones.',
+  'Compliance courses, technical workshops and corporate events, with verifiable digital certificates.':
+    'Cursos de cumplimiento, talleres técnicos y eventos corporativos, con certificados digitales verificables.',
+  'Register your organisation': 'Registra tu organización',
+  'Join the Grupo Global ecosystem. Every organisation is verified in 5 steps to meet EU anti-money-laundering rules.':
+    'Únete al ecosistema Grupo Global. Cada organización se verifica en 5 pasos para cumplir la normativa europea contra el blanqueo de capitales.',
+  'Pre-registration': 'Prerregistro',
+  'Legal documents': 'Documentos legales',
+  'Automatic validation': 'Validación automática',
+  'AML / PEP screening': 'Control AML / PEP',
+  'Approval & credentials': 'Aprobación y credenciales',
+  'Confidentiality agreement (NDA)': 'Acuerdo de confidencialidad (NDA)',
+  'I accept the NDA': 'Acepto el NDA',
+  'Code of Ethics': 'Código Ético',
+  'Presidential Master Console': 'Consola presidencial',
+  'DevOps & Tech Control Center': 'Centro de control técnico y DevOps',
+  'HR Operations Dashboard': 'Panel de operaciones de RR. HH.',
+  'Employee & Delegate Workspace': 'Espacio de empleados y delegados',
+  'Quick access': 'Acceso rápido',
+  'Jump into the most used areas of the intranet.': 'Accede a las áreas más usadas de la intranet.',
+  'Verify a certificate': 'Verificar un certificado',
   'Create new': 'Crear nuevo',
   'Your records will appear here.': 'Tus registros aparecerán aquí.',
 }

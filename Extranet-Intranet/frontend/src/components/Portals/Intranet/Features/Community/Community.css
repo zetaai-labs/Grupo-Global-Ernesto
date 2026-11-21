@@ -1,0 +1,231 @@
+.com-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.com-notice button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.com-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.com-tabs button {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.com-tabs button.active {
+  border-color: var(--purple);
+  background: var(--purple-soft);
+  color: var(--purple);
+  font-weight: 600;
+}
+
+.com-feed {
+  display: grid;
+  gap: 12px;
+  max-width: 760px;
+}
+
+.com-composer {
+  display: grid;
+  gap: 8px;
+}
+
+.com-composer > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.com-composer textarea,
+.com-composer select,
+.com-filter,
+.com-toolbar input,
+.com-toolbar select,
+.com-bio input {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.com-composer textarea {
+  resize: vertical;
+}
+
+.com-filter {
+  justify-self: start;
+}
+
+.com-post {
+  display: flex;
+  gap: 12px;
+}
+
+.com-post > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.com-post header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-size: 12px;
+}
+
+.com-post header small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.com-post header em {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--purple-soft);
+  color: var(--purple);
+  font-size: 10px;
+  font-style: normal;
+}
+
+.com-post p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.com-post > button {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.com-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: var(--purple-soft);
+  color: var(--purple);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.com-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.com-toolbar input {
+  flex: 1;
+  min-width: 200px;
+}
+
+.com-people {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 12px;
+}
+
+.com-person {
+  display: flex;
+  gap: 12px;
+}
+
+.com-person > div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.com-person span {
+  color: #5d6072;
+  font-size: 11px;
+}
+
+.com-person small,
+.com-committee small {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+}
+
+.com-person a {
+  color: var(--purple);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.com-bio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.com-bio label {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+  min-width: 220px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.com-bio button,
+.com-committee button:not(.primary-action) {
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.com-committee {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  font-size: 13px;
+}
+
+.com-committee p {
+  margin: 0;
+  color: #5d6072;
+  font-size: 12px;
+}
+
+.com-committee button {
+  justify-self: start;
+}

@@ -1,8 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { createHash } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { query, pool } from '../../src/config/database.js'
 import { config } from '../../src/config/env.js'
+import { encryptProfile, vaultConfigured } from '../../src/services/vault.service.js'
 
 if (!config.seedUserPassword) {
   throw new Error('SEED_USER_PASSWORD must be set before seeding.')
@@ -310,6 +312,120 @@ async function seed() {
        SELECT $1, 'announcement', 'Welcome to Global Group', 'Your workspace is ready. Notifications for approvals, messages and meetings appear here.', NULL
        WHERE NOT EXISTS (SELECT 1 FROM notifications WHERE user_id = $1 AND title = 'Welcome to Global Group')`,
       [id],
+    )
+  }
+
+  // ---- NDAs issued to the demo external organisations (accepted from the Extranet banner) ----
+  for (const name of ['Iberia Retail S.L.', 'Mumbai Textiles Pvt. Ltd.', 'Vikas Metal Works', 'Atlas Gulf Capital']) {
+    await query(
+      `INSERT INTO nda_records (org_id, nda_version, document_hash)
+       SELECT $1::uuid, 'GG-NDA-2026.1', $2
+       WHERE NOT EXISTS (SELECT 1 FROM nda_records WHERE org_id = $1::uuid)`,
+      [orgIds[name], createHash('sha256').update(`GG-NDA-2026.1|${orgIds[name]}|${name}`).digest('hex')],
+    )
+  }
+
+  // ---- CRM pipeline ----
+  for (const [title, orgName, type, stage, confidentiality, value, manager] of [
+    ['Iberia Retail — store roll-out 2027', 'Iberia Retail S.L.', 'CLIENT', 'ACTIVE_CONTRACT', 'INTERNAL', 250000, managerId],
+    ['Mumbai Textiles — annual supply agreement', 'Mumbai Textiles Pvt. Ltd.', 'VENDOR', 'DUE_DILIGENCE', 'RESTRICTED', 120000, managerId],
+    ['Vikas Metal Works — India distribution', 'Vikas Metal Works', 'STRATEGIC_PARTNER', 'PROPOSAL', 'INTERNAL', 180000, employeeId],
+    ['Andes Trade Partners — LATAM entry', 'Andes Trade Partners S.A.', 'STRATEGIC_PARTNER', 'LEAD', 'INTERNAL', 90000, managerId],
+  ]) {
+    const inserted = await query(
+      `INSERT INTO crm_relationships (entity_id, title, contact_type, pipeline_stage, confidentiality_level, estimated_value_eur, assigned_manager, created_by)
+       SELECT $1::uuid, $2::varchar, $3, $4, $5, $6, $7::int, $8::int
+       WHERE NOT EXISTS (SELECT 1 FROM crm_relationships WHERE title = $2::varchar) RETURNING rel_id`,
+      [orgIds[orgName], title, type, stage, confidentiality, value, manager, ownerId],
+    )
+    if (inserted.rows[0]) {
+      await query("INSERT INTO crm_activities (rel_id, kind, body, created_by) VALUES ($1, 'SYSTEM', $2, $3)",
+        [inserted.rows[0].rel_id, `Demo relationship at stage ${stage}.`, ownerId])
+    }
+  }
+
+  // ---- Projects & programs ----
+  for (const [title, corridor, budget, phase, unit, owner, partner, milestones] of [
+    ['Spain–India Retail Corridor', 'SPAIN_EU_INDIA', 480000, 'EXECUTION', 'Grupo Global Nexus', managerId, 'Iberia Retail S.L.', [
+      ['Store survey complete', '2026-12-15', 'DONE', true], ['First delivery to Madrid', '2027-01-20', 'IN_PROGRESS', true], ['Internal budget review', '2027-02-01', 'PLANNED', false],
+    ]],
+    ['Dubai Investment Hub', 'GCC_DUBAI', 950000, 'PLANNING', 'Financiera Grupo Global', managerId, null, [['Regulatory assessment', '2027-02-15', 'PLANNED', false]]],
+    ['Global Group Platform Go-Live', 'SPAIN_EU_INDIA', 220000, 'EXECUTION', 'Grupo Global Net', employeeId, null, [
+      ['Staging environment', '2026-12-15', 'IN_PROGRESS', false], ['Penetration test', '2027-01-10', 'PLANNED', false],
+    ]],
+  ]) {
+    const inserted = await query(
+      `INSERT INTO projects_programs (title, corridor, budget_eur, phase, lead_entity, owner_id, start_date, end_date, created_by)
+       SELECT $1::varchar, $2, $3, $4, $5::uuid, $6::int, '2026-11-01', '2027-06-30', $7::int
+       WHERE NOT EXISTS (SELECT 1 FROM projects_programs WHERE LOWER(title) = LOWER($1::varchar)) RETURNING project_id`,
+      [title, corridor, budget, phase, orgIds[unit], owner, ownerId],
+    )
+    const projectId = inserted.rows[0]?.project_id
+    if (!projectId) continue
+    await query("INSERT INTO project_members (project_id, user_id, project_role) VALUES ($1, $2, 'OWNER') ON CONFLICT DO NOTHING", [projectId, owner])
+    if (owner !== employeeId) await query('INSERT INTO project_members (project_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [projectId, employeeId])
+    if (partner) await query('INSERT INTO project_partners (project_id, org_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [projectId, orgIds[partner]])
+    for (const [name, due, status, shared] of milestones) {
+      await query(
+        'INSERT INTO project_milestones (project_id, title, due_date, status, shared_with_partners, created_by) VALUES ($1, $2, $3, $4, $5, $6)',
+        [projectId, name, due, status, shared, ownerId],
+      )
+    }
+  }
+
+  // ---- Investor Vault (only when the vault key is configured) ----
+  if (vaultConfigured()) {
+    const investor = await query(
+      `INSERT INTO investors_vault (org_id, encrypted_profile, investment_ticket_range, sector_focus, created_by)
+       VALUES ($1, $2, 'EUR 1M-5M', 'FINTECH,REAL_ESTATE', $3)
+       ON CONFLICT (org_id) WHERE org_id IS NOT NULL DO NOTHING RETURNING investor_id`,
+      [orgIds['Atlas Gulf Capital'], encryptProfile({ full_name: 'Atlas Gulf Capital (demo)', email: 'investor@gmail.com', nationality: 'UAE', notes: 'Fictional demo investor.' }), ownerId],
+    )
+    if (investor.rows[0]) {
+      const room = await query(
+        `INSERT INTO vault_deal_rooms (title, summary, sector, ticket_range, created_by)
+         VALUES ('Bengaluru Tech Park — Series A', 'Fictional demo deal room: mixed-use technology campus in Bengaluru.', 'REAL_ESTATE', 'EUR 1M-5M', $1)
+         RETURNING room_id`,
+        [ownerId],
+      )
+      await query('INSERT INTO vault_room_access (room_id, investor_id, granted_by) VALUES ($1, $2, $3)', [room.rows[0].room_id, investor.rows[0].investor_id, ownerId])
+    }
+  }
+
+  // ---- Community ----
+  for (const [name, sector, description] of [
+    ['Fintech & Investment Committee', 'FINTECH', 'Cross-border finance and investment opportunities.'],
+    ['Real Estate Committee', 'REAL_ESTATE', 'International property portfolio and developments.'],
+    ['Cybersecurity Committee', 'CYBERSECURITY', 'Security governance, audits and threat intelligence.'],
+    ['Healthcare Committee', 'HEALTHCARE', 'Clinical operations and healthcare infrastructure.'],
+  ]) {
+    await query(
+      'INSERT INTO community_committees (name, sector, description) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING',
+      [name, sector, description],
+    )
+  }
+  await query(
+    `INSERT INTO community_posts (author_id, body)
+     SELECT $1::int, $2 WHERE NOT EXISTS (SELECT 1 FROM community_posts WHERE body = $2)`,
+    [ownerId, 'Welcome to the Grupo Global community. Share updates from your delegation here.'],
+  )
+
+  // ---- Courses & events ----
+  for (const [type, title, description, tier, lessons, quiz] of [
+    ['COMPLIANCE_COURSE', 'Code of Ethics & Data Protection', 'Mandatory course on confidentiality, GDPR and the disciplinary regime.', 'ALL_EMPLOYEES',
+      [{ title: 'Protecting information', body: 'Share documents only through authorised channels. Never send confidential files to personal accounts.' }],
+      [
+        { question: 'How should confidential documents be shared with a partner?', options: ['Personal email', 'External Shares or MetaLinks', 'Messaging apps'], answer: 1 },
+        { question: 'What is the consequence of attempting to access the Investor Vault without authorisation?', options: ['A reminder', 'Tier 1 warning', 'Tier 3 expulsion'], answer: 2 },
+      ]],
+    ['TECHNICAL_WORKSHOP', 'Multi-Factor Authentication Setup', 'How to protect your account with an authenticator app.', 'EXECUTIVES',
+      [{ title: 'Enable MFA', body: 'Open Security (MFA), scan the code with an authenticator app and confirm with a 6-digit code.' }], []],
+    ['EVENT', 'Spain–India Bilateral Summit 2027', 'Hybrid summit for delegations, partners and investors.', 'ALL_EMPLOYEES', [], []],
+  ]) {
+    await query(
+      `INSERT INTO community_events_courses (module_type, title, description, access_tier, lessons, quiz, created_by)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (title) DO NOTHING`,
+      [type, title, description, tier, JSON.stringify(lessons), JSON.stringify(quiz), ownerId],
     )
   }
 

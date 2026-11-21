@@ -7,7 +7,8 @@ const navigation = [
   {
     label: 'WORKSPACE',
     items: [
-      { name: 'Overview', path: '/intranet/overview', icon: '⌂' }
+      { name: 'Overview', path: '/intranet/overview', icon: '⌂' },
+      { name: 'Community', path: '/intranet/community', icon: '✦' }
     ]
   },
   {
@@ -36,7 +37,8 @@ const navigation = [
       { name: 'AutoFlow', path: '/intranet/autoflow', icon: '⟳' },
       { name: 'Calendar', path: '/intranet/calendar', icon: '◷' },
       { name: 'Emails', path: '/intranet/emails', icon: '✉' },
-      { name: 'External Shares', path: '/intranet/external-shares', icon: '♧' }
+      { name: 'External Shares', path: '/intranet/external-shares', icon: '♧' },
+      { name: 'Courses & Events', path: '/intranet/courses', icon: '🎓' }
     ]
   },
   {

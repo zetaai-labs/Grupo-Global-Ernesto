@@ -1,0 +1,229 @@
+.crs-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.crs-notice button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.crs-create {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.crs-create h3,
+.crs-wide {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.crs-create input:not([type='radio']),
+.crs-create select,
+.crs-create textarea {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.crs-field {
+  display: grid;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.crs-builder {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.crs-builder fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.crs-builder label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.crs-builder label input:not([type='radio']) {
+  flex: 1;
+}
+
+.crs-builder button,
+.crs-actions button:not(.primary-action),
+.crs-detail header button {
+  justify-self: start;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.crs-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.crs-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(300px, 1.4fr);
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .crs-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.crs-list {
+  display: grid;
+  gap: 10px;
+}
+
+.crs-card {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.crs-card.selected {
+  border-color: var(--purple);
+  box-shadow: 0 0 0 1px var(--purple);
+}
+
+.crs-card small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.crs-type,
+.crs-status {
+  justify-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.crs-type-compliance_course { background: #fff4e5; color: #a35b00; }
+.crs-type-technical_workshop { background: var(--purple-soft); color: var(--purple); }
+.crs-type-event { background: #e0f2fe; color: #075985; }
+.crs-status-completed { background: var(--green-soft); color: var(--green-dark); }
+.crs-status-failed { background: #fff1f2; color: #be123c; }
+.crs-status-enrolled { background: #f1f5f9; color: #475569; }
+
+.crs-detail {
+  display: grid;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.crs-detail header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.crs-detail h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.crs-detail p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.crs-enrol {
+  justify-self: start;
+}
+
+.crs-lesson {
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--background);
+}
+
+.crs-lesson h3,
+.crs-quiz h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.crs-quiz {
+  display: grid;
+  gap: 10px;
+}
+
+.crs-quiz fieldset {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.crs-quiz legend {
+  padding: 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.crs-quiz label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.crs-quiz .primary-action {
+  justify-self: start;
+}
+
+.crs-result {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.crs-result.ok { background: var(--green-soft); color: var(--green-dark); }
+.crs-result.bad { background: #fff1f2; color: #881337; }
+
+.crs-result small {
+  font-size: 10px;
+  word-break: break-all;
+}

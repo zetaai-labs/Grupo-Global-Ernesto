@@ -21,7 +21,10 @@ import ProtectedRoute from './components/Auth/ProtectedRoute.jsx'
 import Unauthorized from './components/Auth/Unauthorized.jsx'
 import ReceivedFileUpload from './components/Public/ReceivedFileUpload.jsx'
 import Onboarding from './components/Public/Onboarding.jsx'
+import VerifyCertificate from './components/Public/VerifyCertificate.jsx'
 import Organizations from './components/Portals/Intranet/Features/Organizations/Organizations.jsx'
+import Courses from './components/Portals/Intranet/Features/Courses/Courses.jsx'
+import Community from './components/Portals/Intranet/Features/Community/Community.jsx'
 import Ethics from './components/Portals/Intranet/Features/Ethics/Ethics.jsx'
 import InvestorVault from './components/Portals/Intranet/Features/InvestorVault/InvestorVault.jsx'
 import Projects from './components/Portals/Intranet/Features/Projects/Projects.jsx'
@@ -73,6 +76,7 @@ const router = createBrowserRouter(
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/upload" element={<ReceivedFileUpload />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/verify-certificate" element={<VerifyCertificate />} />
 
       {/* Intranet Portal — employees and administrators only */}
       <Route
@@ -97,6 +101,8 @@ const router = createBrowserRouter(
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
         <Route path="security" element={<MfaSettings />} />
+        <Route path="courses" element={<Courses />} />
+        <Route path="community" element={<Community />} />
         <Route path="ethics" element={<Ethics />} />
         <Route
           path="investor-vault"

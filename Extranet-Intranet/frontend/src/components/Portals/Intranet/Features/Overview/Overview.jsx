@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
+import RoleConsole from './RoleConsole'
 import './Overview.css'
 import { useT } from '../../../../../i18n'
 
@@ -42,12 +43,14 @@ function Overview() {
 
       {notice && <div className="cloud-notice">{notice}</div>}
 
+      <RoleConsole />
+
       <div className="feature-stats">
         {cards.map((card) => (
           <div className="stat-card" key={card.label}>
-            <div className="stat-top"><span>{card.label}</span><span className="stat-icon">▤</span></div>
+            <div className="stat-top"><span>{t(card.label)}</span><span className="stat-icon">▤</span></div>
             <strong>{stats ? (card.value ?? 0) : '…'}</strong>
-            <small>{card.note}</small>
+            <small>{t(card.note)}</small>
           </div>
         ))}
       </div>
@@ -55,8 +58,8 @@ function Overview() {
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>Quick access</h3>
-            <p>Jump into the most used areas of the intranet.</p>
+            <h3>{t('Quick access')}</h3>
+            <p>{t('Jump into the most used areas of the intranet.')}</p>
           </div>
         </div>
         <div className="overview-links">

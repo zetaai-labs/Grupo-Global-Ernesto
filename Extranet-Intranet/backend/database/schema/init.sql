@@ -564,3 +564,56 @@ CREATE TABLE IF NOT EXISTS governance_sanctions (
   clearance_notes TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_sanctions_user ON governance_sanctions(user_id, issued_at DESC);
+
+-- Technical Spec §1.2 Module 1: Community (activity feed and sector committees).
+CREATE TABLE IF NOT EXISTS community_committees (
+  committee_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL UNIQUE,
+  sector VARCHAR(50) NOT NULL,
+  description TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS community_committee_members (
+  committee_id UUID NOT NULL REFERENCES community_committees(committee_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (committee_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS community_posts (
+  post_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  author_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  committee_id UUID REFERENCES community_committees(committee_id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_community_posts ON community_posts(created_at DESC);
+
+-- §4.7 community_events_courses: training modules, compliance webinars, corporate events.
+CREATE TABLE IF NOT EXISTS community_events_courses (
+  item_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  module_type TEXT NOT NULL CHECK (module_type IN ('EVENT', 'COMPLIANCE_COURSE', 'TECHNICAL_WORKSHOP')),
+  title VARCHAR(255) NOT NULL UNIQUE,
+  description TEXT,
+  access_tier VARCHAR(50) NOT NULL DEFAULT 'ALL_EMPLOYEES' CHECK (access_tier IN ('ALL_EMPLOYEES', 'DELEGATES_ONLY', 'EXECUTIVES')),
+  lessons JSONB NOT NULL DEFAULT '[]'::jsonb,
+  quiz JSONB NOT NULL DEFAULT '[]'::jsonb,
+  pass_mark INT NOT NULL DEFAULT 70 CHECK (pass_mark BETWEEN 1 AND 100),
+  starts_at TIMESTAMPTZ,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Participation per user; certificate_hash is the SHA-256 of the completion certificate.
+CREATE TABLE IF NOT EXISTS course_enrollments (
+  item_id UUID NOT NULL REFERENCES community_events_courses(item_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'ENROLLED' CHECK (status IN ('ENROLLED', 'FAILED', 'COMPLETED')),
+  attempts INT NOT NULL DEFAULT 0,
+  best_score INT,
+  completed_at TIMESTAMPTZ,
+  certificate_hash VARCHAR(64) UNIQUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (item_id, user_id)
+);

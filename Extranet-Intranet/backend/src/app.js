@@ -21,6 +21,8 @@ import contentRoutes from './routes/content.routes.js'
 import notificationRoutes from './routes/notifications.routes.js'
 import organizationRoutes, { publicOnboardingRoutes } from './routes/organizations.routes.js'
 import crmRoutes, { crmWebhookRoutes } from './routes/crm.routes.js'
+import communityRoutes from './routes/community.routes.js'
+import courseRoutes, { publicCertificateRoutes } from './routes/courses.routes.js'
 import governanceRoutes from './routes/governance.routes.js'
 import vaultRoutes from './routes/vault.routes.js'
 import projectRoutes from './routes/projects.routes.js'
@@ -76,6 +78,8 @@ export function createApp() {
   app.use('/api/notifications', authenticate, notificationRoutes)
   app.use('/api/organizations', authenticate, organizationRoutes)
   app.use('/api/crm', authenticate, requireIntranet, crmRoutes)
+  app.use('/api/community', authenticate, requireIntranet, communityRoutes)
+  app.use('/api/courses', authenticate, requireIntranet, courseRoutes)
   app.use('/api/governance', authenticate, governanceRoutes)
   app.use('/api/vault', authenticate, vaultRoutes)
   app.use('/api/projects', authenticate, projectRoutes)
@@ -85,6 +89,7 @@ export function createApp() {
   app.use('/api/public/received-files', publicReceivedRoutes)
   app.use('/api/public/onboarding', publicOnboardingRoutes)
   app.use('/api/webhooks', crmWebhookRoutes)
+  app.use('/api/public/certificates', publicCertificateRoutes)
 
   app.use((error, _req, res, _next) => {
     const status = error.status || 500
