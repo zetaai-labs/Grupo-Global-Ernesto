@@ -22,6 +22,8 @@ import Unauthorized from './components/Auth/Unauthorized.jsx'
 import ReceivedFileUpload from './components/Public/ReceivedFileUpload.jsx'
 import Onboarding from './components/Public/Onboarding.jsx'
 import Organizations from './components/Portals/Intranet/Features/Organizations/Organizations.jsx'
+import InvestorVault from './components/Portals/Intranet/Features/InvestorVault/InvestorVault.jsx'
+import Projects from './components/Portals/Intranet/Features/Projects/Projects.jsx'
 import Crm from './components/Portals/Intranet/Features/Crm/Crm.jsx'
 import MfaSettings from './components/Auth/MfaSettings.jsx'
 
@@ -53,6 +55,7 @@ import SharedDocuments from './components/Portals/Extranet/Features/SharedDocume
 import MySubmissions from './components/Portals/Extranet/Features/MySubmissions/MySubmissions.jsx'
 import SharedLinks from './components/Portals/Extranet/Features/SharedLinks/SharedLinks.jsx'
 import ProjectUpdates from './components/Portals/Extranet/Features/ProjectUpdates/ProjectUpdates.jsx'
+import MyVault from './components/Portals/Extranet/Features/InvestorVault/MyVault.jsx'
 import Resources from './components/Portals/Extranet/Features/Resources/Resources.jsx'
 import ExtranetChat from './components/Portals/Extranet/Features/Chat/Chat.jsx'
 import ExtranetVideo from './components/Portals/Extranet/Features/VideoConferencing/VideoConferencing.jsx'
@@ -93,6 +96,15 @@ const router = createBrowserRouter(
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
         <Route path="security" element={<MfaSettings />} />
+        <Route
+          path="investor-vault"
+          element={
+            <ProtectedRoute roles={['admin']}>
+              <InvestorVault />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="projects" element={<Projects />} />
         <Route path="crm" element={<Crm />} />
         <Route
           path="organizations"
@@ -148,6 +160,14 @@ const router = createBrowserRouter(
         <Route path="my-submissions" element={<MySubmissions />} />
         <Route path="shared-links" element={<SharedLinks />} />
         <Route path="project-updates" element={<ProjectUpdates />} />
+        <Route
+          path="investor-vault"
+          element={
+            <ProtectedRoute roles={['investor']}>
+              <MyVault />
+            </ProtectedRoute>
+          }
+        />
         <Route path="resources" element={<Resources />} />
 
         {/* Extranet Communication */}

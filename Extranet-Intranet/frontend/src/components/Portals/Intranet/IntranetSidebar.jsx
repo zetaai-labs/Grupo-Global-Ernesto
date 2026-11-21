@@ -14,7 +14,9 @@ const navigation = [
     label: 'BUSINESS',
     items: [
       { name: 'Organizations & KYC', path: '/intranet/organizations', icon: '◈', roles: ['admin', 'tech_admin', 'hr', 'manager'] },
-      { name: 'CRM Pipeline', path: '/intranet/crm', icon: '€' }
+      { name: 'CRM Pipeline', path: '/intranet/crm', icon: '€' },
+      { name: 'Projects & Programs', path: '/intranet/projects', icon: '▦' },
+      { name: 'Investor Vault', path: '/intranet/investor-vault', icon: '🔒', roles: ['admin'] }
     ]
   },
   {

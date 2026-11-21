@@ -442,3 +442,98 @@ CREATE TABLE IF NOT EXISTS crm_activities (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS idx_crm_activities_rel ON crm_activities(rel_id, created_at DESC);
+
+-- §4.5 projects_programs: joint ventures, initiatives, developments, deployments.
+CREATE TABLE IF NOT EXISTS projects_programs (
+  project_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  description TEXT,
+  corridor VARCHAR(50) NOT NULL CHECK (corridor IN ('SPAIN_EU_INDIA', 'LATAM_EXPANSION', 'GCC_DUBAI', 'NORTH_AFRICA')),
+  budget_eur NUMERIC(15, 2) NOT NULL CHECK (budget_eur >= 0),
+  phase TEXT NOT NULL DEFAULT 'INITIATION' CHECK (phase IN ('INITIATION', 'PLANNING', 'EXECUTION', 'MONITORING', 'COMPLETED')),
+  lead_entity UUID NOT NULL REFERENCES organizations(org_id),
+  owner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  start_date DATE,
+  end_date DATE,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_projects_title ON projects_programs (LOWER(title));
+
+CREATE TABLE IF NOT EXISTS project_members (
+  project_id UUID NOT NULL REFERENCES projects_programs(project_id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  project_role TEXT NOT NULL DEFAULT 'MEMBER',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS project_partners (
+  project_id UUID NOT NULL REFERENCES projects_programs(project_id) ON DELETE CASCADE,
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (project_id, org_id)
+);
+
+CREATE TABLE IF NOT EXISTS project_milestones (
+  milestone_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  project_id UUID NOT NULL REFERENCES projects_programs(project_id) ON DELETE CASCADE,
+  title VARCHAR(255) NOT NULL,
+  due_date DATE,
+  status TEXT NOT NULL DEFAULT 'PLANNED' CHECK (status IN ('PLANNED', 'IN_PROGRESS', 'DONE', 'BLOCKED')),
+  shared_with_partners BOOLEAN NOT NULL DEFAULT false,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_milestones_project ON project_milestones(project_id, due_date);
+
+-- §4.4 investors_vault: isolated, separately encrypted investor records (Technical Spec §3.1).
+CREATE TABLE IF NOT EXISTS investors_vault (
+  investor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  encrypted_profile TEXT NOT NULL,
+  investment_ticket_range VARCHAR(50) NOT NULL
+    CHECK (investment_ticket_range IN ('EUR 100K-500K', 'EUR 500K-1M', 'EUR 1M-5M', 'EUR 5M+')),
+  sector_focus VARCHAR(255) NOT NULL,
+  nda_signed BOOLEAN NOT NULL DEFAULT false,
+  access_audit_log JSONB NOT NULL DEFAULT '[]'::jsonb,
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_investor_org ON investors_vault(org_id) WHERE org_id IS NOT NULL;
+
+-- Tier-1 deal rooms with encrypted documents, opened to selected investors under NDA.
+CREATE TABLE IF NOT EXISTS vault_deal_rooms (
+  room_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  title VARCHAR(255) NOT NULL,
+  summary TEXT,
+  sector VARCHAR(50) NOT NULL,
+  ticket_range VARCHAR(50),
+  status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'CLOSED')),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS vault_room_access (
+  room_id UUID NOT NULL REFERENCES vault_deal_rooms(room_id) ON DELETE CASCADE,
+  investor_id UUID NOT NULL REFERENCES investors_vault(investor_id) ON DELETE CASCADE,
+  granted_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  granted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (room_id, investor_id)
+);
+
+CREATE TABLE IF NOT EXISTS vault_documents (
+  document_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  room_id UUID NOT NULL REFERENCES vault_deal_rooms(room_id) ON DELETE CASCADE,
+  original_name TEXT NOT NULL,
+  stored_name TEXT NOT NULL,
+  mime_type TEXT,
+  size_bytes BIGINT NOT NULL DEFAULT 0,
+  uploaded_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

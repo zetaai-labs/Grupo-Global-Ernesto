@@ -21,6 +21,8 @@ import contentRoutes from './routes/content.routes.js'
 import notificationRoutes from './routes/notifications.routes.js'
 import organizationRoutes, { publicOnboardingRoutes } from './routes/organizations.routes.js'
 import crmRoutes, { crmWebhookRoutes } from './routes/crm.routes.js'
+import vaultRoutes from './routes/vault.routes.js'
+import projectRoutes from './routes/projects.routes.js'
 import { authenticate } from './middleware/authenticate.js'
 import { requireIntranet, requireRole, requireSystemAdmin } from './middleware/authorize.js'
 
@@ -73,6 +75,8 @@ export function createApp() {
   app.use('/api/notifications', authenticate, notificationRoutes)
   app.use('/api/organizations', authenticate, organizationRoutes)
   app.use('/api/crm', authenticate, requireIntranet, crmRoutes)
+  app.use('/api/vault', authenticate, vaultRoutes)
+  app.use('/api/projects', authenticate, projectRoutes)
 
   // Token-based public links and public file submission (no JWT).
   app.use('/api/links', publicLinkRoutes)

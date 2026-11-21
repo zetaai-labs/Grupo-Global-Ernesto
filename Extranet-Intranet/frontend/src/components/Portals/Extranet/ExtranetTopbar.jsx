@@ -9,6 +9,7 @@ const ROLE_LABELS = {
   partner: 'Partner',
   client: 'Client',
   supplier: 'Supplier',
+  investor: 'Confidential Investor',
 }
 
 const pageNames = {
@@ -17,7 +18,8 @@ const pageNames = {
   'my-submissions': 'My Submissions',
   'shared-links': 'Shared Links',
   'project-updates': 'Project Updates',
-  resources: 'Resources'
+  resources: 'Resources',
+  'investor-vault': 'Investor Vault'
 }
 
 function ExtranetTopbar() {

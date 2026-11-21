@@ -11,6 +11,12 @@ const navigation = [
     ]
   },
   {
+    label: 'CONFIDENTIAL',
+    items: [
+      { name: 'Investor Vault', path: '/extranet/investor-vault', icon: '🔒', roles: ['investor'] }
+    ]
+  },
+  {
     label: 'DOCUMENTS',
     items: [
       { name: 'Shared Documents', path: '/extranet/shared-documents', icon: '▤' },
@@ -38,12 +44,16 @@ const WORKSPACE_LABELS = {
   partner: 'PARTNER WORKSPACE',
   client: 'CLIENT WORKSPACE',
   supplier: 'SUPPLIER WORKSPACE',
+  investor: 'INVESTOR WORKSPACE',
 }
 
 function ExtranetSidebar() {
   const t = useT()
   const role = String(getUser()?.role || '').toLowerCase()
   const workspaceLabel = WORKSPACE_LABELS[role] || 'EXTERNAL WORKSPACE'
+  const visibleNavigation = navigation
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || item.roles.includes(role)) }))
+    .filter((group) => group.items.length)
 
   return (
     <aside className="portal-sidebar">
@@ -61,7 +71,7 @@ function ExtranetSidebar() {
       </div>
 
       <nav className="sidebar-navigation">
-        {navigation.map((group) => (
+        {visibleNavigation.map((group) => (
           <div className="nav-group" key={group.label}>
             <p className="nav-group-label">{t(group.label)}</p>
 
