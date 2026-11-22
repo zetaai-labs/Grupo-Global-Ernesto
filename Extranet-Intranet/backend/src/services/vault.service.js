@@ -2,6 +2,9 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto'
 import { query } from '../config/database.js'
 import { writeAudit } from './audit.js'
 import { notifyRoles } from './notification.service.js'
+import {
+  activeProvider, providerConfigured, payloadTag, providerForTag, generateDataKey, unwrapDataKey,
+} from '../integrations/vault/keyProvider.js'
 
 /**
  * Investor Vault (Schema Document §4.4, Technical Spec §3.1).
@@ -21,12 +24,55 @@ function vaultKey() {
 }
 
 export function vaultConfigured() {
+  return providerConfigured()
+}
+
+const aad = (tag) => Buffer.from(`gg-investor-vault|v2|${tag}`)
+
+/** Encrypts with the active provider: local `v1:` or envelope `v2:<kms|transit>:…`. */
+export async function sealProfile(profile) {
+  const provider = activeProvider()
+  if (provider === 'local') return encryptProfile(profile)
+  const tag = payloadTag(provider)
+  if (!tag) throw Object.assign(new Error('Unknown vault key provider.'), { status: 503 })
+
+  const { plaintext, wrapped } = await generateDataKey(provider)
   try {
-    vaultKey()
-    return true
-  } catch {
-    return false
+    const iv = randomBytes(12)
+    const cipher = createCipheriv('aes-256-gcm', plaintext, iv)
+    cipher.setAAD(aad(tag))
+    const ciphertext = Buffer.concat([cipher.update(JSON.stringify(profile), 'utf8'), cipher.final()])
+    return ['v2', tag, wrapped, iv.toString('base64'), cipher.getAuthTag().toString('base64'), ciphertext.toString('base64')].join(':')
+  } finally {
+    plaintext.fill(0)
   }
+}
+
+/** Decrypts any stored format, so `v1:` records stay readable after moving provider. */
+export async function openProfile(payload) {
+  const parts = String(payload).split(':')
+  if (parts[0] === VERSION) return decryptProfile(payload)
+  if (parts[0] !== 'v2' || parts.length !== 6) throw new Error('Unknown vault payload version.')
+  const [, tag, wrapped, iv, authTag, ciphertext] = parts
+  const provider = providerForTag(tag)
+  if (!provider) throw new Error('Unknown vault key provider.')
+
+  const key = await unwrapDataKey(provider, wrapped)
+  try {
+    const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(iv, 'base64'))
+    decipher.setAAD(aad(tag))
+    decipher.setAuthTag(Buffer.from(authTag, 'base64'))
+    const plain = Buffer.concat([decipher.update(Buffer.from(ciphertext, 'base64')), decipher.final()])
+    return JSON.parse(plain.toString('utf8'))
+  } finally {
+    key.fill(0)
+  }
+}
+
+/** True when a stored value already uses the active provider. */
+export function isCurrentFormat(payload) {
+  const provider = activeProvider()
+  return String(payload).startsWith(provider === 'local' ? 'v1:' : `v2:${payloadTag(provider)}:`)
 }
 
 /** AES-256-GCM: "v1:<iv>:<tag>:<ciphertext>" (base64 parts). */

@@ -8,6 +8,7 @@ const navigation = [
     label: 'WORKSPACE',
     items: [
       { name: 'Overview', path: '/intranet/overview', icon: '⌂' },
+      { name: 'ZYLAX Suite', path: '/intranet/zylax', icon: '◆' },
       { name: 'Community', path: '/intranet/community', icon: '✦' }
     ]
   },
@@ -15,7 +16,9 @@ const navigation = [
     label: 'BUSINESS',
     items: [
       { name: 'Organizations & KYC', path: '/intranet/organizations', icon: '◈', roles: ['admin', 'tech_admin', 'hr', 'manager'] },
+      { name: 'Business Directory', path: '/intranet/data-import', icon: '⇪', roles: ['admin', 'tech_admin', 'manager'] },
       { name: 'CRM Pipeline', path: '/intranet/crm', icon: '€' },
+      { name: 'Commercial', path: '/intranet/commercial', icon: '▣', roles: ['admin', 'manager', 'employee', 'finance'] },
       { name: 'Projects & Programs', path: '/intranet/projects', icon: '▦' },
       { name: 'Investor Vault', path: '/intranet/investor-vault', icon: '🔒', roles: ['admin'] }
     ]
@@ -55,6 +58,7 @@ const navigation = [
       { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin', 'tech_admin'] },
       { name: 'User Management', path: '/intranet/user-management', icon: '♙', roles: ['admin', 'tech_admin', 'hr'] },
       { name: 'Security (MFA)', path: '/intranet/security', icon: '✓' },
+      { name: 'Privacy (GDPR)', path: '/intranet/privacy', icon: '⛨' },
       { name: 'Ethics & Compliance', path: '/intranet/ethics', icon: '⚖' }
     ]
   }

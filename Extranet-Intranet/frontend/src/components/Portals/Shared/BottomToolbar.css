@@ -71,3 +71,12 @@
 
 .sync-dot--connecting { background: #f59e0b; }
 .sync-dot--offline { background: #ef4444; }
+
+/* Keep the end of the menu and page clear of the fixed toolbar. */
+.portal-shell .portal-sidebar {
+  padding-bottom: 72px;
+}
+
+.portal-shell .portal-content {
+  padding-bottom: 84px;
+}

@@ -3,15 +3,17 @@ import { z } from 'zod'
 import { query } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { notifyRoles } from '../services/notification.service.js'
+import { STAFF_ROLES } from '../config/roles.js'
+import { resolveRemediation } from './governance.controller.js'
 
 /** Courses & events (Schema Document §4.7, Technical Spec §1.2 Module 4). */
 
 const MODULE_TYPES = ['EVENT', 'COMPLIANCE_COURSE', 'TECHNICAL_WORKSHOP']
 const ACCESS_TIERS = ['ALL_EMPLOYEES', 'DELEGATES_ONLY', 'EXECUTIVES']
 const TIER_ROLES = {
-  ALL_EMPLOYEES: ['admin', 'tech_admin', 'hr', 'manager', 'employee'],
+  ALL_EMPLOYEES: STAFF_ROLES,
   DELEGATES_ONLY: ['admin', 'manager', 'employee'],
-  EXECUTIVES: ['admin', 'tech_admin', 'hr', 'manager'],
+  EXECUTIVES: ['admin', 'tech_admin', 'hr', 'finance', 'manager'],
 }
 const COURSE_AUTHORS = ['admin', 'hr']
 
@@ -43,6 +45,8 @@ export async function listCourses(req, res) {
      FROM community_events_courses c
      LEFT JOIN course_enrollments e ON e.item_id = c.item_id AND e.user_id = $1
      WHERE c.access_tier = ANY($2::text[])
+        OR EXISTS (SELECT 1 FROM governance_sanctions s
+                   WHERE s.user_id = $1 AND s.required_course_id = c.item_id AND s.status = 'ACTIVE')
      ORDER BY c.starts_at NULLS LAST, c.created_at DESC`,
     [req.user.sub, ACCESS_TIERS.filter((tier) => canAccess(req.user.role, tier))],
   )
@@ -59,7 +63,11 @@ async function loadCourse(req, res) {
     fail(res, 404, 'Course not found.')
     return null
   }
-  if (!canAccess(req.user.role, rows[0].access_tier)) {
+  const required = await query(
+    "SELECT 1 FROM governance_sanctions WHERE user_id = $1 AND required_course_id = $2 AND status = 'ACTIVE'",
+    [req.user.sub, rows[0].item_id],
+  )
+  if (!canAccess(req.user.role, rows[0].access_tier) && !required.rowCount) {
     fail(res, 403, 'This course is not available for your role.')
     return null
   }
@@ -148,6 +156,7 @@ export async function submitQuiz(req, res) {
     [course.item_id, req.user.sub, passed ? 'COMPLETED' : 'FAILED', score, completedAt, hash],
   )
   await writeAudit(req.user.sub, passed ? 'COURSE_PASSED' : 'COURSE_FAILED', 'community_events_courses', course.item_id, { score })
+  if (passed) await resolveRemediation(req.user.sub, req.user.name, course.item_id)
   return res.json({
     data: { passed, score, pass_mark: course.pass_mark, certificate_hash: hash },
     message: passed ? `Passed with ${score}%. Certificate issued.` : `Score ${score}%. You need ${course.pass_mark}% to pass. Try again.`,

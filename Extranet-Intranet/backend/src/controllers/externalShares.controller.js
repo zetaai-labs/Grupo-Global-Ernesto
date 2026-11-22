@@ -7,20 +7,25 @@ import { writeAudit } from '../services/audit.js'
 import { sendStoredFile } from '../services/storage.service.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
 import { SHARE_RECIPIENT_ROLES } from '../config/roles.js'
+import { permittedFolderIds, hasFolderPermission } from '../middleware/folderPermission.js'
 
 const shareSchema = z.object({
   folder_id: z.coerce.number().int().positive(),
   user_id: z.coerce.number().int().positive(),
 })
 
-export async function listShares(_req, res) {
+export async function listShares(req, res) {
+  const permitted = await permittedFolderIds(req)
+  if (permitted && !permitted.length) return res.json({ data: [] })
   const { rows } = await query(
     `SELECT es.id, es.folder_id, f.name AS folder_name, es.user_id,
             u.name AS user_name, u.email AS user_email, es.created_at
      FROM external_shares es
      JOIN folders f ON f.id = es.folder_id
      JOIN users u ON u.id = es.user_id
+     WHERE $1::int[] IS NULL OR es.folder_id = ANY($1::int[])
      ORDER BY es.id DESC`,
+    [permitted],
   )
   return res.json({ data: rows })
 }
@@ -32,6 +37,9 @@ export async function createShare(req, res) {
 
   const folder = await query('SELECT 1 FROM folders WHERE id = $1 AND deleted_at IS NULL', [folder_id])
   if (!folder.rowCount) return res.status(400).json({ message: 'Folder does not exist.' })
+  if (!(await hasFolderPermission(req, folder_id, 'share'))) {
+    return res.status(403).json({ message: 'You do not have permission to share this folder.' })
+  }
 
   const partner = await query(
     `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id
@@ -71,8 +79,12 @@ export async function createShare(req, res) {
 }
 
 export async function deleteShare(req, res) {
-  const { rowCount } = await query('DELETE FROM external_shares WHERE id = $1', [req.params.id])
-  if (!rowCount) return res.status(404).json({ message: 'Share not found.' })
+  const share = await query('SELECT folder_id FROM external_shares WHERE id = $1', [req.params.id])
+  if (!share.rowCount) return res.status(404).json({ message: 'Share not found.' })
+  if (!(await hasFolderPermission(req, share.rows[0].folder_id, 'share'))) {
+    return res.status(403).json({ message: 'You cannot remove this share.' })
+  }
+  await query('DELETE FROM external_shares WHERE id = $1', [req.params.id])
   await writeAudit(req.user.sub, 'EXTERNAL_SHARE_REVOKED', 'external_shares', req.params.id)
   return res.json({ message: 'Share revoked.' })
 }

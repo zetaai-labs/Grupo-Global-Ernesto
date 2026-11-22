@@ -8,6 +8,7 @@ import { config } from '../config/env.js'
 import { writeAudit } from '../services/audit.js'
 import { sendStoredFile } from '../services/storage.service.js'
 import { withRegion } from '../services/scope.js'
+import { permittedFolderIds, hasFolderPermission } from '../middleware/folderPermission.js'
 
 const LIST_SELECT = `
   SELECT m.id, m.token, m.label, m.expires_at, m.max_downloads, m.downloads_count,
@@ -27,7 +28,9 @@ const createSchema = z.object({
 })
 
 export async function listMetaLinks(req, res) {
-  const scoped = withRegion(req, 'WHERE 1=1', [], 'm')
+  const permitted = await permittedFolderIds(req)
+  if (permitted && !permitted.length) return res.json({ data: [] })
+  const scoped = withRegion(req, permitted ? 'WHERE f.folder_id = ANY($1)' : 'WHERE 1=1', permitted ? [permitted] : [], 'm')
   const { rows } = await query(`${LIST_SELECT} ${scoped.sql} ORDER BY m.id DESC`, scoped.params)
   return res.json({ data: rows })
 }
@@ -39,11 +42,11 @@ export async function createMetaLink(req, res) {
   }
   const { file_id, label, expires_in_days, max_downloads, password } = parsed.data
 
-  const { rowCount } = await query(
-    'SELECT 1 FROM files WHERE id = $1 AND deleted_at IS NULL',
-    [file_id],
-  )
-  if (!rowCount) return res.status(400).json({ message: 'File does not exist.' })
+  const file = await query('SELECT folder_id FROM files WHERE id = $1 AND deleted_at IS NULL', [file_id])
+  if (!file.rowCount) return res.status(400).json({ message: 'File does not exist.' })
+  if (!(await hasFolderPermission(req, file.rows[0].folder_id, 'share'))) {
+    return res.status(403).json({ message: 'You do not have permission to share this file.' })
+  }
 
   const token = randomBytes(24).toString('hex')
   const passwordHash = password ? await bcrypt.hash(password, 12) : null
@@ -70,8 +73,15 @@ export async function createMetaLink(req, res) {
 }
 
 export async function deleteMetaLink(req, res) {
-  const { rowCount } = await query('DELETE FROM metalinks WHERE id = $1', [req.params.id])
-  if (!rowCount) return res.status(404).json({ message: 'MetaLink not found.' })
+  const link = await query(
+    'SELECT m.created_by, f.folder_id FROM metalinks m JOIN files f ON f.id = m.file_id WHERE m.id = $1',
+    [req.params.id],
+  )
+  if (!link.rowCount) return res.status(404).json({ message: 'MetaLink not found.' })
+  if (link.rows[0].created_by !== req.user.sub && !(await hasFolderPermission(req, link.rows[0].folder_id, 'share'))) {
+    return res.status(403).json({ message: 'You cannot delete this link.' })
+  }
+  await query('DELETE FROM metalinks WHERE id = $1', [req.params.id])
 
   await writeAudit(req.user.sub, 'METALINK_DELETED', 'metalinks', req.params.id)
   return res.json({ message: 'MetaLink deleted.' })

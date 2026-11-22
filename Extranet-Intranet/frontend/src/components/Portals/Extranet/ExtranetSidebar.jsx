@@ -7,7 +7,9 @@ const navigation = [
   {
     label: 'PARTNER WORKSPACE',
     items: [
-      { name: 'Overview', path: '/extranet/overview', icon: '⌂' }
+      { name: 'Overview', path: '/extranet/overview', icon: '⌂' },
+      { name: 'Quotes & Orders', path: '/extranet/orders', icon: '▣', roles: ['client', 'partner'] },
+      { name: 'ZYLAX Extranet', path: '/extranet/zylax', icon: '◆', roles: ['client', 'partner', 'supplier'] }
     ]
   },
   {
@@ -28,7 +30,10 @@ const navigation = [
     label: 'INFORMATION',
     items: [
       { name: 'Project Updates', path: '/extranet/project-updates', icon: '◷' },
-      { name: 'Resources', path: '/extranet/resources', icon: '▣' }
+      { name: 'Resources', path: '/extranet/resources', icon: '▣' },
+      { name: 'Ethics & Compliance', path: '/extranet/ethics', icon: '⚖' },
+      { name: 'Required Training', path: '/extranet/courses', icon: '🎓' },
+      { name: 'Privacy (GDPR)', path: '/extranet/privacy', icon: '⛨' }
     ]
   },
   {

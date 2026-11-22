@@ -18,7 +18,7 @@ const isOfficer = (user) => GOVERNANCE_ROLES.includes(user.role)
 /** Tier a user must sign, based on role. */
 export function requiredTier(role) {
   if (['admin', 'investor'].includes(role)) return 'TIER_3_CRITICAL_VAULT'
-  if (['tech_admin', 'hr', 'manager'].includes(role)) return 'TIER_2_EXECUTIVE'
+  if (['tech_admin', 'hr', 'finance', 'manager'].includes(role)) return 'TIER_2_EXECUTIVE'
   return 'TIER_1_BASIC'
 }
 
@@ -37,8 +37,10 @@ export function addBusinessDays(start, days) {
 export async function myCompliance(req, res) {
   const [records, sanctions] = await Promise.all([
     query('SELECT record_id, ethics_code_tier, employment_contract_ref, audit_timestamp FROM governance_compliance WHERE user_id = $1 ORDER BY audit_timestamp DESC', [req.user.sub]),
-    query(`SELECT sanction_id, tier, reason, status, remediation_due, suspended_until, issued_at
-           FROM governance_sanctions WHERE user_id = $1 ORDER BY issued_at DESC`, [req.user.sub]),
+    query(`SELECT s.sanction_id, s.tier, s.reason, s.status, s.remediation_due, s.suspended_until, s.issued_at,
+                  s.required_course_id, c.title AS required_course
+           FROM governance_sanctions s LEFT JOIN community_events_courses c ON c.item_id = s.required_course_id
+           WHERE s.user_id = $1 ORDER BY s.issued_at DESC`, [req.user.sub]),
   ])
   const tier = requiredTier(req.user.role)
   return res.json({
@@ -118,6 +120,7 @@ const sanctionSchema = z.object({
   tier: z.coerce.number().int().min(1).max(3),
   reason: z.string().trim().min(10).max(2000),
   suspension_days: z.coerce.number().int().min(14).max(30).optional(),
+  course_id: uuid.optional().nullable(),
 })
 
 export async function issueSanction(req, res) {
@@ -146,12 +149,33 @@ export async function issueSanction(req, res) {
     ? new Date(today.getTime() + parsed.data.suspension_days * 86400000).toISOString().slice(0, 10)
     : null
 
+  // Tier 1 requires re-completing a compliance course with an assessment.
+  let courseId = null
+  if (tier === 1) {
+    const course = await query(
+      `SELECT item_id FROM community_events_courses
+       WHERE module_type = 'COMPLIANCE_COURSE' AND jsonb_array_length(quiz) > 0 AND ($1::uuid IS NULL OR item_id = $1::uuid)
+       ORDER BY created_at LIMIT 1`,
+      [parsed.data.course_id || null],
+    )
+    if (!course.rows[0]) return fail(res, 409, 'Create a compliance course with an assessment before issuing a Tier 1 warning.')
+    courseId = course.rows[0].item_id
+  }
+
   const sanction = await withTransaction(async (client) => {
     const { rows } = await client.query(
-      `INSERT INTO governance_sanctions (user_id, tier, reason, status, remediation_due, suspended_until, issued_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING sanction_id`,
-      [userId, tier, reason, tier === 3 ? 'PERMANENT' : 'ACTIVE', remediationDue, suspendedUntil, req.user.sub],
+      `INSERT INTO governance_sanctions (user_id, tier, reason, status, remediation_due, suspended_until, issued_by, required_course_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING sanction_id`,
+      [userId, tier, reason, tier === 3 ? 'PERMANENT' : 'ACTIVE', remediationDue, suspendedUntil, req.user.sub, courseId],
     )
+    if (courseId) {
+      // "Mandatory re-completion": any earlier pass no longer counts.
+      await client.query(
+        `INSERT INTO course_enrollments (item_id, user_id, status) VALUES ($1, $2, 'ENROLLED')
+         ON CONFLICT (item_id, user_id) DO UPDATE SET status = 'ENROLLED', completed_at = NULL, certificate_hash = NULL`,
+        [courseId, userId],
+      )
+    }
     if (tier === 2) await client.query("UPDATE users SET status = 'suspended' WHERE id = $1", [userId])
     if (tier === 3) {
       // Permanent expulsion: revoke credentials and second factor.
@@ -173,7 +197,8 @@ export async function issueSanction(req, res) {
     1: { title: 'Formative warning issued', body: `Complete the compliance course by ${remediationDue}.` },
     2: { title: 'Your access has been suspended', body: `Suspended until ${suspendedUntil}. HR clearance is required to restore access.` },
   }
-  if (messages[tier]) await notify([userId], { type: 'governance', ...messages[tier], link: tier === 1 ? '/intranet/ethics' : null })
+  const portal = isExternal(person.role) ? 'extranet' : 'intranet'
+  if (messages[tier]) await notify([userId], { type: 'governance', ...messages[tier], link: tier === 1 ? `/${portal}/ethics` : null })
   await notifyRoles(GOVERNANCE_ROLES, { type: 'governance', title: `Tier ${tier} sanction: ${person.name}`, link: '/intranet/ethics' }, req.user.sub)
 
   return res.status(201).json({ data: { sanction_id: sanction.sanction_id, remediation_due: remediationDue, suspended_until: suspendedUntil }, message: `Tier ${tier} sanction recorded.` })
@@ -211,4 +236,40 @@ export async function clearSanction(req, res) {
   await writeAudit(req.user.sub, 'ETHICS_SANCTION_CLEARED', 'governance_sanctions', sanction.sanction_id, { tier: sanction.tier })
   await notify([sanction.user_id], { type: 'governance', title: `Tier ${sanction.tier} sanction cleared`, body: 'Your compliance record has been updated.' })
   return res.json({ message: sanction.tier === 2 ? 'Sanction cleared and access restored.' : 'Sanction cleared.' })
+}
+
+/** Passing the required course closes the Tier 1 warning automatically. */
+export async function resolveRemediation(userId, userName, itemId) {
+  const { rows } = await query(
+    `UPDATE governance_sanctions
+     SET status = 'CLEARED', cleared_at = now(), clearance_notes = 'Required compliance course completed.'
+     WHERE user_id = $1 AND required_course_id = $2 AND tier = 1 AND status = 'ACTIVE'
+     RETURNING sanction_id`,
+    [userId, itemId],
+  )
+  for (const row of rows) {
+    await writeAudit(userId, 'ETHICS_REMEDIATION_COMPLETED', 'governance_sanctions', row.sanction_id)
+    await notifyRoles(GOVERNANCE_ROLES, { type: 'governance', title: `Tier 1 remediation completed: ${userName}`, link: '/intranet/ethics' })
+  }
+  return rows.length
+}
+
+/** Alerts HR once about Tier 1 warnings past their deadline; escalation stays a human decision. */
+export async function sendOverdueRemediationAlerts() {
+  const { rows } = await query(
+    `UPDATE governance_sanctions s SET overdue_notified_at = now()
+     FROM users u
+     WHERE u.id = s.user_id AND s.tier = 1 AND s.status = 'ACTIVE'
+       AND s.remediation_due < CURRENT_DATE AND s.overdue_notified_at IS NULL
+     RETURNING u.name`,
+  )
+  for (const row of rows) {
+    await notifyRoles(GOVERNANCE_ROLES, {
+      type: 'governance',
+      title: `Tier 1 remediation overdue: ${row.name}`,
+      body: 'Review whether to escalate to Tier 2.',
+      link: '/intranet/ethics',
+    })
+  }
+  return rows.length
 }

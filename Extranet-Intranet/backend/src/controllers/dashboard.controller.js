@@ -7,6 +7,7 @@ import { vaultConfigured } from '../services/vault.service.js'
 import { imapConfigured } from '../jobs/emailSync.job.js'
 import { requiredTier } from './governance.controller.js'
 import { MFA_REQUIRED_ROLES } from '../config/roles.js'
+import { permittedFolderIds } from '../middleware/folderPermission.js'
 
 async function scopedCount(req, base) {
   const scoped = withRegion(req, `SELECT COUNT(*)::int AS total FROM ${base}`, [])
@@ -17,9 +18,11 @@ async function scopedCount(req, base) {
 const single = async (sql, params) => (await query(sql, params)).rows[0]
 
 export async function getDashboard(req, res) {
+  const permitted = await permittedFolderIds(req)
+  const inFolders = (column) => (permitted ? ` AND ${column} IN (${permitted.map(Number).join(',') || 'NULL'})` : '')
   const [folders, files, workflows, pending, emails] = await Promise.all([
-    scopedCount(req, 'folders WHERE deleted_at IS NULL'),
-    scopedCount(req, 'files WHERE deleted_at IS NULL'),
+    scopedCount(req, `folders WHERE deleted_at IS NULL${inFolders('id')}`),
+    scopedCount(req, `files WHERE deleted_at IS NULL${inFolders('folder_id')}`),
     scopedCount(req, 'workflows WHERE 1=1'),
     scopedCount(req, "workflows WHERE status = 'pending'"),
     single('SELECT COUNT(*)::int AS total FROM emails WHERE user_id = $1', [req.user.sub]).then((row) => row.total),
@@ -106,7 +109,7 @@ async function devOpsConsole() {
 async function hrConsole() {
   const [people, signed, sanctions, courses, kyc] = await Promise.all([
     single(`SELECT COUNT(*)::int AS total FROM users u JOIN roles r ON r.id = u.role_id
-            WHERE u.status = 'active' AND r.name IN ('admin', 'tech_admin', 'hr', 'manager', 'employee')`),
+            WHERE u.status = 'active' AND r.name IN ('admin', 'tech_admin', 'hr', 'finance', 'manager', 'employee')`),
     query(`SELECT r.name AS role, COALESCE(array_agg(g.ethics_code_tier) FILTER (WHERE g.ethics_code_tier IS NOT NULL), '{}') AS tiers
            FROM users u JOIN roles r ON r.id = u.role_id
            LEFT JOIN governance_compliance g ON g.user_id = u.id
@@ -126,6 +129,30 @@ async function hrConsole() {
       { label: 'Active sanctions', value: sanctions.active, note: `${sanctions.suspended} suspended`, link: '/intranet/ethics' },
       { label: 'Course completions', value: courses.total, note: 'Certificates issued', link: '/intranet/courses' },
       { label: 'Pending KYC', value: kyc.total, note: 'Awaiting Compliance', link: '/intranet/organizations' },
+    ],
+  }
+}
+
+async function financeConsole() {
+  const [crm, projects, phases] = await Promise.all([
+    single(`SELECT COALESCE(SUM(estimated_value_eur) FILTER (WHERE pipeline_stage IN ('LEAD', 'PROPOSAL', 'DUE_DILIGENCE')), 0)::float AS open_value,
+                   COALESCE(SUM(estimated_value_eur) FILTER (WHERE pipeline_stage = 'ACTIVE_CONTRACT'), 0)::float AS active_value,
+                   COUNT(*) FILTER (WHERE pipeline_stage = 'ACTIVE_CONTRACT')::int AS active_count
+            FROM crm_relationships`),
+    single('SELECT COUNT(*)::int AS total, COALESCE(SUM(budget_eur), 0)::float AS budget FROM projects_programs'),
+    single(`SELECT COALESCE(SUM(budget_eur) FILTER (WHERE phase = 'EXECUTION'), 0)::float AS execution,
+                   COALESCE(SUM(budget_eur) FILTER (WHERE phase IN ('INITIATION', 'PLANNING')), 0)::float AS planned
+            FROM projects_programs`),
+  ])
+  return {
+    console: 'FINANCE',
+    title: 'Finance Control Panel',
+    cards: [
+      { label: 'Programme budget', value: projects.budget, format: 'eur', note: `${projects.total} projects`, link: '/intranet/projects' },
+      { label: 'Budget in execution', value: phases.execution, format: 'eur', note: 'Active delivery', link: '/intranet/projects' },
+      { label: 'Budget planned', value: phases.planned, format: 'eur', note: 'Initiation and planning', link: '/intranet/projects' },
+      { label: 'Active contracts', value: crm.active_value, format: 'eur', note: `${crm.active_count} contracts`, link: '/intranet/crm' },
+      { label: 'Open pipeline', value: crm.open_value, format: 'eur', note: 'Lead → due diligence', link: '/intranet/crm' },
     ],
   }
 }
@@ -161,7 +188,7 @@ async function delegateConsole(req) {
 }
 
 export async function getConsole(req, res) {
-  const builders = { admin: presidentialConsole, tech_admin: devOpsConsole, hr: hrConsole }
+  const builders = { admin: presidentialConsole, tech_admin: devOpsConsole, hr: hrConsole, finance: financeConsole }
   const build = builders[req.user.role] || delegateConsole
   return res.json({ data: await build(req) })
 }

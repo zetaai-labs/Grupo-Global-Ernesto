@@ -3,6 +3,7 @@ import { config } from '../config/env.js'
 import { query } from '../config/database.js'
 import { setIo } from './io.js'
 import { canJoinRoom } from '../controllers/calendar.controller.js'
+import { originSecretValid } from '../middleware/cloudflare.js'
 
 const MAX_PARTICIPANTS = 8
 
@@ -20,6 +21,7 @@ export function registerSockets(io) {
   // Reject sockets without a valid session JWT (purpose-scoped tokens such as MFA challenges are refused).
   io.use(async (socket, next) => {
     try {
+      if (!originSecretValid(socket.handshake.headers['x-origin-secret'])) return next(new Error('Unauthorized'))
       const claims = jwt.verify(socket.handshake.auth?.token, config.jwtSecret)
       if (claims.purpose || claims.mfa_setup) return next(new Error("Unauthorized"))
 

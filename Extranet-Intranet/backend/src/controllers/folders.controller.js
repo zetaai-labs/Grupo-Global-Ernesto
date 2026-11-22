@@ -39,18 +39,20 @@ export async function createFolder(req, res) {
   }
   const { name, parent_id: parentId, is_shared: isShared } = parsed.data
 
+  let orgId = req.user.org_id || null
   if (parentId) {
-    const { rowCount } = await query(
-      'SELECT 1 FROM folders WHERE id = $1 AND deleted_at IS NULL',
-      [parentId],
-    )
-    if (!rowCount) return res.status(400).json({ message: 'Parent folder does not exist.' })
+    const parent = await query('SELECT org_id FROM folders WHERE id = $1 AND deleted_at IS NULL', [parentId])
+    if (!parent.rowCount) return res.status(400).json({ message: 'Parent folder does not exist.' })
+    if (!(await hasFolderPermission(req, parentId, 'edit'))) {
+      return res.status(403).json({ message: 'You cannot create folders here.' })
+    }
+    orgId = parent.rows[0].org_id // Sub-folders stay in the parent's organisation.
   }
 
   const { rows } = await query(
-    `INSERT INTO folders (name, parent_id, is_shared, region, created_by)
-     VALUES ($1, $2, $3, $4, $5) RETURNING id, name, parent_id, is_shared, region`,
-    [name, parentId || null, Boolean(isShared), req.user.region, req.user.sub],
+    `INSERT INTO folders (name, parent_id, is_shared, region, created_by, org_id)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, name, parent_id, is_shared, region, org_id`,
+    [name, parentId || null, Boolean(isShared), req.user.region, req.user.sub, orgId],
   )
 
   // The creator receives full permissions on the new folder.

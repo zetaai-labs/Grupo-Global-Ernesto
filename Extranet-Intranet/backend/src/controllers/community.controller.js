@@ -11,7 +11,7 @@ const fail = (res, status, message) => res.status(status).json({ message })
 
 export async function directory(req, res) {
   const params = [STAFF_ROLES]
-  const filters = ["u.status = 'active'", 'r.name = ANY($1::text[])']
+  const filters = ["u.status = 'active'", 'NOT u.processing_opposed', 'r.name = ANY($1::text[])']
   const add = (sql, value) => {
     params.push(value)
     filters.push(sql.split('?').join(`$${params.length}`))

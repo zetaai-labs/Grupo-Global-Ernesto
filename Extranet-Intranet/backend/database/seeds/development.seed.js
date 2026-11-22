@@ -1,10 +1,12 @@
+import { seedCommercial } from './commercial.seed.js'
+import { seedZylax } from './zylax.seed.js'
 import fs from 'node:fs'
 import path from 'node:path'
 import { createHash } from 'node:crypto'
 import bcrypt from 'bcryptjs'
 import { query, pool } from '../../src/config/database.js'
 import { config } from '../../src/config/env.js'
-import { encryptProfile, vaultConfigured } from '../../src/services/vault.service.js'
+import { sealProfile, vaultConfigured } from '../../src/services/vault.service.js'
 
 if (!config.seedUserPassword) {
   throw new Error('SEED_USER_PASSWORD must be set before seeding.')
@@ -20,6 +22,7 @@ const roles = [
   ['supplier', 'External supplier/vendor — extranet access'],
   ['tech_admin', 'Technical Administrator — infrastructure, security policy, integrations'],
   ['investor', 'Confidential Investor — isolated investor vault access'],
+  ['finance', 'Finance Manager — budgets, revenue and financial oversight'],
 ]
 
 // Operational corridors (Schema Document §2.2).
@@ -101,6 +104,7 @@ async function seed() {
     ['Mumbai Textiles Pvt. Ltd.', 'supplier@gmail.com', roleIds.supplier, regionIds.INDIA, 'Mumbai Textiles Pvt. Ltd.'],
     ['Chaitanya Rana', 'techadmin@gmail.com', roleIds.tech_admin, regionIds.GLOBAL, 'Zeta AI Labs Pvt. Ltd.'],
     ['Atlas Gulf Capital', 'investor@gmail.com', roleIds.investor, regionIds.UAE_DUBAI, 'Atlas Gulf Capital'],
+    ['Sofía Navarro', 'finance@gmail.com', roleIds.finance, regionIds.GLOBAL, 'Financiera Grupo Global'],
   ]
 
   // One-time rename of the earlier demo emails, so existing chats/approvals/shares stay linked.
@@ -140,6 +144,19 @@ async function seed() {
       `INSERT INTO folders (name, is_shared, created_by)
        SELECT $1, $2, $3 WHERE NOT EXISTS (SELECT 1 FROM folders WHERE name = $1)`,
       [name, sharedFolders.includes(name), ownerId],
+    )
+  }
+
+  // Private folders of individual business units (logical isolation demo).
+  for (const [name, unit] of [
+    ['Nexus — Alliance Agreements', 'Grupo Global Nexus'],
+    ['Net — Infrastructure Runbooks', 'Grupo Global Net'],
+    ['Financiera — Treasury Reports', 'Financiera Grupo Global'],
+  ]) {
+    await query(
+      `INSERT INTO folders (name, created_by, org_id)
+       SELECT $1::text, $2::int, $3::uuid WHERE NOT EXISTS (SELECT 1 FROM folders WHERE name = $1::text)`,
+      [name, ownerId, orgIds[unit]],
     )
   }
 
@@ -379,7 +396,7 @@ async function seed() {
       `INSERT INTO investors_vault (org_id, encrypted_profile, investment_ticket_range, sector_focus, created_by)
        VALUES ($1, $2, 'EUR 1M-5M', 'FINTECH,REAL_ESTATE', $3)
        ON CONFLICT (org_id) WHERE org_id IS NOT NULL DO NOTHING RETURNING investor_id`,
-      [orgIds['Atlas Gulf Capital'], encryptProfile({ full_name: 'Atlas Gulf Capital (demo)', email: 'investor@gmail.com', nationality: 'UAE', notes: 'Fictional demo investor.' }), ownerId],
+      [orgIds['Atlas Gulf Capital'], await sealProfile({ full_name: 'Atlas Gulf Capital (demo)', email: 'investor@gmail.com', nationality: 'UAE', notes: 'Fictional demo investor.' }), ownerId],
     )
     if (investor.rows[0]) {
       const room = await query(
@@ -432,7 +449,10 @@ async function seed() {
   // Folder access per role: [role, view, edit, share].
   const folderGrants = {
     'Corporate Documents': [['admin', 1, 1, 1], ['employee', 1, 1, 1], ['manager', 1, 1, 1], ['hr', 1, 1, 0]],
-    'Finance Records': [['admin', 1, 1, 1], ['employee', 1, 1, 1], ['manager', 1, 1, 1]],
+    'Finance Records': [['admin', 1, 1, 1], ['employee', 1, 1, 1], ['manager', 1, 1, 1], ['finance', 1, 1, 1]],
+    'Nexus — Alliance Agreements': [['admin', 1, 1, 1], ['manager', 1, 1, 1], ['employee', 1, 1, 0]],
+    'Net — Infrastructure Runbooks': [['admin', 1, 1, 1], ['manager', 1, 1, 1], ['employee', 1, 1, 0]],
+    'Financiera — Treasury Reports': [['admin', 1, 1, 1], ['finance', 1, 1, 1], ['manager', 1, 1, 0], ['employee', 1, 0, 0]],
     'HR Policies': [['admin', 1, 1, 1], ['hr', 1, 1, 1], ['manager', 1, 0, 0], ['employee', 1, 0, 0]],
     'Partner Shared Files': [['admin', 1, 1, 1], ['manager', 1, 1, 1], ['partner', 1, 0, 0]],
     'Client Deliverables': [['admin', 1, 1, 1], ['manager', 1, 1, 1], ['employee', 1, 1, 0], ['client', 1, 0, 0]],
@@ -502,6 +522,9 @@ async function seed() {
       [folderName, email, ownerId],
     )
   }
+
+  await seedCommercial(query)
+  await seedZylax(query)
 
   console.log('[OK] Seeded roles, regions, users, folders, permissions, shares, conversations and workflows.')
 }

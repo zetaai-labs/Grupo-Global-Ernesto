@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
 import { useT } from '../../../../../i18n'
@@ -15,6 +16,7 @@ const EMPTY = { user_id: '', tier: '1', suspension_days: '14', reason: '' }
 function Ethics() {
   const t = useT()
   const user = getUser()
+  const portal = useLocation().pathname.startsWith('/extranet') ? 'extranet' : 'intranet'
   const isOfficer = ['admin', 'hr'].includes(user?.role)
   const isSuperAdmin = user?.role === 'admin'
 
@@ -115,7 +117,8 @@ function Ethics() {
               <ul className="eth-list">
                 {mine.sanctions.map((sanction) => (
                   <li key={sanction.sanction_id}><strong>{t(SANCTION_LABELS[sanction.tier])}</strong><span>{sanction.reason}</span>
-                    <small>{sanction.status}{sanction.remediation_due ? ` · ${t('due')} ${sanction.remediation_due.slice(0, 10)}` : ''}</small></li>
+                    <small>{sanction.status}{sanction.remediation_due ? ` · ${t('due')} ${sanction.remediation_due.slice(0, 10)}` : ''}</small>
+                    {sanction.status === 'ACTIVE' && sanction.required_course && <Link to={`/${portal}/courses`}>{t('Complete required course')}: {sanction.required_course}</Link>}</li>
                 ))}
               </ul>
             </>

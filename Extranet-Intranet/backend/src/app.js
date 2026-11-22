@@ -22,10 +22,17 @@ import notificationRoutes from './routes/notifications.routes.js'
 import organizationRoutes, { publicOnboardingRoutes } from './routes/organizations.routes.js'
 import crmRoutes, { crmWebhookRoutes } from './routes/crm.routes.js'
 import communityRoutes from './routes/community.routes.js'
+import privacyRoutes from './routes/privacy.routes.js'
 import courseRoutes, { publicCertificateRoutes } from './routes/courses.routes.js'
 import governanceRoutes from './routes/governance.routes.js'
 import vaultRoutes from './routes/vault.routes.js'
 import projectRoutes from './routes/projects.routes.js'
+import videoRoutes from './routes/video.routes.js'
+import commercialRoutes, { commercialPortalRoutes } from './routes/commercial.routes.js'
+import zylaxRoutes from './zylax/routes.js'
+import importRoutes from './imports/routes.js'
+import { COMMERCIAL_READ_ROLES, COMMERCIAL_CUSTOMER_ROLES } from './config/roles.js'
+import { cloudflareEdge } from './middleware/cloudflare.js'
 import { authenticate } from './middleware/authenticate.js'
 import { requireIntranet, requireRole, requireSystemAdmin } from './middleware/authorize.js'
 
@@ -44,6 +51,8 @@ export const corsOrigin = (origin, callback) =>
 
 export function createApp() {
   const app = express()
+
+  app.use(cloudflareEdge)
 
   app.use(cors({ origin: corsOrigin, credentials: true }))
   // Keep the raw body so signed webhooks (HMAC-SHA256) can be verified byte-for-byte.
@@ -78,11 +87,17 @@ export function createApp() {
   app.use('/api/notifications', authenticate, notificationRoutes)
   app.use('/api/organizations', authenticate, organizationRoutes)
   app.use('/api/crm', authenticate, requireIntranet, crmRoutes)
+  app.use('/api/imports', authenticate, requireIntranet, importRoutes)
   app.use('/api/community', authenticate, requireIntranet, communityRoutes)
-  app.use('/api/courses', authenticate, requireIntranet, courseRoutes)
+  app.use('/api/courses', authenticate, courseRoutes)
+  app.use('/api/privacy', authenticate, privacyRoutes)
   app.use('/api/governance', authenticate, governanceRoutes)
   app.use('/api/vault', authenticate, vaultRoutes)
+  app.use('/api/video', authenticate, videoRoutes)
   app.use('/api/projects', authenticate, projectRoutes)
+  app.use('/api/zylax/hub', authenticate, zylaxRoutes)
+  app.use('/api/zylax/portal', authenticate, requireRole(...COMMERCIAL_CUSTOMER_ROLES), commercialPortalRoutes)
+  app.use('/api/zylax', authenticate, requireRole(...COMMERCIAL_READ_ROLES), commercialRoutes)
 
   // Token-based public links and public file submission (no JWT).
   app.use('/api/links', publicLinkRoutes)

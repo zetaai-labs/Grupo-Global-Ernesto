@@ -18,8 +18,15 @@ const pageNames = {
   'my-submissions': 'My Submissions',
   'shared-links': 'Shared Links',
   'project-updates': 'Project Updates',
+  orders: 'Quotes & Orders',
+  zylax: 'ZYLAX Extranet',
   resources: 'Resources',
-  'investor-vault': 'Investor Vault'
+  'investor-vault': 'Investor Vault',
+  ethics: 'Ethics & Compliance',
+  courses: 'Required Training',
+  privacy: 'Privacy (GDPR)',
+  chat: 'Team Chat',
+  'video-conferencing': 'Video Meetings'
 }
 
 function ExtranetTopbar() {

@@ -3,6 +3,7 @@ import { query } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
 import { withRegion } from '../services/scope.js'
+import { hasFolderPermission } from '../middleware/folderPermission.js'
 import { STAFF_ROLES, OPERATIONS_ROLES } from '../config/roles.js'
 
 export async function listMySubmissions(req, res) {
@@ -89,6 +90,9 @@ const linkedSchema = z.object({ folder_id: z.coerce.number().int().positive(), l
 export async function addLinkedFolder(req, res) {
   const parsed = linkedSchema.safeParse(req.body || {})
   if (!parsed.success) return res.status(400).json({ message: 'A folder and label are required.' })
+  if (!(await hasFolderPermission(req, parsed.data.folder_id, 'view'))) {
+    return res.status(403).json({ message: 'You do not have access to this folder.' })
+  }
   try {
     const { rows } = await query(
       `INSERT INTO linked_folders (user_id, folder_id, label)

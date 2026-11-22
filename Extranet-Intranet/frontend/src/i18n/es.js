@@ -1,5 +1,7 @@
 // Spanish (Spain) translations. Keys are the English source text.
 // Add entries here to translate more of the interface — untranslated text stays in English.
+import esZylax from './es.zylax'
+
 const es = {
   // ---- Login & password reset ----
   'One Platform.': 'Una plataforma.',
@@ -232,8 +234,20 @@ const es = {
   'Quick access': 'Acceso rápido',
   'Jump into the most used areas of the intranet.': 'Accede a las áreas más usadas de la intranet.',
   'Verify a certificate': 'Verificar un certificado',
+  'Required Training': 'Formación obligatoria',
+  'Complete required course': 'Completar curso obligatorio',
+  'Finance Control Panel': 'Panel de control financiero',
+  finance: 'Finanzas',
+  'DATA PROTECTION': 'PROTECCIÓN DE DATOS',
+  'Privacy (GDPR)': 'Privacidad (RGPD)',
+  'Exercise your rights of Access, Rectification, Cancellation and Opposition. We respond within one month.':
+    'Ejerce tus derechos de Acceso, Rectificación, Cancelación y Oposición. Respondemos en el plazo de un mes.',
+  'Download my data (ZIP)': 'Descargar mis datos (ZIP)',
+  'New request': 'Nueva solicitud',
+  'My requests': 'Mis solicitudes',
+  'Send request': 'Enviar solicitud',
   'Create new': 'Crear nuevo',
   'Your records will appear here.': 'Tus registros aparecerán aquí.',
 }
 
-export default es
+export default { ...esZylax, ...es }

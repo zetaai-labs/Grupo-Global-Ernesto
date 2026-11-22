@@ -1,4 +1,7 @@
 import { query, withTransaction } from '../config/database.js'
+import { removeStoredFiles } from './storage.service.js'
+import { eraseZylaxData, exportZylaxData } from '../zylax/privacy.js'
+import { eraseDirectoryContacts, exportDirectoryContacts } from '../imports/import.service.js'
 
 function httpError(status, message) {
   return Object.assign(new Error(message), { status })
@@ -10,7 +13,7 @@ function httpError(status, message) {
  */
 export async function exportUserData(userId) {
   const profile = await query(
-    `SELECT u.id, u.name, u.email, u.status, u.mfa_enabled, u.created_at, r.name AS role, rg.code AS region
+    `SELECT u.id, u.name, u.email, u.status, u.mfa_enabled, u.processing_opposed, u.created_at, r.name AS role, rg.code AS region
      FROM users u JOIN roles r ON r.id = u.role_id LEFT JOIN regions rg ON rg.id = u.region_id
      WHERE u.id = $1`,
     [userId],
@@ -43,6 +46,7 @@ export async function exportUserData(userId) {
     folders_shared_with_me: [
       `SELECT f.name AS folder, es.created_at FROM external_shares es JOIN folders f ON f.id = es.folder_id
        WHERE es.user_id = $1`, [userId]],
+    privacy_requests: ['SELECT request_type, field, requested_value, details, status, response, created_at FROM gdpr_requests WHERE user_id = $1 ORDER BY created_at', [userId]],
     activity_log: ['SELECT action, entity, entity_id, created_at FROM audit_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5000', [userId]],
   }
 
@@ -50,6 +54,8 @@ export async function exportUserData(userId) {
   for (const [name, [sql, params]] of Object.entries(sections)) {
     data[name] = (await query(sql, params)).rows
   }
+  data.zylax = await exportZylaxData(Number(userId), email)
+  data.business_directory_contacts = await exportDirectoryContacts(email)
   return data
 }
 
@@ -62,7 +68,7 @@ export async function eraseUser(userId, actorId) {
   if (Number(userId) === Number(actorId)) throw httpError(400, 'You cannot erase your own account.')
 
   const target = await query(
-    `SELECT u.id, u.email, u.status, r.name AS role FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1`,
+    `SELECT u.id, u.name, u.email, u.status, r.name AS role FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1`,
     [userId],
   )
   const user = target.rows[0]
@@ -77,7 +83,7 @@ export async function eraseUser(userId, actorId) {
   }
 
   const label = 'Deleted user'
-  await withTransaction(async (client) => {
+  const storedFiles = await withTransaction(async (client) => {
     await client.query(
       `UPDATE users SET name = $2, email = $3, password_hash = '!erased', status = 'erased',
               mfa_secret = NULL, mfa_enabled = false
@@ -99,11 +105,16 @@ export async function eraseUser(userId, actorId) {
       "UPDATE audit_logs SET details = details - 'email' WHERE LOWER(details->>'email') = LOWER($1)",
       [user.email],
     )
+    const zylaxFiles = await eraseZylaxData(client, { userId: Number(userId), email: user.email, name: user.name, label })
+    await eraseDirectoryContacts(client, user.email)
     await client.query(
       `INSERT INTO audit_logs (user_id, action, entity, entity_id, details) VALUES ($1, 'USER_ERASED', 'users', $2, '{}'::jsonb)`,
       [actorId, String(userId)],
     )
+    return zylaxFiles
   })
+  // Stored files cannot be rolled back, so they are removed only after the transaction commits.
+  await removeStoredFiles(storedFiles)
 }
 
 /** Retention: read notifications older than `days` are removed. */

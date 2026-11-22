@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs'
 import { query } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { exportUserData, eraseUser } from '../services/gdpr.service.js'
+import { HR_MANAGED_ROLES } from '../config/roles.js'
 
 const USER_LIST_QUERY = `
   SELECT u.id, u.uuid, u.name, u.email, u.status, r.name AS role, r.code AS role_code, rg.code AS region,
@@ -39,6 +40,19 @@ export async function createUser(req, res) {
   if (PRIVILEGED_ROLES.includes(role.rows[0].name) && req.user.role !== 'admin') {
     return res.status(403).json({ message: 'Only the Super Administrator can create administrator accounts.' })
   }
+  if (req.user.role === 'hr') {
+    if (!HR_MANAGED_ROLES.includes(role.rows[0].name)) {
+      return res.status(403).json({ message: 'HR can only create employee and manager accounts.' })
+    }
+    // Staff must belong to the group; external companies are onboarded through KYC.
+    if (org_id) {
+      const org = await query(
+        "SELECT 1 FROM organizations WHERE org_id = $1 AND org_type IN ('PARENT', 'BUSINESS_UNIT') AND verification_status = 'VERIFIED'",
+        [org_id],
+      )
+      if (!org.rowCount) return res.status(403).json({ message: 'HR can only assign staff to a Grupo Global entity.' })
+    }
+  }
 
   const passwordHash = await bcrypt.hash(String(password), 12)
   try {
@@ -73,6 +87,20 @@ export async function updateUserStatus(req, res) {
   const { status } = req.body || {}
   if (!['active', 'suspended'].includes(status)) {
     return res.status(400).json({ message: 'Status must be active or suspended.' })
+  }
+  if (!/^\d+$/.test(req.params.id)) return res.status(404).json({ message: 'User not found.' })
+
+  const target = await query('SELECT r.name AS role FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1', [req.params.id])
+  if (!target.rows[0]) return res.status(404).json({ message: 'User not found.' })
+  if (Number(req.params.id) === Number(req.user.sub)) {
+    return res.status(400).json({ message: 'You cannot change the status of your own account.' })
+  }
+  if (req.user.role === 'hr' && !HR_MANAGED_ROLES.includes(target.rows[0].role)) {
+    return res.status(403).json({ message: 'HR can only change the status of employee and manager accounts.' })
+  }
+  // Mirrors account creation: only the Super Administrator controls administrator accounts.
+  if (PRIVILEGED_ROLES.includes(target.rows[0].role) && req.user.role !== 'admin') {
+    return res.status(403).json({ message: 'Only the Super Administrator can change administrator accounts.' })
   }
 
   // A Code of Ethics suspension can only be lifted through HR clearance (Schema Document §5.2).

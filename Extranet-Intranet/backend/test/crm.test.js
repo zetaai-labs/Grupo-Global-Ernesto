@@ -25,7 +25,7 @@ describe('CRM relationships', () => {
       const denied = await request(app).post('/api/crm').set(auth(employee)).send({ entity_id: entity, title: 'x', contact_type: 'CLIENT' })
       assert.equal(denied.status, 403, 'employees cannot create relationships')
 
-      const internal = await request(app).post('/api/crm').set(auth(manager)).send({
+      const internal = await request(app).post('/api/crm').set(auth(admin)).send({
         entity_id: entity, title: 'Iberia store roll-out 2027', contact_type: 'CLIENT',
         confidentiality_level: 'INTERNAL', estimated_value_eur: 250000, note: 'Kick-off meeting held.',
       })

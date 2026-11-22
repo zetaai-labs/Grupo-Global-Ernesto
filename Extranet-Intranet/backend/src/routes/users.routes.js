@@ -8,17 +8,19 @@ import {
   exportUser,
   eraseUserAccount,
 } from '../controllers/users.controller.js'
-import { requireAdmin, requireSystemAdmin } from '../middleware/authorize.js'
+import { requireAdmin, requireRole } from '../middleware/authorize.js'
+import { ACCOUNT_MANAGER_ROLES } from '../config/roles.js'
 
 const router = Router()
+const canManageAccounts = requireRole(...ACCOUNT_MANAGER_ROLES)
 
-// Mounted behind authenticate + requireRole('admin', 'hr') in app.js.
-// HR can read the directory; Super/Tech Admin manage accounts; only the Super Admin erases (GDPR).
+// Mounted behind authenticate + requireRole('admin', 'tech_admin', 'hr') in app.js.
+// Super/Tech Admin manage accounts; HR manages employees and managers; only the Super Admin erases (GDPR).
 router.get('/', listUsers)
 router.get('/meta', listMetadata)
 router.get('/:id', getUser)
-router.post('/', requireSystemAdmin, createUser)
-router.patch('/:id/status', requireSystemAdmin, updateUserStatus)
+router.post('/', canManageAccounts, createUser)
+router.patch('/:id/status', canManageAccounts, updateUserStatus)
 router.get('/:id/export', requireAdmin, exportUser)
 router.post('/:id/erase', requireAdmin, eraseUserAccount)
 

@@ -21,6 +21,8 @@ const pageNames = {
   'user-management': 'User Management',
   organizations: 'Organizations & KYC',
   crm: 'CRM Pipeline',
+  commercial: 'Commercial',
+  zylax: 'ZYLAX Suite',
   projects: 'Projects & Programs',
   'investor-vault': 'Investor Vault',
   ethics: 'Ethics & Compliance',
@@ -30,7 +32,8 @@ const pageNames = {
   chat: 'Team Chat',
   'video-conferencing': 'Video Conferencing',
   'audit-log': 'Audit Log',
-  security: 'Security'
+  security: 'Security',
+  privacy: 'Privacy (GDPR)'
 }
 
 function IntranetTopbar() {

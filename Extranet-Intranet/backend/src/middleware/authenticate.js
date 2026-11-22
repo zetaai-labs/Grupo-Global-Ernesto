@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken'
 import { config } from '../config/env.js'
 import { query } from '../config/database.js'
 import { isExternal } from '../config/roles.js'
+import { organisationScope } from '../services/scope.js'
 
 const MFA_SETUP_PATHS = ['/api/auth/mfa/', '/api/auth/me', '/api/auth/logout', '/api/notifications']
 
@@ -32,7 +33,7 @@ export async function authenticate(req, res, next) {
 
   const { rows } = await query(
     `SELECT u.id, u.uuid, u.name, u.email, u.status, u.org_id, r.name AS role, r.code AS role_code, rg.code AS region,
-            o.verification_status AS org_status
+            o.verification_status AS org_status, o.org_type, o.parent_org_id
      FROM users u
      JOIN roles r ON r.id = u.role_id
      LEFT JOIN regions rg ON rg.id = u.region_id
@@ -60,6 +61,7 @@ export async function authenticate(req, res, next) {
     uuid: user.uuid,
     org_id: user.org_id,
     role_code: user.role_code,
+    org_scope: organisationScope(user),
   }
 
   // Sessions issued for mandatory MFA setup may only reach the MFA and session endpoints.

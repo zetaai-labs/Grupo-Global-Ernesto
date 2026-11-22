@@ -617,3 +617,544 @@ CREATE TABLE IF NOT EXISTS course_enrollments (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (item_id, user_id)
 );
+
+-- Schema Document §2.1: logical data isolation between organisations and business units.
+-- NULL org_id = group-wide (visible across Grupo Global, subject to role permissions).
+ALTER TABLE folders ADD COLUMN IF NOT EXISTS org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_folders_org ON folders(org_id);
+ALTER TABLE crm_relationships ADD COLUMN IF NOT EXISTS owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_crm_owner_org ON crm_relationships(owner_org_id);
+
+-- Technical Spec §3.1: Finance role (mandatory MFA).
+INSERT INTO roles (name, description) VALUES ('finance', 'Finance Manager — budgets, revenue and financial oversight')
+ON CONFLICT (name) DO NOTHING;
+UPDATE roles SET code = 'ROLE_FINANCE_MGR', authority_level = '2' WHERE name = 'finance';
+
+-- §5.2 Tier 1: mandatory re-completion of a compliance course.
+ALTER TABLE governance_sanctions ADD COLUMN IF NOT EXISTS required_course_id UUID REFERENCES community_events_courses(item_id) ON DELETE SET NULL;
+ALTER TABLE governance_sanctions ADD COLUMN IF NOT EXISTS overdue_notified_at TIMESTAMPTZ;
+
+-- Technical Spec §3.2: GDPR ARCO rights (Access, Rectification, Cancellation, Opposition).
+ALTER TABLE users ADD COLUMN IF NOT EXISTS processing_opposed BOOLEAN NOT NULL DEFAULT false;
+CREATE TABLE IF NOT EXISTS gdpr_requests (
+  request_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  request_type TEXT NOT NULL CHECK (request_type IN ('RECTIFICATION', 'CANCELLATION', 'OPPOSITION')),
+  field VARCHAR(50),
+  requested_value VARCHAR(255),
+  details TEXT NOT NULL,
+  status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')),
+  due_at TIMESTAMPTZ NOT NULL DEFAULT now() + interval '30 days',
+  decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_at TIMESTAMPTZ,
+  response TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_gdpr_pending ON gdpr_requests(user_id, request_type) WHERE status = 'PENDING';
+CREATE INDEX IF NOT EXISTS idx_gdpr_status ON gdpr_requests(status, due_at);
+
+-- =====================================================================
+-- Business integrations (Technical Spec §1.2 module 3, §2.1, §2.3; Schema §2.4)
+-- =====================================================================
+CREATE TABLE IF NOT EXISTS membership_plans (
+  plan_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code VARCHAR(50) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  billing_interval TEXT NOT NULL CHECK (billing_interval IN ('MONTHLY', 'YEARLY')),
+  price_cents INTEGER NOT NULL CHECK (price_cents >= 0),
+  currency CHAR(3) NOT NULL DEFAULT 'EUR' CHECK (currency = 'EUR'),
+  active BOOLEAN NOT NULL DEFAULT true,
+  stripe_price_id VARCHAR(255),
+  paypal_plan_id VARCHAR(255),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS subscriptions (
+  subscription_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  plan_id UUID NOT NULL REFERENCES membership_plans(plan_id),
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('INCOMPLETE', 'TRIAL', 'ACTIVE', 'PAST_DUE', 'CANCELED', 'EXPIRED')),
+  provider TEXT NOT NULL DEFAULT 'MANUAL' CHECK (provider IN ('MANUAL', 'STRIPE', 'PAYPAL')),
+  provider_ref VARCHAR(255),
+  current_period_start TIMESTAMPTZ NOT NULL DEFAULT now(),
+  current_period_end TIMESTAMPTZ,
+  canceled_at TIMESTAMPTZ,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_subscription_open_org ON subscriptions(org_id) WHERE status IN ('INCOMPLETE', 'TRIAL', 'ACTIVE', 'PAST_DUE');
+CREATE UNIQUE INDEX IF NOT EXISTS uq_subscription_provider_ref ON subscriptions(provider, provider_ref) WHERE provider_ref IS NOT NULL;
+
+CREATE SEQUENCE IF NOT EXISTS invoice_number_seq START 1001;
+CREATE TABLE IF NOT EXISTS invoices (
+  invoice_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_number VARCHAR(32) NOT NULL UNIQUE,
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE RESTRICT,
+  subscription_id UUID REFERENCES subscriptions(subscription_id) ON DELETE SET NULL,
+  description VARCHAR(500) NOT NULL,
+  amount_cents INTEGER NOT NULL CHECK (amount_cents >= 0),
+  tax_cents INTEGER NOT NULL DEFAULT 0 CHECK (tax_cents >= 0),
+  currency CHAR(3) NOT NULL DEFAULT 'EUR' CHECK (currency = 'EUR'),
+  status TEXT NOT NULL DEFAULT 'OPEN' CHECK (status IN ('OPEN', 'PAID', 'VOID')),
+  issued_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  due_at TIMESTAMPTZ,
+  paid_at TIMESTAMPTZ,
+  provider TEXT NOT NULL DEFAULT 'MANUAL' CHECK (provider IN ('MANUAL', 'STRIPE', 'PAYPAL')),
+  provider_ref VARCHAR(255),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_invoices_org ON invoices(org_id, issued_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_invoice_provider_ref ON invoices(provider, provider_ref) WHERE provider_ref IS NOT NULL;
+
+CREATE TABLE IF NOT EXISTS billing_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider TEXT NOT NULL,
+  provider_event_id VARCHAR(255) NOT NULL,
+  event_type VARCHAR(255) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (provider, provider_event_id)
+);
+
+CREATE TABLE IF NOT EXISTS member_lifecycle_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  from_status TEXT,
+  to_status TEXT NOT NULL,
+  reason VARCHAR(255),
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_lifecycle_org ON member_lifecycle_events(org_id, created_at DESC);
+
+-- OIDC authorization codes (stored hashed, single use).
+CREATE TABLE IF NOT EXISTS oidc_auth_codes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code_hash CHAR(64) NOT NULL UNIQUE,
+  client_id VARCHAR(255) NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  redirect_uri TEXT NOT NULL,
+  code_challenge VARCHAR(128) NOT NULL,
+  nonce VARCHAR(255),
+  scope VARCHAR(255) NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS provisioning_jobs (
+  job_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  provider TEXT NOT NULL CHECK (provider IN ('GOOGLE', 'MICROSOFT')),
+  action TEXT NOT NULL CHECK (action IN ('CREATE', 'UPDATE', 'SUSPEND')),
+  user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  target_email VARCHAR(255) NOT NULL,
+  dry_run BOOLEAN NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('PLANNED', 'SUCCESS', 'FAILED')),
+  request JSONB NOT NULL DEFAULT '{}'::jsonb,
+  result JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Provider advice is kept apart from kyc_checks: it never advances or approves onboarding.
+CREATE TABLE IF NOT EXISTS kyc_provider_screenings (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  provider VARCHAR(64) NOT NULL,
+  sanctions TEXT NOT NULL CHECK (sanctions IN ('CLEAR', 'HIT')),
+  pep TEXT NOT NULL CHECK (pep IN ('CLEAR', 'HIT')),
+  adverse_media TEXT NOT NULL CHECK (adverse_media IN ('CLEAR', 'HIT')),
+  matches JSONB NOT NULL DEFAULT '[]'::jsonb,
+  performed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_kyc_provider_org ON kyc_provider_screenings(org_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS kyc_registry_lookups (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  registry VARCHAR(32) NOT NULL,
+  lookup_value VARCHAR(64) NOT NULL,
+  valid BOOLEAN,
+  registered_name VARCHAR(255),
+  details JSONB NOT NULL DEFAULT '{}'::jsonb,
+  performed_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_kyc_registry_org ON kyc_registry_lookups(org_id, created_at DESC);
+
+-- =====================================================================
+-- Technical Spec §3.2: tamper-evident audit trail (SHA-256 hash chain).
+-- The chain covers a hash of the original details and a pseudonymous actor reference,
+-- so GDPR scrubbing (removing detail keys, nulling user_id) does not break verification.
+-- =====================================================================
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS chain_seq BIGINT;
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS prev_hash CHAR(64);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS entry_hash CHAR(64);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS details_hash CHAR(64);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS actor_ref CHAR(64);
+ALTER TABLE audit_logs ADD COLUMN IF NOT EXISTS details_redacted_at TIMESTAMPTZ;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_audit_chain_seq ON audit_logs(chain_seq);
+
+CREATE TABLE IF NOT EXISTS audit_chain_head (
+  id SMALLINT PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  last_seq BIGINT NOT NULL DEFAULT 0,
+  last_hash CHAR(64) NOT NULL DEFAULT repeat('0', 64),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+INSERT INTO audit_chain_head (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+-- Immutable-storage anchors: batches of the chain copied to S3 Object Lock (when configured).
+CREATE TABLE IF NOT EXISTS audit_anchors (
+  anchor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  from_seq BIGINT NOT NULL,
+  to_seq BIGINT NOT NULL,
+  head_hash CHAR(64) NOT NULL,
+  object_key TEXT NOT NULL UNIQUE,
+  retain_until TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE OR REPLACE FUNCTION audit_sha256(value TEXT) RETURNS CHAR(64) LANGUAGE sql IMMUTABLE AS $fn$
+  SELECT encode(sha256(convert_to(value, 'UTF8')), 'hex')::char(64)
+$fn$;
+
+CREATE OR REPLACE FUNCTION audit_entry_hash(
+  p_prev TEXT, p_seq BIGINT, p_action TEXT, p_entity TEXT, p_entity_id TEXT,
+  p_created_at TIMESTAMPTZ, p_actor_ref TEXT, p_details_hash TEXT
+) RETURNS CHAR(64) LANGUAGE sql STABLE AS $fn$
+  SELECT audit_sha256(jsonb_build_array(
+    p_prev, p_seq, p_action, p_entity, p_entity_id,
+    to_char(p_created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"'),
+    p_actor_ref, p_details_hash
+  )::text)
+$fn$;
+
+CREATE OR REPLACE FUNCTION audit_actor_ref(p_user_id INTEGER) RETURNS CHAR(64) LANGUAGE sql IMMUTABLE AS $fn$
+  SELECT CASE WHEN p_user_id IS NULL THEN NULL ELSE audit_sha256('gg-audit-actor:' || p_user_id) END
+$fn$;
+
+CREATE OR REPLACE FUNCTION audit_chain_insert() RETURNS trigger LANGUAGE plpgsql AS $fn$
+DECLARE
+  v_seq BIGINT;
+  v_hash CHAR(64);
+BEGIN
+  -- The row lock serialises writers, so the chain order always matches commit order.
+  SELECT last_seq, last_hash INTO v_seq, v_hash FROM audit_chain_head WHERE id = 1 FOR UPDATE;
+  NEW.chain_seq := v_seq + 1;
+  NEW.prev_hash := v_hash;
+  NEW.details_hash := audit_sha256(NEW.details::text);
+  NEW.actor_ref := audit_actor_ref(NEW.user_id);
+  NEW.details_redacted_at := NULL;
+  NEW.entry_hash := audit_entry_hash(v_hash, NEW.chain_seq, NEW.action, NEW.entity, NEW.entity_id,
+                                     NEW.created_at, NEW.actor_ref, NEW.details_hash);
+  UPDATE audit_chain_head SET last_seq = NEW.chain_seq, last_hash = NEW.entry_hash, updated_at = now() WHERE id = 1;
+  RETURN NEW;
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION audit_chain_guard() RETURNS trigger LANGUAGE plpgsql AS $fn$
+BEGIN
+  IF TG_OP = 'DELETE' THEN
+    RAISE EXCEPTION 'audit_logs is append-only';
+  END IF;
+  -- Rows that have not joined the chain yet are being backfilled by the migration below.
+  IF OLD.chain_seq IS NULL THEN
+    RETURN NEW;
+  END IF;
+  IF (NEW.id, NEW.action, NEW.entity, NEW.entity_id, NEW.created_at, NEW.chain_seq, NEW.prev_hash,
+      NEW.entry_hash, NEW.details_hash, NEW.actor_ref)
+     IS DISTINCT FROM
+     (OLD.id, OLD.action, OLD.entity, OLD.entity_id, OLD.created_at, OLD.chain_seq, OLD.prev_hash,
+      OLD.entry_hash, OLD.details_hash, OLD.actor_ref) THEN
+    RAISE EXCEPTION 'audit_logs is append-only';
+  END IF;
+  -- Allowed GDPR changes: unlink the user, or remove keys from details.
+  IF NEW.user_id IS DISTINCT FROM OLD.user_id AND NEW.user_id IS NOT NULL THEN
+    RAISE EXCEPTION 'audit_logs actor cannot be reassigned';
+  END IF;
+  IF NEW.details IS DISTINCT FROM OLD.details THEN
+    IF NOT (OLD.details @> NEW.details) THEN
+      RAISE EXCEPTION 'audit_logs details can only be redacted';
+    END IF;
+    NEW.details_redacted_at := now();
+  ELSE
+    NEW.details_redacted_at := OLD.details_redacted_at;
+  END IF;
+  RETURN NEW;
+END
+$fn$;
+
+CREATE OR REPLACE FUNCTION audit_chain_no_truncate() RETURNS trigger LANGUAGE plpgsql AS $fn$
+BEGIN
+  RAISE EXCEPTION 'audit_logs is append-only';
+END
+$fn$;
+
+-- Existing rows join the chain once, in id order; the insert trigger takes over atomically.
+DO $mig$
+DECLARE
+  rec RECORD;
+  v_seq BIGINT;
+  v_hash CHAR(64);
+  v_details CHAR(64);
+  v_actor CHAR(64);
+  v_entry CHAR(64);
+BEGIN
+  LOCK TABLE audit_logs IN SHARE ROW EXCLUSIVE MODE;
+  SELECT last_seq, last_hash INTO v_seq, v_hash FROM audit_chain_head WHERE id = 1 FOR UPDATE;
+  FOR rec IN SELECT id, user_id, action, entity, entity_id, details, created_at
+             FROM audit_logs WHERE chain_seq IS NULL ORDER BY id LOOP
+    v_seq := v_seq + 1;
+    v_details := audit_sha256(rec.details::text);
+    v_actor := audit_actor_ref(rec.user_id);
+    v_entry := audit_entry_hash(v_hash, v_seq, rec.action, rec.entity, rec.entity_id, rec.created_at, v_actor, v_details);
+    UPDATE audit_logs SET chain_seq = v_seq, prev_hash = v_hash, entry_hash = v_entry,
+           details_hash = v_details, actor_ref = v_actor
+    WHERE id = rec.id;
+    v_hash := v_entry;
+  END LOOP;
+  UPDATE audit_chain_head SET last_seq = v_seq, last_hash = v_hash, updated_at = now() WHERE id = 1;
+
+  DROP TRIGGER IF EXISTS trg_audit_chain_insert ON audit_logs;
+  CREATE TRIGGER trg_audit_chain_insert BEFORE INSERT ON audit_logs
+    FOR EACH ROW EXECUTE FUNCTION audit_chain_insert();
+  DROP TRIGGER IF EXISTS trg_audit_chain_guard ON audit_logs;
+  CREATE TRIGGER trg_audit_chain_guard BEFORE UPDATE OR DELETE ON audit_logs
+    FOR EACH ROW EXECUTE FUNCTION audit_chain_guard();
+  DROP TRIGGER IF EXISTS trg_audit_chain_no_truncate ON audit_logs;
+  CREATE TRIGGER trg_audit_chain_no_truncate BEFORE TRUNCATE ON audit_logs
+    FOR EACH STATEMENT EXECUTE FUNCTION audit_chain_no_truncate();
+END
+$mig$;
+
+-- Technical Spec §3.1: WebAuthn security keys as a second factor.
+CREATE TABLE IF NOT EXISTS webauthn_credentials (
+  webauthn_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  credential_id TEXT NOT NULL UNIQUE,
+  public_key BYTEA NOT NULL,
+  counter BIGINT NOT NULL DEFAULT 0,
+  transports TEXT[] NOT NULL DEFAULT '{}',
+  name VARCHAR(100) NOT NULL DEFAULT 'Security key',
+  last_used_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_webauthn_user ON webauthn_credentials(user_id);
+
+CREATE TABLE IF NOT EXISTS webauthn_challenges (
+  challenge_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  purpose TEXT NOT NULL CHECK (purpose IN ('register', 'login')),
+  challenge TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, purpose)
+);
+
+-- ZYLAX Wave 1: commercial core (Catalog, Contacts, Distributors, Quotes, Orders).
+CREATE SEQUENCE IF NOT EXISTS zx_quote_seq;
+CREATE SEQUENCE IF NOT EXISTS zx_order_seq;
+
+CREATE TABLE IF NOT EXISTS zx_products (
+  product_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  sku VARCHAR(64) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  category VARCHAR(100) NOT NULL DEFAULT 'General',
+  unit_price_eur NUMERIC(14,2) NOT NULL CHECK (unit_price_eur >= 0),
+  tax_rate NUMERIC(5,2) NOT NULL DEFAULT 21 CHECK (tax_rate BETWEEN 0 AND 100),
+  stock_qty INTEGER NOT NULL DEFAULT 0 CHECK (stock_qty >= 0),
+  active BOOLEAN NOT NULL DEFAULT true,
+  owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_zx_products_sku ON zx_products (UPPER(sku));
+
+CREATE TABLE IF NOT EXISTS zx_contacts (
+  contact_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE CASCADE,
+  full_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  job_title VARCHAR(150),
+  active BOOLEAN NOT NULL DEFAULT true,
+  owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_contacts_org ON zx_contacts(org_id);
+
+CREATE TABLE IF NOT EXISTS zx_distributors (
+  distributor_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  org_id UUID NOT NULL UNIQUE REFERENCES organizations(org_id) ON DELETE CASCADE,
+  kind TEXT NOT NULL DEFAULT 'DISTRIBUTOR' CHECK (kind IN ('DISTRIBUTOR', 'FRANCHISE')),
+  territory VARCHAR(50) NOT NULL,
+  discount_pct NUMERIC(5,2) NOT NULL DEFAULT 0 CHECK (discount_pct BETWEEN 0 AND 40),
+  status TEXT NOT NULL DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'SUSPENDED')),
+  owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS zx_quotes (
+  quote_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_number VARCHAR(32) NOT NULL UNIQUE,
+  customer_org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE RESTRICT,
+  contact_id UUID REFERENCES zx_contacts(contact_id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'DRAFT' CHECK (status IN ('DRAFT', 'SENT', 'ACCEPTED', 'REJECTED')),
+  valid_until DATE NOT NULL,
+  notes TEXT,
+  net_eur NUMERIC(14,2) NOT NULL DEFAULT 0,
+  tax_eur NUMERIC(14,2) NOT NULL DEFAULT 0,
+  total_eur NUMERIC(14,2) NOT NULL DEFAULT 0,
+  owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  decided_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_quotes_customer ON zx_quotes(customer_org_id, status);
+
+CREATE TABLE IF NOT EXISTS zx_quote_lines (
+  line_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_id UUID NOT NULL REFERENCES zx_quotes(quote_id) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES zx_products(product_id) ON DELETE RESTRICT,
+  sku VARCHAR(64) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  qty INTEGER NOT NULL CHECK (qty > 0),
+  unit_price_eur NUMERIC(14,2) NOT NULL,
+  discount_pct NUMERIC(5,2) NOT NULL DEFAULT 0,
+  tax_rate NUMERIC(5,2) NOT NULL,
+  net_eur NUMERIC(14,2) NOT NULL,
+  tax_eur NUMERIC(14,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (quote_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS zx_orders (
+  order_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_number VARCHAR(32) NOT NULL UNIQUE,
+  quote_id UUID NOT NULL UNIQUE REFERENCES zx_quotes(quote_id) ON DELETE RESTRICT,
+  customer_org_id UUID NOT NULL REFERENCES organizations(org_id) ON DELETE RESTRICT,
+  status TEXT NOT NULL DEFAULT 'CONFIRMED'
+    CHECK (status IN ('CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED')),
+  net_eur NUMERIC(14,2) NOT NULL,
+  tax_eur NUMERIC(14,2) NOT NULL,
+  total_eur NUMERIC(14,2) NOT NULL,
+  owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_orders_customer ON zx_orders(customer_org_id, status);
+
+CREATE TABLE IF NOT EXISTS zx_order_events (
+  event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id UUID NOT NULL REFERENCES zx_orders(order_id) ON DELETE CASCADE,
+  status TEXT NOT NULL,
+  note TEXT,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_order_events_order ON zx_order_events(order_id, created_at);
+
+-- ZYLAX: shared record engine for the operational, extranet and sector modules.
+CREATE SEQUENCE IF NOT EXISTS zx_record_seq;
+ALTER TABLE zx_products ADD COLUMN IF NOT EXISTS specifications TEXT;
+
+CREATE TABLE IF NOT EXISTS zx_records (
+  record_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  ref_no VARCHAR(40) NOT NULL UNIQUE,
+  module VARCHAR(40) NOT NULL,
+  entity VARCHAR(40) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  status VARCHAR(30) NOT NULL,
+  data JSONB NOT NULL DEFAULT '{}'::jsonb,
+  sealed_data TEXT,
+  owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  customer_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  assigned_to INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_records_entity ON zx_records(module, entity, status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_zx_records_customer ON zx_records(customer_org_id);
+CREATE INDEX IF NOT EXISTS idx_zx_records_assigned ON zx_records(assigned_to);
+CREATE INDEX IF NOT EXISTS idx_zx_records_creator ON zx_records(created_by);
+CREATE INDEX IF NOT EXISTS idx_zx_records_data ON zx_records USING GIN (data);
+
+CREATE TABLE IF NOT EXISTS zx_record_events (
+  event_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  record_id UUID NOT NULL REFERENCES zx_records(record_id) ON DELETE CASCADE,
+  kind VARCHAR(20) NOT NULL CHECK (kind IN ('created', 'updated', 'status', 'comment', 'file')),
+  from_status VARCHAR(30),
+  to_status VARCHAR(30),
+  body TEXT,
+  internal BOOLEAN NOT NULL DEFAULT false,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_record_events_record ON zx_record_events(record_id, created_at);
+
+CREATE TABLE IF NOT EXISTS zx_record_files (
+  file_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  record_id UUID NOT NULL REFERENCES zx_records(record_id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  stored_name TEXT NOT NULL,
+  mime_type VARCHAR(150),
+  size_bytes BIGINT NOT NULL DEFAULT 0,
+  internal BOOLEAN NOT NULL DEFAULT true,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_record_files_record ON zx_record_files(record_id);
+
+-- ZYLAX POS and billing. Invoice numbers come from a locked counter so they stay consecutive.
+CREATE TABLE IF NOT EXISTS zx_counters (
+  name VARCHAR(40) PRIMARY KEY,
+  value BIGINT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS zx_invoices (
+  invoice_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_number VARCHAR(32) NOT NULL UNIQUE,
+  source TEXT NOT NULL CHECK (source IN ('POS', 'ORDER')),
+  order_id UUID UNIQUE REFERENCES zx_orders(order_id) ON DELETE RESTRICT,
+  customer_org_id UUID REFERENCES organizations(org_id) ON DELETE RESTRICT,
+  customer_name VARCHAR(255),
+  status TEXT NOT NULL CHECK (status IN ('ISSUED', 'PAID', 'REFUNDED')),
+  payment_method TEXT CHECK (payment_method IN ('CASH', 'CARD', 'TRANSFER')),
+  net_eur NUMERIC(14,2) NOT NULL,
+  tax_eur NUMERIC(14,2) NOT NULL,
+  total_eur NUMERIC(14,2) NOT NULL,
+  owner_org_id UUID REFERENCES organizations(org_id) ON DELETE SET NULL,
+  created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+  paid_at TIMESTAMPTZ,
+  refunded_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_zx_invoices_customer ON zx_invoices(customer_org_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS zx_invoice_lines (
+  line_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  invoice_id UUID NOT NULL REFERENCES zx_invoices(invoice_id) ON DELETE CASCADE,
+  product_id UUID REFERENCES zx_products(product_id) ON DELETE RESTRICT,
+  sku VARCHAR(64) NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  qty INTEGER NOT NULL CHECK (qty > 0),
+  unit_price_eur NUMERIC(14,2) NOT NULL,
+  discount_pct NUMERIC(5,2) NOT NULL DEFAULT 0,
+  tax_rate NUMERIC(5,2) NOT NULL,
+  net_eur NUMERIC(14,2) NOT NULL,
+  tax_eur NUMERIC(14,2) NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

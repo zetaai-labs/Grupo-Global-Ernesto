@@ -1,0 +1,134 @@
+.prv-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.prv-notice button {
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.prv-flag {
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fff4e5;
+  color: #7c4500;
+  font-size: 12px;
+}
+
+.prv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.prv-form {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+}
+
+.prv-form h3,
+.prv-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.prv-form small,
+.prv-muted {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.prv-form select,
+.prv-form input,
+.prv-form textarea,
+.prv-decide input {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  font: inherit;
+  font-size: 12px;
+}
+
+.prv-form .primary-action {
+  justify-self: start;
+}
+
+.prv-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.prv-list li:not(.prv-muted) {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--background);
+  font-size: 12px;
+}
+
+.prv-list p,
+.prv-list small,
+.prv-decide {
+  grid-column: 1 / -1;
+  margin: 0;
+  word-break: break-word;
+}
+
+.prv-list small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.prv-pill {
+  align-self: start;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.prv-pending { background: #fff4e5; color: #a35b00; }
+.prv-approved { background: var(--green-soft); color: var(--green-dark); }
+.prv-rejected { background: #fff1f2; color: #be123c; }
+
+.prv-decide {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.prv-decide input {
+  flex: 1;
+  min-width: 170px;
+}
+
+.prv-decide button {
+  padding: 6px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+  color: #4338ca;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.prv-decide .prv-reject {
+  border-color: #fecdd3;
+  color: #be123c;
+}

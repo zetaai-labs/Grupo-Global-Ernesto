@@ -21,6 +21,7 @@ import ProtectedRoute from './components/Auth/ProtectedRoute.jsx'
 import Unauthorized from './components/Auth/Unauthorized.jsx'
 import ReceivedFileUpload from './components/Public/ReceivedFileUpload.jsx'
 import Onboarding from './components/Public/Onboarding.jsx'
+import Privacy from './components/Portals/Shared/Privacy.jsx'
 import VerifyCertificate from './components/Public/VerifyCertificate.jsx'
 import Organizations from './components/Portals/Intranet/Features/Organizations/Organizations.jsx'
 import Courses from './components/Portals/Intranet/Features/Courses/Courses.jsx'
@@ -29,6 +30,11 @@ import Ethics from './components/Portals/Intranet/Features/Ethics/Ethics.jsx'
 import InvestorVault from './components/Portals/Intranet/Features/InvestorVault/InvestorVault.jsx'
 import Projects from './components/Portals/Intranet/Features/Projects/Projects.jsx'
 import Crm from './components/Portals/Intranet/Features/Crm/Crm.jsx'
+import DataImport from './components/Portals/Intranet/Features/DataImport/DataImport.jsx'
+import Commercial from './components/Portals/Intranet/Features/Commercial/Commercial.jsx'
+import ZylaxHub from './components/Portals/Shared/Zylax/ZylaxHub.jsx'
+import ZylaxModule from './components/Portals/Shared/Zylax/ZylaxModule.jsx'
+import MyOrders from './components/Portals/Extranet/Features/MyOrders/MyOrders.jsx'
 import MfaSettings from './components/Auth/MfaSettings.jsx'
 
 // Portal layouts
@@ -101,6 +107,7 @@ const router = createBrowserRouter(
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
         <Route path="security" element={<MfaSettings />} />
+        <Route path="privacy" element={<Privacy />} />
         <Route path="courses" element={<Courses />} />
         <Route path="community" element={<Community />} />
         <Route path="ethics" element={<Ethics />} />
@@ -114,6 +121,10 @@ const router = createBrowserRouter(
         />
         <Route path="projects" element={<Projects />} />
         <Route path="crm" element={<Crm />} />
+        <Route path="data-import" element={<ProtectedRoute roles={['admin', 'tech_admin', 'manager']}><DataImport /></ProtectedRoute>} />
+        <Route path="zylax" element={<ZylaxHub />} />
+        <Route path="zylax/:module" element={<ZylaxModule />} />
+        <Route path="commercial" element={<ProtectedRoute roles={['admin', 'manager', 'employee', 'finance']}><Commercial /></ProtectedRoute>} />
         <Route
           path="organizations"
           element={
@@ -168,6 +179,12 @@ const router = createBrowserRouter(
         <Route path="my-submissions" element={<MySubmissions />} />
         <Route path="shared-links" element={<SharedLinks />} />
         <Route path="project-updates" element={<ProjectUpdates />} />
+        <Route path="zylax" element={<ProtectedRoute roles={['client', 'partner', 'supplier']}><ZylaxHub /></ProtectedRoute>} />
+        <Route path="zylax/:module" element={<ProtectedRoute roles={['client', 'partner', 'supplier']}><ZylaxModule /></ProtectedRoute>} />
+        <Route path="orders" element={<ProtectedRoute roles={['client', 'partner']}><MyOrders /></ProtectedRoute>} />
+        <Route path="ethics" element={<Ethics />} />
+        <Route path="courses" element={<Courses />} />
+        <Route path="privacy" element={<Privacy />} />
         <Route
           path="investor-vault"
           element={

@@ -3,7 +3,7 @@ const USER_KEY = 'gg_user'
 
 // Mirrors backend/src/config/roles.js (STAFF_ROLES / EXTERNAL_ROLES).
 export const PORTAL_ROLES = {
-  intranet: ['admin', 'tech_admin', 'hr', 'manager', 'employee'],
+  intranet: ['admin', 'tech_admin', 'hr', 'finance', 'manager', 'employee'],
   extranet: ['partner', 'client', 'supplier', 'investor'],
 }
 

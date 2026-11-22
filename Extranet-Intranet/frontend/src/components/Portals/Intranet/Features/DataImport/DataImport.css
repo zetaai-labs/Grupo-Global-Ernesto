@@ -1,0 +1,29 @@
+.data-import button { padding: 7px 12px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; color: #334155; font: inherit; font-size: 12px; cursor: pointer; }
+.data-import button:disabled { opacity: .5; cursor: not-allowed; }
+.data-import button.primary-action { background: #4338ca; border-color: #4338ca; color: #fff; }
+.import-upload, .import-search, .import-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.import-upload input, .import-search input, .import-actions select { padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; font: inherit; font-size: 12px; }
+.import-search { margin-bottom: 12px; }
+.import-search input { flex: 1; min-width: 220px; }
+.import-progress, .import-unmapped { margin: 12px 0 0; color: #475569; font-size: 12px; }
+.import-review, .import-history { margin-top: 18px; padding-top: 14px; border-top: 1px solid #e2e8f0; }
+.import-review h4, .import-history h4 { margin: 0 0 10px; font-size: 13px; overflow-wrap: anywhere; }
+.import-counts { display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px; }
+.import-counts div { display: grid; gap: 3px; padding: 10px 12px; border: 1px solid #e2e8f0; border-radius: 8px; }
+.import-counts span { color: #64748b; font-size: 11px; }
+.import-counts strong { font-size: 18px; font-variant-numeric: tabular-nums; }
+.import-review .import-actions { margin: 14px 0 10px; }
+.import-spacer { flex: 1; }
+.import-table-wrap { overflow-x: auto; border: 1px solid #e2e8f0; border-radius: 8px; }
+.import-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.import-table th, .import-table td { padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; vertical-align: top; }
+.import-table th { background: #f8fafc; color: #475569; font-weight: 600; white-space: nowrap; }
+.import-table tr:last-child td { border-bottom: 0; }
+.import-table small { display: block; margin-top: 2px; color: #64748b; }
+.import-status { display: inline-block; padding: 2px 7px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 10px; font-weight: 600; }
+.import-status.is-valid { background: #dcfce7; color: #166534; }
+.import-status.is-warning { background: #fef3c7; color: #92400e; }
+.import-status.is-invalid { background: #fee2e2; color: #991b1b; }
+.data-import .import-table-wrap + .import-actions { margin-top: 12px; }
+.import-history button { display: flex; width: 100%; justify-content: space-between; gap: 12px; margin-bottom: 6px; text-align: left; }
+.import-history em { flex: none; color: #64748b; font-style: normal; }

@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { query } from '../config/database.js'
 import { notify } from '../services/notification.service.js'
 import { sendStoredFile } from '../services/storage.service.js'
-import { encryptProfile, decryptProfile, logVaultAccess, denyAndAlert } from '../services/vault.service.js'
+import { sealProfile, openProfile, logVaultAccess, denyAndAlert } from '../services/vault.service.js'
 
 export const TICKET_RANGES = ['EUR 100K-500K', 'EUR 500K-1M', 'EUR 1M-5M', 'EUR 5M+']
 export const SECTORS = ['FINTECH', 'REAL_ESTATE', 'HEALTHCARE', 'CYBERSECURITY', 'CROSS_BORDER_TRADE']
@@ -28,11 +28,11 @@ async function requireAdmin(req, res) {
 const NDA_SQL = `(v.nda_signed OR EXISTS (
   SELECT 1 FROM nda_records n WHERE n.org_id = v.org_id AND n.accepted_at IS NOT NULL))`
 
-function presentInvestor(row, { withProfile }) {
+async function presentInvestor(row, { withProfile }) {
   let profile = null
   if (withProfile) {
     try {
-      profile = decryptProfile(row.encrypted_profile)
+      profile = await openProfile(row.encrypted_profile)
     } catch {
       profile = { error: 'Profile could not be decrypted with the current vault key.' }
     }
@@ -66,7 +66,12 @@ export async function listInvestors(req, res) {
   const { rows } = await query(`${INVESTOR_SELECT} ORDER BY v.created_at DESC`)
   await logVaultAccess(req, null, 'LIST_INVESTORS', { count: rows.length })
   // Listing shows names (decrypted) so the administrator can work; every list view is logged.
-  return res.json({ data: rows.map((row) => presentInvestor(row, { withProfile: true })), meta: { ticket_ranges: TICKET_RANGES, sectors: SECTORS } })
+  // Small batches keep an external key service within its request limits.
+  const data = []
+  for (let index = 0; index < rows.length; index += 10) {
+    data.push(...await Promise.all(rows.slice(index, index + 10).map((row) => presentInvestor(row, { withProfile: true }))))
+  }
+  return res.json({ data, meta: { ticket_ranges: TICKET_RANGES, sectors: SECTORS } })
 }
 
 const profileSchema = z.object({
@@ -100,7 +105,7 @@ export async function createInvestor(req, res) {
     const { rows } = await query(
       `INSERT INTO investors_vault (org_id, encrypted_profile, investment_ticket_range, sector_focus, nda_signed, created_by)
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING investor_id`,
-      [data.org_id || null, encryptProfile(data.profile), data.investment_ticket_range, data.sector_focus.join(','), Boolean(data.nda_signed), req.user.sub],
+      [data.org_id || null, await sealProfile(data.profile), data.investment_ticket_range, data.sector_focus.join(','), Boolean(data.nda_signed), req.user.sub],
     )
     await logVaultAccess(req, rows[0].investor_id, 'CREATE_INVESTOR')
     return res.status(201).json({ data: rows[0] })
@@ -116,7 +121,7 @@ export async function getInvestor(req, res) {
   const { rows } = await query(`${INVESTOR_SELECT} WHERE v.investor_id = $1`, [req.params.id])
   if (!rows[0]) return fail(res, 404, 'Investor not found.')
   await logVaultAccess(req, req.params.id, 'VIEW_INVESTOR')
-  return res.json({ data: { ...presentInvestor(rows[0], { withProfile: true }), access_audit_log: rows[0].access_audit_log.slice(-100).reverse() } })
+  return res.json({ data: { ...(await presentInvestor(rows[0], { withProfile: true })), access_audit_log: rows[0].access_audit_log.slice(-100).reverse() } })
 }
 
 export async function updateInvestor(req, res) {
@@ -131,7 +136,7 @@ export async function updateInvestor(req, res) {
     values.push(value)
     sets.push(`${column} = $${values.length}`)
   }
-  if (data.profile) set('encrypted_profile', encryptProfile(data.profile))
+  if (data.profile) set('encrypted_profile', await sealProfile(data.profile))
   if (data.investment_ticket_range) set('investment_ticket_range', data.investment_ticket_range)
   if (data.sector_focus) set('sector_focus', data.sector_focus.join(','))
   if (data.nda_signed !== undefined) set('nda_signed', data.nda_signed)
@@ -280,5 +285,5 @@ export async function myVault(req, res) {
   const investor = await myInvestor(req.user)
   if (!investor) return res.json({ data: null })
   await logVaultAccess(req, investor.investor_id, 'VIEW_OWN_PROFILE')
-  return res.json({ data: presentInvestor(investor, { withProfile: true }) })
+  return res.json({ data: await presentInvestor(investor, { withProfile: true }) })
 }

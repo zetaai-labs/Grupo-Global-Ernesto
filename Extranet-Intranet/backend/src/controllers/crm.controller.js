@@ -4,6 +4,7 @@ import { query, withTransaction } from '../config/database.js'
 import { config } from '../config/env.js'
 import { writeAudit } from '../services/audit.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
+import { orgPredicate } from '../services/scope.js'
 
 /** CRM relationships and pipelines (Schema Document §4.3). */
 
@@ -26,12 +27,13 @@ const fail = (res, status, message) => res.status(status).json({ message })
 function visibility(user, alias, firstParam) {
   const p = firstParam
   return {
-    sql: `(${alias}.confidentiality_level IN ('PUBLIC', 'INTERNAL')
+    sql: `(${alias}.assigned_manager = $${p} OR ${alias}.created_by = $${p} OR ${orgPredicate(`${alias}.owner_org_id`, `$${p + 3}`)})
+          AND (${alias}.confidentiality_level IN ('PUBLIC', 'INTERNAL')
           OR (${alias}.confidentiality_level = 'RESTRICTED'
               AND ($${p + 1} = ANY($${p + 2}::text[]) OR ${alias}.assigned_manager = $${p} OR ${alias}.created_by = $${p}))
           OR (${alias}.confidentiality_level = 'HIGHLY_CONFIDENTIAL'
               AND ($${p + 1} = 'admin' OR ${alias}.assigned_manager = $${p})))`,
-    params: [user.sub, user.role, RESTRICTED_READERS],
+    params: [user.sub, user.role, RESTRICTED_READERS, user.org_scope ?? null],
   }
 }
 
@@ -113,7 +115,7 @@ async function assertStaff(userId) {
   if (!userId) return true
   const { rowCount } = await query(
     `SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id
-     WHERE u.id = $1 AND u.status = 'active' AND r.name IN ('admin', 'tech_admin', 'hr', 'manager', 'employee')`,
+     WHERE u.id = $1 AND u.status = 'active' AND r.name IN ('admin', 'tech_admin', 'hr', 'finance', 'manager', 'employee')`,
     [userId],
   )
   return rowCount > 0
@@ -132,10 +134,10 @@ export async function createRelationship(req, res) {
   const rel = await withTransaction(async (client) => {
     const { rows } = await client.query(
       `INSERT INTO crm_relationships
-         (entity_id, title, contact_type, confidentiality_level, pipeline_stage, assigned_manager, estimated_value_eur, next_action_at, created_by)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING rel_id`,
+         (entity_id, title, contact_type, confidentiality_level, pipeline_stage, assigned_manager, estimated_value_eur, next_action_at, created_by, owner_org_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING rel_id`,
       [data.entity_id, data.title, data.contact_type, data.confidentiality_level, data.pipeline_stage,
-        data.assigned_manager || req.user.sub, data.estimated_value_eur ?? null, data.next_action_at || null, req.user.sub],
+        data.assigned_manager || req.user.sub, data.estimated_value_eur ?? null, data.next_action_at || null, req.user.sub, req.user.org_id || null],
     )
     await client.query(
       "INSERT INTO crm_activities (rel_id, kind, body, created_by) VALUES ($1, 'SYSTEM', $2, $3)",
@@ -225,7 +227,7 @@ export async function addActivity(req, res) {
 export async function listManagers(_req, res) {
   const { rows } = await query(
     `SELECT u.id, u.name, r.name AS role FROM users u JOIN roles r ON r.id = u.role_id
-     WHERE u.status = 'active' AND r.name IN ('admin', 'manager', 'employee', 'hr') ORDER BY u.name`,
+     WHERE u.status = 'active' AND r.name IN ('admin', 'manager', 'employee', 'hr', 'finance') ORDER BY u.name`,
   )
   return res.json({ data: rows })
 }

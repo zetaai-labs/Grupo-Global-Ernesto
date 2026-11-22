@@ -12,6 +12,7 @@ import { writeAudit } from './src/services/audit.js'
 import { syncInbox, imapConfigured } from './src/jobs/emailSync.job.js'
 import { sendWorkflowReminders } from './src/controllers/workflows.controller.js'
 import { sendEventReminders } from './src/controllers/calendar.controller.js'
+import { sendOverdueRemediationAlerts } from './src/controllers/governance.controller.js'
 
 const app = createApp()
 const httpServer = createServer(app)
@@ -91,6 +92,15 @@ schedule(1, async () => {
     await sendWorkflowReminders()
   } catch (error) {
     await safeAudit('WORKFLOW_REMINDERS_FAILED', 'workflows', { error: error.message })
+  }
+})
+
+// Code of Ethics: alert HR about overdue Tier 1 remediation (checked hourly).
+schedule(1, async () => {
+  try {
+    await sendOverdueRemediationAlerts()
+  } catch (error) {
+    await safeAudit('REMEDIATION_ALERTS_FAILED', 'governance_sanctions', { error: error.message })
   }
 })
 

@@ -5,12 +5,22 @@ import { downloadFromApi } from '../../../../../utils/download'
 import './UserManagement.css'
 import { useT } from '../../../../../i18n'
 
+const HR_MANAGED_ROLES = ['manager', 'employee']
+
 function UserManagement() {
   const t = useT()
-  // HR sees a read-only directory; only admins can create or suspend accounts.
-  // Super Admin and Technical Admin manage accounts; only the Super Admin exports/erases (GDPR).
-  const isAdmin = ['admin', 'tech_admin'].includes(getUser()?.role)
-  const isSuperAdmin = getUser()?.role === 'admin'
+  // Super Admin and Technical Admin manage accounts; HR manages employees and managers.
+  // Only the Super Admin exports/erases (GDPR). The API enforces these same limits.
+  const currentRole = getUser()?.role
+  const isHr = currentRole === 'hr'
+  const canManage = isHr || ['admin', 'tech_admin'].includes(currentRole)
+  const isSuperAdmin = currentRole === 'admin'
+  const canAssignRole = (name) => (isHr ? HR_MANAGED_ROLES.includes(name) : isSuperAdmin || !['admin', 'tech_admin'].includes(name))
+  const canChangeStatus = (user) => canManage
+    && !['erased', 'expelled'].includes(user.status)
+    && user.email !== getUser()?.email
+    && (isSuperAdmin || !['admin', 'tech_admin'].includes(user.role))
+    && (!isHr || HR_MANAGED_ROLES.includes(user.role))
   const [users, setUsers] = useState([])
   const [roles, setRoles] = useState([])
   const [regions, setRegions] = useState([])
@@ -29,12 +39,14 @@ function UserManagement() {
       setRoles(meta.roles || [])
       setRegions(meta.regions || [])
       setOrganizations(meta.organizations || [])
-      if (!form.role_id && meta.roles?.length) {
-        setForm((current) => ({ ...current, role_id: String(meta.roles[0].id) }))
+      const firstRole = (meta.roles || []).find((role) => canAssignRole(role.name))
+      if (!form.role_id && firstRole) {
+        setForm((current) => ({ ...current, role_id: String(firstRole.id) }))
       }
     } catch (error) {
       setNotice(error.response?.data?.message || 'Could not load users.')
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.role_id])
 
   useEffect(() => {
@@ -53,7 +65,7 @@ function UserManagement() {
         region_id: form.region_id ? Number(form.region_id) : null,
         org_id: form.org_id || null,
       })
-      setForm({ name: '', email: '', password: '', role_id: String(roles[0]?.id || ''), region_id: '', org_id: '' })
+      setForm({ name: '', email: '', password: '', role_id: String(roles.find((role) => canAssignRole(role.name))?.id || ''), region_id: '', org_id: '' })
       await load()
     } catch (error) {
       setNotice(error.response?.data?.message || 'Could not create the user.')
@@ -125,12 +137,12 @@ function UserManagement() {
 
       {notice && <div className="cloud-notice">{notice}</div>}
 
-      {isAdmin && (
+      {canManage && (
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>Add a user</h3>
-            <p>New accounts receive a role and an optional region.</p>
+            <h3>{isHr ? 'Add an employee' : 'Add a user'}</h3>
+            <p>{isHr ? 'HR can add employees and managers to Grupo Global entities.' : 'New accounts receive a role and an optional region.'}</p>
           </div>
         </div>
         <form className="users-form" onSubmit={addUser}>
@@ -139,7 +151,7 @@ function UserManagement() {
           <input type="password" value={form.password} onChange={change('password')} placeholder="Password (min. 10 characters)" minLength={10} required />
           <select value={form.role_id} onChange={change('role_id')} required aria-label="Role">
             {roles
-              .filter((role) => isSuperAdmin || !['admin', 'tech_admin'].includes(role.name))
+              .filter((role) => canAssignRole(role.name))
               .map((role) => <option key={role.id} value={role.id}>{role.name}{role.code ? ` — ${role.code}` : ''}</option>)}
           </select>
           <select value={form.region_id} onChange={change('region_id')} aria-label="Corridor">
@@ -148,7 +160,9 @@ function UserManagement() {
           </select>
           <select value={form.org_id} onChange={change('org_id')} aria-label="Organisation">
             <option value="">No organisation</option>
-            {organizations.map((org) => <option key={org.org_id} value={org.org_id}>{org.legal_name}</option>)}
+            {organizations
+              .filter((org) => !isHr || ['PARENT', 'BUSINESS_UNIT'].includes(org.org_type))
+              .map((org) => <option key={org.org_id} value={org.org_id}>{org.legal_name}</option>)}
           </select>
           <button type="submit" className="primary-action">＋ Add user</button>
         </form>
@@ -159,7 +173,7 @@ function UserManagement() {
         <div className="panel-heading">
           <div>
             <h3>Accounts</h3>
-            <p>{isAdmin ? 'Suspend or reactivate access.' : 'Employee directory (read-only for HR).'}</p>
+            <p>{isHr ? 'Suspend or reactivate employees and managers.' : 'Suspend or reactivate access.'}</p>
           </div>
         </div>
         <div className="feature-list">
@@ -171,7 +185,7 @@ function UserManagement() {
                 <span>{user.email} · {user.role_code || user.role}{user.region ? ` · ${user.region}` : ''}{user.organization ? ` · ${user.organization}` : ''}</span>
               </span>
               <span className={`item-status ${user.status === 'active' ? 'status-active' : ''}`}>{user.status}</span>
-              {isAdmin && user.status !== 'erased' && (
+              {canChangeStatus(user) && (
                 <button type="button" onClick={() => toggleStatus(user)}>
                   {user.status === 'active' ? 'Suspend' : 'Activate'}
                 </button>

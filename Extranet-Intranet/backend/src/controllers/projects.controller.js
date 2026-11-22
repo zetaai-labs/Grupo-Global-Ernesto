@@ -3,6 +3,7 @@ import { query, withTransaction } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { notify } from '../services/notification.service.js'
 import { isExternal } from '../config/roles.js'
+import { orgPredicate } from '../services/scope.js'
 
 /** Projects & programs (Schema Document §4.5). */
 
@@ -15,14 +16,19 @@ const uuid = z.string().uuid()
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const fail = (res, status, message) => res.status(status).json({ message })
 
-async function loadProject(id) {
+/** Finance oversees all budgets; everyone else sees their organisation's projects or ones they work on. */
+const projectScope = (user) => (user.role === 'finance' ? null : user.org_scope ?? null)
+const PROJECT_VISIBLE = (lead, owner, id, userParam, scopeParam) => `(${orgPredicate(lead, scopeParam)} OR ${owner} = ${userParam}
+  OR EXISTS (SELECT 1 FROM project_members vm WHERE vm.project_id = ${id} AND vm.user_id = ${userParam}))`
+
+async function loadProject(id, user) {
   const { rows } = await query(
     `SELECT p.*, o.legal_name AS lead_entity_name, u.name AS owner_name
      FROM projects_programs p
      JOIN organizations o ON o.org_id = p.lead_entity
      LEFT JOIN users u ON u.id = p.owner_id
-     WHERE p.project_id = $1`,
-    [id],
+     WHERE p.project_id = $1 AND ${PROJECT_VISIBLE('p.lead_entity', 'p.owner_id', 'p.project_id', '$2', '$3')}`,
+    [id, user.sub, projectScope(user)],
   )
   return rows[0]
 }
@@ -40,8 +46,8 @@ async function permissions(user, project) {
 }
 
 export async function listProjects(req, res) {
-  const params = []
-  const filters = []
+  const params = [req.user.sub, projectScope(req.user)]
+  const filters = [PROJECT_VISIBLE('p.lead_entity', 'p.owner_id', 'p.project_id', '$1', '$2')]
   const add = (sql, value) => {
     params.push(value)
     filters.push(sql.replace('?', `$${params.length}`))
@@ -62,7 +68,7 @@ export async function listProjects(req, res) {
      FROM projects_programs p
      JOIN organizations o ON o.org_id = p.lead_entity
      LEFT JOIN users u ON u.id = p.owner_id
-     ${filters.length ? `WHERE ${filters.join(' AND ')}` : ''}
+     WHERE ${filters.join(' AND ')}
      ORDER BY CASE p.phase WHEN 'EXECUTION' THEN 0 WHEN 'PLANNING' THEN 1 WHEN 'INITIATION' THEN 2 WHEN 'MONITORING' THEN 3 ELSE 4 END, p.updated_at DESC`,
     params,
   )
@@ -76,7 +82,7 @@ export async function listProjects(req, res) {
 
 export async function getProject(req, res) {
   if (!uuid.safeParse(req.params.id).success) return fail(res, 400, 'Invalid project id.')
-  const project = await loadProject(req.params.id)
+  const project = await loadProject(req.params.id, req.user)
   if (!project) return fail(res, 404, 'Project not found.')
   const [members, partners, milestones, perms] = await Promise.all([
     query(`SELECT u.id, u.name, r.name AS role, pm.project_role FROM project_members pm
@@ -116,6 +122,9 @@ export async function createProject(req, res) {
   if (data.start_date && data.end_date && data.end_date < data.start_date) return fail(res, 400, 'End date must be after the start date.')
   const unit = await query("SELECT 1 FROM organizations WHERE org_id = $1 AND org_type IN ('PARENT', 'BUSINESS_UNIT')", [data.lead_entity])
   if (!unit.rowCount) return fail(res, 400, 'The lead entity must be a Grupo Global business unit.')
+  if (req.user.org_scope && !req.user.org_scope.includes(data.lead_entity)) {
+    return fail(res, 403, 'You can only create projects for your own business unit.')
+  }
 
   try {
     const project = await withTransaction(async (client) => {
@@ -139,7 +148,7 @@ export async function createProject(req, res) {
 
 export async function updateProject(req, res) {
   if (!uuid.safeParse(req.params.id).success) return fail(res, 400, 'Invalid project id.')
-  const project = await loadProject(req.params.id)
+  const project = await loadProject(req.params.id, req.user)
   if (!project) return fail(res, 404, 'Project not found.')
   if (!(await permissions(req.user, project)).manage) return fail(res, 403, 'Only the project owner, managers or administrators can edit this project.')
   const parsed = projectUpdateSchema.safeParse(req.body || {})
@@ -161,13 +170,13 @@ export async function updateProject(req, res) {
 }
 
 export async function addMember(req, res) {
-  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id))
+  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id, req.user))
   if (!project) return fail(res, 404, 'Project not found.')
   if (!(await permissions(req.user, project)).manage) return fail(res, 403, 'Only the project owner, managers or administrators can manage the team.')
   const userId = Number(req.body?.user_id)
   const staff = await query(
     `SELECT 1 FROM users u JOIN roles r ON r.id = u.role_id
-     WHERE u.id = $1 AND u.status = 'active' AND r.name IN ('admin', 'tech_admin', 'hr', 'manager', 'employee')`,
+     WHERE u.id = $1 AND u.status = 'active' AND r.name IN ('admin', 'tech_admin', 'hr', 'finance', 'manager', 'employee')`,
     [userId],
   )
   if (!staff.rowCount) return fail(res, 400, 'Choose an active staff member.')
@@ -183,7 +192,7 @@ export async function addMember(req, res) {
 }
 
 export async function removeMember(req, res) {
-  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id))
+  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id, req.user))
   if (!project) return fail(res, 404, 'Project not found.')
   if (!(await permissions(req.user, project)).manage) return fail(res, 403, 'Only the project owner, managers or administrators can manage the team.')
   if (Number(req.params.userId) === project.owner_id) return fail(res, 409, 'Change the owner before removing them from the team.')
@@ -192,7 +201,7 @@ export async function removeMember(req, res) {
 }
 
 export async function addPartner(req, res) {
-  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id))
+  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id, req.user))
   if (!project) return fail(res, 404, 'Project not found.')
   if (!(await permissions(req.user, project)).manage) return fail(res, 403, 'Only the project owner, managers or administrators can link partners.')
   const orgId = String(req.body?.org_id || '')
@@ -210,7 +219,7 @@ export async function addPartner(req, res) {
 }
 
 export async function removePartner(req, res) {
-  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id))
+  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id, req.user))
   if (!project) return fail(res, 404, 'Project not found.')
   if (!(await permissions(req.user, project)).manage) return fail(res, 403, 'Only the project owner, managers or administrators can unlink partners.')
   await query('DELETE FROM project_partners WHERE project_id = $1 AND org_id = $2', [req.params.id, req.params.orgId])
@@ -231,7 +240,7 @@ const milestoneSchema = z.object({
 const milestoneUpdateSchema = z.object(milestoneFields).partial()
 
 export async function addMilestone(req, res) {
-  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id))
+  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id, req.user))
   if (!project) return fail(res, 404, 'Project not found.')
   if (!(await permissions(req.user, project)).member) return fail(res, 403, 'Only project members can add milestones.')
   const parsed = milestoneSchema.safeParse(req.body || {})
@@ -246,7 +255,7 @@ export async function addMilestone(req, res) {
 }
 
 export async function updateMilestone(req, res) {
-  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id))
+  const project = uuid.safeParse(req.params.id).success && (await loadProject(req.params.id, req.user))
   if (!project) return fail(res, 404, 'Project not found.')
   if (!(await permissions(req.user, project)).member) return fail(res, 403, 'Only project members can update milestones.')
   const parsed = milestoneUpdateSchema.safeParse(req.body || {})
