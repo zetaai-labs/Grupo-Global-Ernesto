@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import helmet from 'helmet'
 
 import { config } from './config/env.js'
 import authRoutes from './routes/auth.routes.js'
@@ -30,6 +31,7 @@ import projectRoutes from './routes/projects.routes.js'
 import videoRoutes from './routes/video.routes.js'
 import commercialRoutes, { commercialPortalRoutes } from './routes/commercial.routes.js'
 import zylaxRoutes from './zylax/routes.js'
+import integrationRoutes from './routes/integrations.routes.js'
 import importRoutes from './imports/routes.js'
 import { COMMERCIAL_READ_ROLES, COMMERCIAL_CUSTOMER_ROLES } from './config/roles.js'
 import { cloudflareEdge } from './middleware/cloudflare.js'
@@ -52,6 +54,16 @@ export const corsOrigin = (origin, callback) =>
 export function createApp() {
   const app = express()
 
+  // Without this, every user behind nginx would share one IP and one login rate limit.
+  const hops = Number(process.env.TRUST_PROXY_HOPS || 0)
+  app.set('trust proxy', Number.isInteger(hops) && hops >= 1 && hops <= 5 ? hops : false)
+
+  app.use(helmet({
+    contentSecurityPolicy: { useDefaults: false, directives: { defaultSrc: ["'none'"], baseUri: ["'none'"], frameAncestors: ["'none'"] } },
+    crossOriginResourcePolicy: { policy: 'same-site' },
+    strictTransportSecurity: process.env.NODE_ENV === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false,
+  }))
+
   app.use(cloudflareEdge)
 
   app.use(cors({ origin: corsOrigin, credentials: true }))
@@ -69,6 +81,7 @@ export function createApp() {
   // Admin-only routes.
   app.use('/api/users', authenticate, requireRole('admin', 'tech_admin', 'hr'), userRoutes)
   app.use('/api/audit-logs', authenticate, requireSystemAdmin, auditLogRoutes)
+  app.use('/api/integrations', authenticate, requireSystemAdmin, integrationRoutes)
   app.use('/api/backups', authenticate, requireSystemAdmin, backupRoutes)
 
   // Internal workspace routes.

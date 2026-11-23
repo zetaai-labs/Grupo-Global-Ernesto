@@ -55,6 +55,7 @@ const navigation = [
     label: 'ADMINISTRATION',
     items: [
       { name: 'System Web Page', path: '/intranet/system-web-page', icon: '▣' },
+      { name: 'Integrations', path: '/intranet/integrations', icon: '⧉', roles: ['admin', 'tech_admin'] },
       { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin', 'tech_admin'] },
       { name: 'User Management', path: '/intranet/user-management', icon: '♙', roles: ['admin', 'tech_admin', 'hr'] },
       { name: 'Security (MFA)', path: '/intranet/security', icon: '✓' },

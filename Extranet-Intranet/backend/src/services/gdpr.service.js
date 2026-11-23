@@ -46,6 +46,7 @@ export async function exportUserData(userId) {
     folders_shared_with_me: [
       `SELECT f.name AS folder, es.created_at FROM external_shares es JOIN folders f ON f.id = es.folder_id
        WHERE es.user_id = $1`, [userId]],
+    security_keys: ['SELECT name, last_used_at, created_at FROM webauthn_credentials WHERE user_id = $1 ORDER BY created_at', [userId]],
     privacy_requests: ['SELECT request_type, field, requested_value, details, status, response, created_at FROM gdpr_requests WHERE user_id = $1 ORDER BY created_at', [userId]],
     activity_log: ['SELECT action, entity, entity_id, created_at FROM audit_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5000', [userId]],
   }
@@ -91,7 +92,7 @@ export async function eraseUser(userId, actorId) {
       [userId, label, `erased-user-${userId}@erased.invalid`],
     )
     for (const table of ['emails', 'notifications', 'password_resets', 'linked_folders', 'event_attendees',
-      'conversation_members', 'external_shares']) {
+      'conversation_members', 'external_shares', 'webauthn_credentials', 'webauthn_challenges']) {
       await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId])
     }
     await client.query('DELETE FROM folder_permissions WHERE user_id = $1', [userId])

@@ -9,6 +9,7 @@ import { storageDriver } from './src/services/storage.service.js'
 import { purgeExpired } from './src/services/recycleBin.service.js'
 import { purgeOldNotifications } from './src/services/gdpr.service.js'
 import { writeAudit } from './src/services/audit.js'
+import { runAuditIntegrityJob } from './src/services/auditIntegrity.service.js'
 import { syncInbox, imapConfigured } from './src/jobs/emailSync.job.js'
 import { sendWorkflowReminders } from './src/controllers/workflows.controller.js'
 import { sendEventReminders } from './src/controllers/calendar.controller.js'
@@ -101,6 +102,15 @@ schedule(1, async () => {
     await sendOverdueRemediationAlerts()
   } catch (error) {
     await safeAudit('REMEDIATION_ALERTS_FAILED', 'governance_sanctions', { error: error.message })
+  }
+})
+
+// Audit trail: verify the hash chain and copy new entries to immutable storage (hourly).
+schedule(1, async () => {
+  try {
+    await runAuditIntegrityJob()
+  } catch (error) {
+    await safeAudit('AUDIT_INTEGRITY_JOB_FAILED', 'audit_logs', { error: error.message })
   }
 })
 

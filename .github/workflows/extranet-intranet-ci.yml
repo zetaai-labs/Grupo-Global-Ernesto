@@ -1,0 +1,86 @@
+name: Extranet-Intranet CI
+
+on:
+  pull_request:
+    paths:
+      - 'Extranet-Intranet/**'
+      - '.github/workflows/extranet-intranet-ci.yml'
+  push:
+    branches: [venky, kuheli]
+    paths:
+      - 'Extranet-Intranet/**'
+      - '.github/workflows/extranet-intranet-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ci_db
+          POSTGRES_USER: ci_user
+          POSTGRES_PASSWORD: ci_password
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U ci_user -d ci_db"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://ci_user:ci_password@localhost:5432/ci_db
+      SEED_USER_PASSWORD: Demo@12345
+    defaults:
+      run:
+        working-directory: Extranet-Intranet/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Extranet-Intranet/backend/package-lock.json
+      - name: Generate throwaway secrets
+        run: |
+          for name in STORAGE_ENCRYPTION_KEY VAULT_ENCRYPTION_KEY; do
+            value="$(openssl rand -base64 32)"; echo "::add-mask::$value"; echo "$name=$value" >> "$GITHUB_ENV"
+          done
+          for name in JWT_SECRET WEBHOOK_SECRET; do
+            value="$(openssl rand -hex 32)"; echo "::add-mask::$value"; echo "$name=$value" >> "$GITHUB_ENV"
+          done
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run db:seed
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+
+  frontend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: Extranet-Intranet/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Extranet-Intranet/frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [backend, frontend]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f Dockerfile.prod -t grupo-global-backend:ci .
+        working-directory: Extranet-Intranet/backend
+      - run: docker build -f Dockerfile.prod -t grupo-global-web:ci .
+        working-directory: Extranet-Intranet/frontend

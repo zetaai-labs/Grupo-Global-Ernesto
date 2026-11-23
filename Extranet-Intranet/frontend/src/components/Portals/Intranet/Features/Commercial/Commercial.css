@@ -11,7 +11,7 @@
 .zx-form input, .zx-form select, .zx-form textarea, .zx-toolbar input {
   width: 100%; min-width: 0; box-sizing: border-box; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; font: inherit; font-size: 12px;
 }
-.zx-form textarea, .zx-lines, .zx-form-actions { grid-column: 1 / -1; }
+.zx-form textarea, .zx-lines, .zx-form-actions, .zx-wide { grid-column: 1 / -1; }
 .zx-lines { display: grid; gap: 8px; }
 .zx-line { display: grid; grid-template-columns: minmax(0, 1fr) 80px 90px 34px; gap: 8px; }
 .zx-line button, .zx-add, .zx-form-actions button:not(.primary-action), .zx-detail header button {

@@ -309,7 +309,8 @@ function Organizations() {
                     <strong>{autoCheck.result === 'PASS' ? t('Passed') : t('Issues found')}</strong>
                     <span>{t('Tax ID')}: {autoCheck.details?.tax_id?.rule}</span>
                     {(autoCheck.details?.issues || []).map((issue) => <span key={issue}>• {issue}</span>)}
-                    <small>{t('Registry lookup')}: {autoCheck.details?.registry_lookup}</small>
+                    {(autoCheck.details?.warnings || []).map((warning) => <span key={warning}>⚠ {t(warning)}</span>)}
+                    <small>{t('Registry lookup')}: {t(autoCheck.details?.registry_lookup)}</small>
                   </div>
                 ) : <p className="org-muted">{t('Not run yet.')}</p>}
                 {isCompliance && pending && <button type="button" className="org-secondary" onClick={revalidate}>{t('Run validation')}</button>}

@@ -386,6 +386,22 @@
   transition: background 0.18s ease, transform 0.18s ease;
 }
 
+.login-sso {
+  height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #0a2f6b;
+  border-radius: 12px;
+  color: #0a2f6b;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-sso:hover {
+  background: #eef3fb;
+}
+
 .login-submit:hover:not(:disabled) {
   background: #0b3b86;
   transform: translateY(-1px);

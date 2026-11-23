@@ -16,6 +16,7 @@ export async function seedCommercial(query) {
   const iberia = await orgId('Iberia Retail S.L.')
   const vikas = await orgId('Vikas Metal Works')
   if (!owner || !iberia) return
+  await query(`UPDATE organizations SET billing_address = 'Calle Demo 1, 28001 Madrid' WHERE org_id = $1 AND billing_address IS NULL`, [iberia])
 
   for (const [sku, name, category, price, tax, stock] of PRODUCTS) {
     await query(

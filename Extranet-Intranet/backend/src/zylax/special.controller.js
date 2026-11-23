@@ -118,22 +118,40 @@ export async function catalog(req, res) {
 
 // ----- POS and invoicing -----
 
-async function nextInvoiceNumber(client) {
+/** Standard and corrective invoices use separate consecutive series. */
+async function nextInvoiceNumber(client, corrective = false) {
   const year = new Date().getUTCFullYear()
   const { rows } = await client.query(
     `INSERT INTO zx_counters (name, value) VALUES ($1, 1)
      ON CONFLICT (name) DO UPDATE SET value = zx_counters.value + 1 RETURNING value`,
-    [`invoice-${year}`],
+    [`${corrective ? 'corrective' : 'invoice'}-${year}`],
   )
-  return `INV-${year}-${String(rows[0].value).padStart(6, '0')}`
+  return `${corrective ? 'RECT' : 'INV'}-${year}-${String(rows[0].value).padStart(6, '0')}`
+}
+
+/** Freezes company details on the invoice, so later edits never change an issued document. */
+async function partySnapshots(client, customerOrgId) {
+  const seller = (await client.query(`SELECT legal_name, tax_id, country, billing_address FROM organizations WHERE org_type = 'PARENT' ORDER BY created_at LIMIT 1`)).rows[0]
+  const buyer = customerOrgId
+    ? (await client.query('SELECT legal_name, tax_id, country, billing_address FROM organizations WHERE org_id = $1', [customerOrgId])).rows[0]
+    : null
+  const party = (row, fallback = null) => (row ? { name: row.legal_name, tax_id: row.tax_id, country: row.country, address: row.billing_address || fallback } : null)
+  return { seller: party(seller, process.env.COMPANY_ADDRESS || null), buyer: party(buyer) }
 }
 
 async function insertInvoice(client, invoice, lines) {
-  const number = await nextInvoiceNumber(client)
+  const corrective = invoice.kind === 'CORRECTIVE'
+  const number = await nextInvoiceNumber(client, corrective)
+  const parties = corrective
+    ? { seller: invoice.seller_snapshot, buyer: invoice.buyer_snapshot }
+    : await partySnapshots(client, invoice.customer_org_id)
   const { rows } = await client.query(
-    `INSERT INTO zx_invoices (invoice_number, source, order_id, customer_org_id, customer_name, status, payment_method, net_eur, tax_eur, total_eur, owner_org_id, created_by, paid_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CASE WHEN $6 = 'PAID' THEN now() END) RETURNING *`,
-    [number, invoice.source, invoice.order_id || null, invoice.customer_org_id || null, invoice.customer_name || null, invoice.status, invoice.payment_method || null, invoice.net_eur, invoice.tax_eur, invoice.total_eur, invoice.owner_org_id || null, invoice.created_by],
+    `INSERT INTO zx_invoices (invoice_number, source, order_id, customer_org_id, customer_name, status, payment_method, net_eur, tax_eur, total_eur, owner_org_id, created_by, paid_at,
+                              kind, corrects_invoice_id, correction_reason, seller_snapshot, buyer_snapshot)
+     VALUES ($1, $2, $3, $4, $5, $6::text, $7, $8, $9, $10, $11, $12, CASE WHEN $6::text = 'PAID' THEN now() END, $13, $14, $15, $16, $17) RETURNING *`,
+    [number, invoice.source, invoice.order_id || null, invoice.customer_org_id || null, invoice.customer_name || null, invoice.status, invoice.payment_method || null, invoice.net_eur, invoice.tax_eur, invoice.total_eur, invoice.owner_org_id || null, invoice.created_by,
+      corrective ? 'CORRECTIVE' : 'STANDARD', invoice.corrects_invoice_id || null, invoice.correction_reason || null,
+      parties.seller ? JSON.stringify(parties.seller) : null, parties.buyer ? JSON.stringify(parties.buyer) : null],
   )
   for (const l of lines) {
     await client.query(
@@ -199,7 +217,7 @@ export async function listInvoices(req, res) {
 export async function myInvoices(req, res) {
   if (!COMMERCIAL_CUSTOMER_ROLES.includes(req.user.role)) throw httpError(403, 'No access to invoices.')
   const { rows } = await query(
-    `SELECT invoice_id, invoice_number, status, payment_method, net_eur, tax_eur, total_eur, created_at, paid_at
+    `SELECT invoice_id, invoice_number, kind, status, payment_method, net_eur, tax_eur, total_eur, created_at, paid_at
      FROM zx_invoices WHERE customer_org_id = $1 ORDER BY created_at DESC LIMIT 200`,
     [req.user.org_id],
   )
@@ -219,6 +237,8 @@ export async function invoiceOrder(req, res) {
     if (order.status === 'CANCELLED') throw httpError(409, 'A cancelled order cannot be invoiced.')
     const existing = await client.query('SELECT invoice_number FROM zx_invoices WHERE order_id = $1', [order.order_id])
     if (existing.rows[0]) throw httpError(409, `Already invoiced: ${existing.rows[0].invoice_number}.`)
+    const buyer = await client.query('SELECT billing_address FROM organizations WHERE org_id = $1', [order.customer_org_id])
+    if (!buyer.rows[0]?.billing_address?.trim()) throw httpError(409, 'Add the customer billing address before invoicing.')
     const lines = await client.query(
       'SELECT product_id, sku, name, qty, unit_price_eur, discount_pct, tax_rate, net_eur, tax_eur FROM zx_quote_lines WHERE quote_id = $1',
       [order.quote_id],
@@ -248,6 +268,7 @@ export async function payInvoice(req, res) {
   if (!['CASH', 'CARD', 'TRANSFER'].includes(method)) throw httpError(400, 'Choose a payment method.')
   const invoice = await withTransaction(async (client) => {
     const row = await lockedInvoice(client, req)
+    if (row.kind === 'CORRECTIVE') throw httpError(409, 'A corrective invoice cannot be paid.')
     if (row.status !== 'ISSUED') throw httpError(409, 'Only issued invoices can be paid.')
     const { rows } = await client.query(`UPDATE zx_invoices SET status = 'PAID', payment_method = $2, paid_at = now() WHERE invoice_id = $1 RETURNING *`, [row.invoice_id, method])
     return rows[0]
@@ -258,8 +279,10 @@ export async function payInvoice(req, res) {
 
 export async function refundInvoice(req, res) {
   if (!['admin', 'finance', 'manager'].includes(req.user.role)) throw httpError(403, 'You cannot refund invoices.')
-  const invoice = await withTransaction(async (client) => {
+  const reason = String(req.body?.reason || '').trim().slice(0, 500) || 'Customer refund'
+  const { invoice, corrective } = await withTransaction(async (client) => {
     const row = await lockedInvoice(client, req)
+    if (row.kind === 'CORRECTIVE') throw httpError(409, 'A corrective invoice cannot be refunded.')
     if (row.status !== 'PAID') throw httpError(409, 'Only paid invoices can be refunded.')
     if (row.source === 'POS') {
       const lines = await client.query('SELECT product_id, qty FROM zx_invoice_lines WHERE invoice_id = $1 ORDER BY product_id', [row.invoice_id])
@@ -268,8 +291,15 @@ export async function refundInvoice(req, res) {
       }
     }
     const { rows } = await client.query(`UPDATE zx_invoices SET status = 'REFUNDED', refunded_at = now() WHERE invoice_id = $1 RETURNING *`, [row.invoice_id])
-    return rows[0]
+    const originals = await client.query('SELECT product_id, sku, name, qty, unit_price_eur, discount_pct, tax_rate, net_eur, tax_eur FROM zx_invoice_lines WHERE invoice_id = $1', [row.invoice_id])
+    const negative = (value) => (-Number(value)).toFixed(2)
+    const correction = await insertInvoice(client, {
+      kind: 'CORRECTIVE', source: row.source, customer_org_id: row.customer_org_id, customer_name: row.customer_name, status: 'ISSUED', payment_method: row.payment_method,
+      net_eur: negative(row.net_eur), tax_eur: negative(row.tax_eur), total_eur: negative(row.total_eur), owner_org_id: row.owner_org_id, created_by: req.user.sub,
+      corrects_invoice_id: row.invoice_id, correction_reason: reason, seller_snapshot: row.seller_snapshot, buyer_snapshot: row.buyer_snapshot,
+    }, originals.rows.map((line) => ({ ...line, qty: -line.qty, net_eur: negative(line.net_eur), tax_eur: negative(line.tax_eur) })))
+    return { invoice: rows[0], corrective: correction }
   })
-  await writeAudit(req.user.sub, 'ZX_INVOICE_REFUNDED', 'zx_invoices', invoice.invoice_id, { total: invoice.total_eur })
-  return res.json({ data: invoice })
+  await writeAudit(req.user.sub, 'ZX_INVOICE_REFUNDED', 'zx_invoices', invoice.invoice_id, { total: invoice.total_eur, corrective: corrective.invoice_number })
+  return res.json({ data: { ...invoice, corrective_invoice_id: corrective.invoice_id, corrective_invoice_number: corrective.invoice_number } })
 }

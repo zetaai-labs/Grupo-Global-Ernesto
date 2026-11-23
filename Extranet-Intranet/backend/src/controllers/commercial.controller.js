@@ -68,13 +68,35 @@ export async function getSummary(req, res) {
   return res.json({ data: rows[0] })
 }
 
-export async function listCustomers(_req, res) {
+export async function listCustomers(req, res) {
+  const params = [CUSTOMER_TYPES]
+  let where = `verification_status = 'VERIFIED' AND org_type = ANY($1::text[])`
+  if (req.query.q) {
+    params.push(`%${String(req.query.q).slice(0, 100)}%`)
+    where += ' AND (legal_name ILIKE $2 OR tax_id ILIKE $2)'
+  }
   const { rows } = await query(
-    `SELECT org_id, legal_name, region_corridor, org_type FROM organizations
-     WHERE verification_status = 'VERIFIED' AND org_type = ANY($1::text[]) ORDER BY legal_name`,
-    [CUSTOMER_TYPES],
+    `SELECT org_id, legal_name, tax_id, country, region_corridor, org_type, billing_address FROM organizations
+     WHERE ${where} ORDER BY legal_name`,
+    params,
   )
   return res.json({ data: rows })
+}
+
+const addressBody = z.object({ billing_address: z.string().trim().min(5, 'Enter the full billing address.').max(500) })
+
+/** Issued invoices keep their own frozen copy, so this only affects future documents. */
+export async function updateCustomerAddress(req, res) {
+  const { billing_address: address } = parse(addressBody, req.body)
+  const { rows } = await query(
+    `UPDATE organizations SET billing_address = $2
+     WHERE org_id = $1 AND verification_status = 'VERIFIED' AND org_type = ANY($3::text[])
+     RETURNING org_id, legal_name, billing_address`,
+    [req.params.id, address, CUSTOMER_TYPES],
+  )
+  if (!rows[0]) throw httpError(404, 'Customer not found.')
+  await writeAudit(req.user.sub, 'ZX_CUSTOMER_ADDRESS_UPDATED', 'organizations', rows[0].org_id)
+  return res.json({ data: rows[0] })
 }
 
 // ----- Product Catalog -----

@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { upload, persistUpload } from '../middleware/upload.js'
 import * as engine from './engine.controller.js'
 import * as special from './special.controller.js'
+import * as documents from './documents.controller.js'
 
 // Mounted behind authenticate. Every handler enforces its own role, company and record rules.
 const router = Router()
@@ -15,6 +16,9 @@ router.get('/safety/roster/:id', special.musterRoster)
 router.post('/pos/sales', special.posSale)
 router.get('/pos/invoices', special.listInvoices)
 router.get('/pos/my-invoices', special.myInvoices)
+router.get('/pos/my-invoices/:id/pdf', documents.portalDownloadInvoice)
+router.get('/pos/invoices/:id/pdf', documents.downloadInvoice)
+router.post('/pos/invoices/:id/email', documents.emailInvoice)
 router.post('/pos/orders/:orderId/invoice', special.invoiceOrder)
 router.post('/pos/invoices/:id/pay', special.payInvoice)
 router.post('/pos/invoices/:id/refund', special.refundInvoice)

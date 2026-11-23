@@ -1,3 +1,5 @@
+import { translateServer } from '../../../../i18n/serverMessages'
+
 export const humanize = (value) => {
   const text = String(value || '').replaceAll('_', ' ').toLowerCase()
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -5,7 +7,7 @@ export const humanize = (value) => {
 
 export const euro = (value) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(Number(value || 0))
 
-export const errorText = (error, fallback) => error.response?.data?.message || fallback
+export const errorText = (error, fallback) => translateServer(error.response?.data?.message) || fallback
 
 const GOOD = ['APPROVED', 'DONE', 'CLOSED', 'COMPLETED', 'CONFIRMED', 'PAID', 'WON', 'DELIVERED', 'RESOLVED', 'ACCEPTED', 'AWARDED', 'SIGNED', 'SAFE', 'RELEASED', 'QUOTED']
 const BAD = ['REJECTED', 'CANCELLED', 'DECLINED', 'LOST', 'TERMINATED', 'VOID', 'RETIRED', 'WITHDRAWN', 'RETURNED']

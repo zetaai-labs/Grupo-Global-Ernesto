@@ -10,9 +10,24 @@ fs.mkdirSync(backupDir, { recursive: true })
 
 const container = process.env.BACKUP_CONTAINER || 'grupo_global_db'
 
-function runDocker(args, { stdoutFile, stdinFile } = {}) {
+/** "docker" runs pg_dump through the local database container; "direct" is for production containers. */
+export const backupMethod = () => (process.env.BACKUP_METHOD === 'direct' ? 'direct' : 'docker')
+
+/** Connection details go through the environment so the password never appears in a process list. */
+export function connectionEnv(databaseUrl) {
+  const url = new URL(databaseUrl)
+  return {
+    PGHOST: url.hostname,
+    PGPORT: url.port || '5432',
+    PGUSER: decodeURIComponent(url.username),
+    PGPASSWORD: decodeURIComponent(url.password),
+    PGDATABASE: decodeURIComponent(url.pathname.slice(1)),
+  }
+}
+
+function runCommand(command, args, { stdoutFile, stdinFile, env } = {}) {
   return new Promise((resolve, reject) => {
-    const child = spawn('docker', args, { stdio: ['pipe', 'pipe', 'pipe'] })
+    const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'], ...(env ? { env: { ...process.env, ...env } } : {}) })
     let stderr = ''
 
     if (stdinFile) fs.createReadStream(stdinFile).pipe(child.stdin)
@@ -31,6 +46,22 @@ function runDocker(args, { stdoutFile, stdinFile } = {}) {
   })
 }
 
+function dumpDatabase(target) {
+  if (backupMethod() === 'direct') {
+    return runCommand('pg_dump', ['--no-owner', '--no-privileges', '-Fp', '--file', target], { env: connectionEnv(config.databaseUrl) })
+  }
+  return runCommand('docker', ['exec', container, 'pg_dump', '-U', 'grupo_global', '-Fp', 'grupo_global'], { stdoutFile: target })
+}
+
+/** All-or-nothing: any SQL error stops the restore, so a failed restore can no longer report success. */
+function restoreDatabase(file) {
+  const safety = ['--single-transaction', '-v', 'ON_ERROR_STOP=1']
+  if (backupMethod() === 'direct') {
+    return runCommand('psql', [...safety, '-f', file], { env: connectionEnv(config.databaseUrl) })
+  }
+  return runCommand('docker', ['exec', '-i', container, 'psql', ...safety, '-U', 'grupo_global', 'grupo_global'], { stdinFile: file })
+}
+
 function sizeOf(target) {
   const stat = fs.statSync(target)
   if (stat.isFile()) return stat.size
@@ -44,10 +75,7 @@ export async function createBackup(type, userId) {
   let target
   if (type === 'database') {
     target = path.join(backupDir, `database-${stamp}.sql`)
-    await runDocker(
-      ['exec', container, 'pg_dump', '-U', 'grupo_global', '-Fp', 'grupo_global'],
-      { stdoutFile: target },
-    )
+    await dumpDatabase(target)
   } else {
     if (storageDriver() === 's3') {
       throw Object.assign(new Error('Files are stored in S3 — use S3 bucket versioning for file backups.'), { status: 400 })
@@ -75,10 +103,7 @@ export async function restoreBackup(id, userId = null) {
   if (!fs.existsSync(backup.path)) throw Object.assign(new Error('Backup file is missing.'), { status: 404 })
 
   if (backup.type === 'database') {
-    await runDocker(
-      ['exec', '-i', container, 'psql', '-U', 'grupo_global', 'grupo_global'],
-      { stdinFile: backup.path },
-    )
+    await restoreDatabase(backup.path)
   } else {
     fs.mkdirSync(config.uploadDir, { recursive: true })
     fs.cpSync(backup.path, config.uploadDir, { recursive: true, force: true })

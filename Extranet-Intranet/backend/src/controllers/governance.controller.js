@@ -184,6 +184,8 @@ export async function issueSanction(req, res) {
         [userId],
       )
       await client.query('UPDATE password_resets SET used_at = now() WHERE user_id = $1 AND used_at IS NULL', [userId])
+      await client.query('DELETE FROM webauthn_credentials WHERE user_id = $1', [userId])
+      await client.query('DELETE FROM webauthn_challenges WHERE user_id = $1', [userId])
       // Isolate the linked organisation's assets when the person belongs to an external company.
       if (person.org_id && isExternal(person.role) && !['PARENT', 'BUSINESS_UNIT'].includes(person.org_type)) {
         await client.query("UPDATE organizations SET verification_status = 'SUSPENDED' WHERE org_id = $1", [person.org_id])

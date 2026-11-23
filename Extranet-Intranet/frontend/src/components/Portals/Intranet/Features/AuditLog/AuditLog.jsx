@@ -8,6 +8,8 @@ function AuditLog() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [notice, setNotice] = useState('')
+  const [integrity, setIntegrity] = useState(null)
+  const [checking, setChecking] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -24,6 +26,33 @@ function AuditLog() {
   useEffect(() => {
     load()
   }, [load])
+
+  const verify = async () => {
+    setChecking(true)
+    setNotice('')
+    try {
+      const response = await api.get('/audit-logs/integrity')
+      setIntegrity(response.data.data)
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'Could not verify the audit log.')
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  const copyToStorage = async () => {
+    setChecking(true)
+    try {
+      const response = await api.post('/audit-logs/anchors')
+      setNotice(response.data?.message || '')
+      const refreshed = await api.get('/audit-logs/integrity')
+      setIntegrity(refreshed.data.data)
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'Could not copy the audit log.')
+    } finally {
+      setChecking(false)
+    }
+  }
 
   return (
     <section className="feature-page">
@@ -53,7 +82,33 @@ function AuditLog() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice" role="status">{t(notice)}</div>}
+
+      <div className="feature-panel">
+        <div className="panel-heading">
+          <div>
+            <h3>{t('Log integrity')}</h3>
+            <p>{t('Checks that no audit entry has been changed, removed or reordered.')}</p>
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" className="primary-action" disabled={checking} onClick={verify}>{checking ? t('Checking…') : t('Verify integrity')}</button>
+            {integrity?.immutable_storage.configured && integrity.valid && (
+              <button type="button" className="secondary-action" disabled={checking} onClick={copyToStorage}>{t('Copy to immutable storage')}</button>
+            )}
+          </div>
+        </div>
+        {integrity && (
+          <div className="cloud-notice" role={integrity.valid ? 'status' : 'alert'}>
+            <strong>{integrity.valid ? t('Verified: no tampering detected.') : t('Integrity check failed.')}</strong>{' '}
+            {integrity.valid
+              ? `${integrity.entries.toLocaleString()} ${t('entries checked')}.`
+              : `${integrity.issue.type}${integrity.issue.seq ? ` · ${t('entry')} ${integrity.issue.seq}` : ''}`}{' '}
+            {integrity.immutable_storage.configured
+              ? `${t('Immutable copy up to entry')} ${integrity.anchored_to_seq.toLocaleString()} (${integrity.immutable_storage.mode}).`
+              : t('Immutable storage is not configured yet.')}
+          </div>
+        )}
+      </div>
 
       <div className="feature-panel">
         <div className="panel-heading">

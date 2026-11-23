@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { io } from 'socket.io-client'
+import api from '../../../api/client'
 import { getToken } from '../../../api/auth'
 import { SOCKET_URL } from '../../../api/socket'
 import './VideoWorkspace.css'
@@ -33,8 +34,9 @@ function RemoteTile({ peer }) {
 }
 
 /**
- * Group video meeting (WebRTC mesh, up to 8 people). The room comes from ?room=
- * (calendar meeting links) or defaults to the portal's open meeting room.
+ * Group video meeting. Uses the LiveKit SFU when the server provides a session, otherwise
+ * WebRTC mesh for up to 8 people. The room comes from ?room= (calendar meeting links) or
+ * defaults to the portal's open meeting room.
  */
 function VideoWorkspace({ portal = 'intranet' }) {
   const t = useT()
@@ -47,12 +49,14 @@ function VideoWorkspace({ portal = 'intranet' }) {
   const streamRef = useRef(null)
   const screenRef = useRef(null)
   const peersRef = useRef(new Map()) // socketId -> { pc, name }
+  const sfuRef = useRef(null) // { room, Track, streams, publications }
   const [peers, setPeers] = useState([]) // [{ id, name, stream }]
   const [joined, setJoined] = useState(false)
   const [muted, setMuted] = useState(false)
   const [cameraOff, setCameraOff] = useState(false)
   const [sharing, setSharing] = useState(false)
   const [notice, setNotice] = useState('')
+  const [mode, setMode] = useState('mesh')
 
   const upsertPeer = useCallback((id, patch) => {
     setPeers((current) => {
@@ -93,6 +97,9 @@ function VideoWorkspace({ portal = 'intranet' }) {
   }, [removePeer, upsertPeer])
 
   const teardown = useCallback(() => {
+    const sfu = sfuRef.current
+    sfuRef.current = null
+    sfu?.room.disconnect()
     peersRef.current.forEach(({ pc }) => pc.close())
     peersRef.current.clear()
     setPeers([])
@@ -142,15 +149,95 @@ function VideoWorkspace({ portal = 'intranet' }) {
     }
   }, [connectionFor, removePeer, teardown, upsertPeer])
 
+  /** Joins through the SFU. Remote tiles keep one MediaStream each so video does not flicker. */
+  const joinSfu = async (session, stream) => {
+    const { Room, RoomEvent, Track } = await import('livekit-client')
+    const lkRoom = new Room({ adaptiveStream: true, dynacast: true })
+    const sfu = { room: lkRoom, Track, streams: new Map(), publications: {} }
+    sfuRef.current = sfu
+
+    const tile = (id, name, tracks) => {
+      if (!tracks.length) {
+        sfu.streams.delete(id)
+        return null
+      }
+      const media = sfu.streams.get(id) || new MediaStream()
+      sfu.streams.set(id, media)
+      media.getTracks().filter((track) => !tracks.includes(track)).forEach((track) => media.removeTrack(track))
+      tracks.filter((track) => !media.getTracks().includes(track)).forEach((track) => media.addTrack(track))
+      return { id, name, stream: media }
+    }
+    const refresh = () => {
+      if (sfuRef.current !== sfu) return
+      const next = []
+      lkRoom.remoteParticipants.forEach((participant) => {
+        const published = [...participant.trackPublications.values()].filter((item) => item.isSubscribed && item.track)
+        const of = (screen) => published
+          .filter((item) => [Track.Source.ScreenShare, Track.Source.ScreenShareAudio].includes(item.source) === screen)
+          .map((item) => item.track.mediaStreamTrack)
+        const name = participant.name || 'Participant'
+        next.push(tile(participant.identity, name, of(false)) || { id: participant.identity, name, stream: null })
+        const screen = tile(`${participant.identity}:screen`, `${name} (screen)`, of(true))
+        if (screen) next.push(screen)
+      })
+      setPeers(next)
+    }
+
+    for (const event of [RoomEvent.ParticipantConnected, RoomEvent.ParticipantDisconnected, RoomEvent.TrackSubscribed, RoomEvent.TrackUnsubscribed]) {
+      lkRoom.on(event, refresh)
+    }
+    lkRoom.on(RoomEvent.Reconnecting, () => setNotice('Connection lost. Reconnecting…'))
+    lkRoom.on(RoomEvent.Reconnected, () => setNotice('Reconnected.'))
+    lkRoom.on(RoomEvent.Disconnected, () => {
+      if (sfuRef.current !== sfu) return
+      teardown()
+      setJoined(false)
+      setNotice('You were disconnected from the meeting.')
+    })
+
+    await lkRoom.connect(session.url, session.token)
+    const [audio] = stream.getAudioTracks()
+    const [video] = stream.getVideoTracks()
+    if (audio) sfu.publications.audio = await lkRoom.localParticipant.publishTrack(audio, { source: Track.Source.Microphone })
+    if (video) sfu.publications.video = await lkRoom.localParticipant.publishTrack(video, { source: Track.Source.Camera })
+    refresh()
+    setMode('sfu')
+    setJoined(true)
+    setNotice(lkRoom.remoteParticipants.size ? `Joined — ${lkRoom.remoteParticipants.size} other participant(s) in the room.` : 'Joined — waiting for others to join.')
+  }
+
   const join = async () => {
+    let stream
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+      stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
       streamRef.current = stream
       if (localRef.current) localRef.current.srcObject = stream
     } catch {
       setNotice('Camera or microphone access was denied.')
       return
     }
+
+    let session = { mode: 'mesh' }
+    try {
+      session = (await api.post('/video/session', { room })).data.data
+    } catch (error) {
+      if (error.response?.status === 403) {
+        setNotice(error.response.data?.message || 'You are not invited to this meeting.')
+        teardown()
+        return
+      }
+    }
+    if (session.mode === 'sfu') {
+      try {
+        await joinSfu(session, stream)
+      } catch {
+        // No silent fallback: mesh users would end up in a separate call from SFU users.
+        teardown()
+        setNotice('The meeting server could not be reached. Please try again.')
+      }
+      return
+    }
+    setMode('mesh')
 
     socketRef.current?.emit('video:join', room, async (reply) => {
       if (!reply?.ok) {
@@ -180,13 +267,17 @@ function VideoWorkspace({ portal = 'intranet' }) {
 
   const toggleMute = () => {
     const next = !muted
-    streamRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next })
+    const publication = sfuRef.current?.publications.audio
+    if (publication) (next ? publication.mute() : publication.unmute())
+    else streamRef.current?.getAudioTracks().forEach((track) => { track.enabled = !next })
     setMuted(next)
   }
 
   const toggleCamera = () => {
     const next = !cameraOff
-    streamRef.current?.getVideoTracks().forEach((track) => { track.enabled = !next })
+    const publication = sfuRef.current?.publications.video
+    if (publication) (next ? publication.mute() : publication.unmute())
+    else streamRef.current?.getVideoTracks().forEach((track) => { track.enabled = !next })
     setCameraOff(next)
   }
 
@@ -202,6 +293,11 @@ function VideoWorkspace({ portal = 'intranet' }) {
   }
 
   const stopSharing = () => {
+    const sfu = sfuRef.current
+    if (sfu?.publications.screen?.track) {
+      sfu.room.localParticipant.unpublishTrack(sfu.publications.screen.track)
+      sfu.publications.screen = null
+    }
     screenRef.current?.getTracks().forEach((track) => track.stop())
     screenRef.current = null
     replaceVideoTrack(streamRef.current?.getVideoTracks()[0] || null)
@@ -215,6 +311,8 @@ function VideoWorkspace({ portal = 'intranet' }) {
       screenRef.current = screen
       const [track] = screen.getVideoTracks()
       track.onended = stopSharing
+      const sfu = sfuRef.current
+      if (sfu) sfu.publications.screen = await sfu.room.localParticipant.publishTrack(track, { source: sfu.Track.Source.ScreenShare })
       replaceVideoTrack(track)
       setSharing(true)
     } catch {
@@ -242,7 +340,7 @@ function VideoWorkspace({ portal = 'intranet' }) {
         <div>
           <span className="communication-eyebrow">{t('COMMUNICATION')}</span>
           <h1>{portal === 'intranet' ? 'Video Conferencing' : 'Video Meetings'}</h1>
-          <p>Secure group meetings for up to 8 people. Schedule one from the Calendar to invite colleagues, clients or suppliers.</p>
+          <p>{joined && mode === 'sfu' ? 'Secure group meeting.' : 'Secure group meetings.'} Schedule one from the Calendar to invite colleagues, clients or suppliers.</p>
         </div>
         <span className="communication-status">{joined ? `● In meeting · ${participantCount}` : '○ Not connected'}</span>
       </header>

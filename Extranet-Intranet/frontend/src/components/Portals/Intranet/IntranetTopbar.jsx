@@ -32,6 +32,7 @@ const pageNames = {
   chat: 'Team Chat',
   'video-conferencing': 'Video Conferencing',
   'audit-log': 'Audit Log',
+  integrations: 'Integrations',
   security: 'Security',
   privacy: 'Privacy (GDPR)'
 }

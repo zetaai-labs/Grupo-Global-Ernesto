@@ -34,6 +34,16 @@ export const config = {
   security: {
     // Technical Spec §3.1 — mandatory MFA for Super Admin, Tech Admin and HR.
     enforceMfa: process.env.MFA_ENFORCE === 'true',
+    // Security keys are bound to this domain. Defaults to the first FRONTEND_ORIGIN host.
+    webauthnRpId: process.env.WEBAUTHN_RP_ID || '',
+    webauthnRpName: process.env.WEBAUTHN_RP_NAME || 'Global Group',
+  },
+  audit: {
+    // Technical Spec §3.2: immutable copies of the audit chain in an S3 Object Lock bucket.
+    bucket: process.env.AUDIT_S3_BUCKET || '',
+    region: process.env.AUDIT_S3_REGION || process.env.S3_REGION || process.env.AWS_REGION || '',
+    retentionDays: Number(process.env.AUDIT_RETENTION_DAYS || 0),
+    lockMode: process.env.AUDIT_LOCK_MODE === 'COMPLIANCE' ? 'COMPLIANCE' : 'GOVERNANCE',
   },
   jobs: {
     backupIntervalHours: Number(process.env.BACKUP_INTERVAL_HOURS || 24),

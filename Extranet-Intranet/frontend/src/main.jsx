@@ -32,6 +32,7 @@ import Projects from './components/Portals/Intranet/Features/Projects/Projects.j
 import Crm from './components/Portals/Intranet/Features/Crm/Crm.jsx'
 import DataImport from './components/Portals/Intranet/Features/DataImport/DataImport.jsx'
 import Commercial from './components/Portals/Intranet/Features/Commercial/Commercial.jsx'
+import Integrations from './components/Portals/Intranet/Features/Integrations/Integrations.jsx'
 import ZylaxHub from './components/Portals/Shared/Zylax/ZylaxHub.jsx'
 import ZylaxModule from './components/Portals/Shared/Zylax/ZylaxModule.jsx'
 import MyOrders from './components/Portals/Extranet/Features/MyOrders/MyOrders.jsx'
@@ -106,6 +107,7 @@ const router = createBrowserRouter(
         <Route path="emails" element={<Emails />} />
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
+        <Route path="integrations" element={<ProtectedRoute roles={['admin', 'tech_admin']}><Integrations /></ProtectedRoute>} />
         <Route path="security" element={<MfaSettings />} />
         <Route path="privacy" element={<Privacy />} />
         <Route path="courses" element={<Courses />} />

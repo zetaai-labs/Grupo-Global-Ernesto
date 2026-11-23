@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
-import { useT } from '../../../../../i18n'
+import { getLanguage, useT } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
+import { downloadFromApi } from '../../../../../utils/download'
 import { euro } from './format'
 import StatusPill from './StatusPill'
 import './Commercial.css'
@@ -11,6 +13,7 @@ const TABS = [
   ['orders', 'Orders'],
   ['products', 'Product Catalog'],
   ['contacts', 'Contacts'],
+  ['customers', 'Customers'],
   ['distributors', 'Franchises & Distributors'],
 ]
 const TERRITORIES = ['GLOBAL', 'SPAIN_EU', 'INDIA', 'UAE_DUBAI', 'LATAM', 'USA_CAN', 'MOROCCO']
@@ -40,7 +43,7 @@ function Commercial() {
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  const fail = (error, fallback) => setNotice(error.response?.data?.message || t(fallback))
+  const fail = (error, fallback) => setNotice(translateServer(error.response?.data?.message) || t(fallback))
 
   const load = useCallback(async () => {
     try {
@@ -51,7 +54,7 @@ function Commercial() {
       setRows(list.data?.data || [])
       setSummary(stats.data?.data || {})
     } catch (error) {
-      setNotice(error.response?.data?.message || 'Could not load this page.')
+      setNotice(translateServer(error.response?.data?.message || 'Could not load this page.'))
     }
   }, [tab, search])
 
@@ -86,6 +89,11 @@ function Commercial() {
   const editProduct = (row) => {
     setDetail(null)
     setForm({ _id: row.product_id, sku: row.sku, name: row.name, category: row.category, unit_price_eur: row.unit_price_eur, tax_rate: row.tax_rate, stock_qty: row.stock_qty, description: row.description || '', specifications: row.specifications || '' })
+  }
+
+  const editCustomer = (row) => {
+    setDetail(null)
+    setForm({ _id: row.org_id, legal_name: row.legal_name, billing_address: row.billing_address || '' })
   }
 
   const editContact = (row) => {
@@ -131,6 +139,7 @@ function Commercial() {
     event.preventDefault()
     const { _id: editingId, ...values } = form
     let body = { ...values }
+    if (tab === 'customers') body = { billing_address: values.billing_address }
     if (tab === 'quotes') {
       body = {
         ...body,
@@ -158,7 +167,7 @@ function Commercial() {
   const field = (key) => ({ value: form?.[key] ?? '', onChange: (event) => setForm({ ...form, [key]: event.target.value }) })
   const setLine = (index, patch) => setForm({ ...form, lines: form.lines.map((line, i) => (i === index ? { ...line, ...patch } : line)) })
   const customerContacts = contacts.filter((contact) => contact.org_id === form?.customer_org_id)
-  const canCreate = tab === 'quotes' || tab === 'contacts' ? canSell : canManage && tab !== 'orders'
+  const canCreate = tab === 'quotes' || tab === 'contacts' ? canSell : canManage && !['orders', 'customers'].includes(tab)
 
   const customerSelect = (key) => (
     <select required {...field(key)} aria-label={t('Customer')}>
@@ -210,6 +219,12 @@ function Commercial() {
               <label>{t('Stock')}<input required type="number" min="0" step="1" {...field('stock_qty')} /></label>
               <textarea rows="2" placeholder={t('Description')} {...field('description')} />
               <textarea rows="3" placeholder={t('Technical specifications')} {...field('specifications')} />
+            </>
+          )}
+          {tab === 'customers' && (
+            <>
+              <strong className="zx-wide">{form.legal_name}</strong>
+              <textarea required minLength="5" maxLength="500" rows="2" aria-label={t('Billing address')} placeholder={t('Billing address')} {...field('billing_address')} />
             </>
           )}
           {tab === 'contacts' && (
@@ -291,6 +306,12 @@ function Commercial() {
             </ol>
           )}
           <div className="zx-form-actions">
+            {detail.kind === 'quotes' && (
+              <button type="button" disabled={busy} onClick={() => downloadFromApi(`/zylax/quotes/${detail.quote_id}/pdf?lang=${getLanguage()}`, `${detail.quote_number}.pdf`).catch(() => setNotice(t('Could not create the PDF.')))}>{t('Download PDF')}</button>
+            )}
+            {detail.kind === 'quotes' && detail.can_edit && detail.status !== 'DRAFT' && (
+              <button type="button" disabled={busy} onClick={() => act(() => api.post(`/zylax/quotes/${detail.quote_id}/email`, { lang: getLanguage() }), 'Email sent.')}>{t('Email to customer')}</button>
+            )}
             {detail.kind === 'quotes' && detail.can_edit && detail.status === 'DRAFT' && <button type="button" onClick={editQuote}>{t('Edit')}</button>}
             {detail.kind === 'orders' && ['admin', 'manager', 'finance'].includes(role) && detail.status !== 'CANCELLED' && (
               <button type="button" disabled={busy} onClick={() => act(() => api.post(`/zylax/hub/pos/orders/${detail.order_id}/invoice`), 'Invoice issued.', { kind: 'orders', id: detail.order_id })}>{t('Create invoice')}</button>
@@ -330,6 +351,7 @@ function Commercial() {
           {tab === 'orders' && <thead><tr><th>{t('Order')}</th><th>{t('Customer')}</th><th>{t('Quote')}</th><th>{t('Total')}</th><th>{t('Status')}</th></tr></thead>}
           {tab === 'products' && <thead><tr><th>{t('SKU')}</th><th>{t('Product')}</th><th>{t('Category')}</th><th>{t('Price')}</th><th>{t('Stock')}</th><th>{t('Status')}</th></tr></thead>}
           {tab === 'contacts' && <thead><tr><th>{t('Name')}</th><th>{t('Company')}</th><th>{t('Job title')}</th><th>{t('Email')}</th><th>{t('Phone')}</th></tr></thead>}
+          {tab === 'customers' && <thead><tr><th>{t('Company')}</th><th>{t('Tax ID')}</th><th>{t('Country')}</th><th>{t('Billing address')}</th></tr></thead>}
           {tab === 'distributors' && <thead><tr><th>{t('Company')}</th><th>{t('Type')}</th><th>{t('Territory')}</th><th>{t('Discount')}</th><th>{t('Order value')}</th><th>{t('Status')}</th></tr></thead>}
           <tbody>
             {tab === 'quotes' && rows.map((row) => <tr key={row.quote_id} className="zx-click" onClick={() => openDetail('quotes', row.quote_id)}><td className="zx-mono">{row.quote_number}</td><td>{row.customer}</td><td>{row.valid_until}</td><td>{euro(row.total_eur)}</td><td><StatusPill status={row.status} /></td></tr>)}
@@ -346,6 +368,13 @@ function Commercial() {
               </tr>
             ))}
             {tab === 'contacts' && rows.map((row) => <tr key={row.contact_id}><td>{canSell ? <button type="button" className="zx-link" onClick={() => editContact(row)}>{row.full_name}</button> : row.full_name}</td><td>{row.organization}</td><td>{row.job_title || '—'}</td><td>{row.email || '—'}</td><td>{row.phone || '—'}</td></tr>)}
+            {tab === 'customers' && rows.map((row) => (
+              <tr key={row.org_id}>
+                <td>{['admin', 'manager', 'finance'].includes(role) ? <button type="button" className="zx-link" onClick={() => editCustomer(row)}>{row.legal_name}</button> : row.legal_name}</td>
+                <td className="zx-mono">{row.tax_id}</td><td>{row.country}</td>
+                <td className={row.billing_address ? '' : 'zx-low'}>{row.billing_address || t('Missing')}</td>
+              </tr>
+            ))}
             {tab === 'distributors' && rows.map((row) => (
               <tr key={row.distributor_id}>
                 <td>{row.organization}</td><td>{t(row.kind === 'FRANCHISE' ? 'Franchise' : 'Distributor')}</td><td>{row.territory}</td><td>{Number(row.discount_pct)}%</td><td>{euro(row.order_value_eur)}</td>

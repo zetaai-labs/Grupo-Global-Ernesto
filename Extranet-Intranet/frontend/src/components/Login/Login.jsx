@@ -1,6 +1,7 @@
 import { useT } from '../../i18n'
 import LanguageSwitch from '../../i18n/LanguageSwitch'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { startAuthentication } from '@simplewebauthn/browser'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
 import { saveSession, PORTAL_ROLES } from '../../api/auth'
@@ -139,6 +140,13 @@ function destinationFor(role, requested) {
   return '/intranet'
 }
 
+const SSO_ERRORS = {
+  denied: 'Sign-in was cancelled.',
+  not_allowed: 'This account cannot use single sign-on. Use your email and password.',
+  failed: 'Single sign-on could not be completed. Please try again.',
+  unavailable: 'Single sign-on is not available right now.',
+}
+
 function Login() {
   const t = useT()
   const navigate = useNavigate()
@@ -153,6 +161,49 @@ function Login() {
   const [error, setError] = useState('')
   const [mfaToken, setMfaToken] = useState('')
   const [mfaCode, setMfaCode] = useState('')
+  const [mfaMethods, setMfaMethods] = useState({ totp: true, webauthn: false })
+  const [ssoProvider, setSsoProvider] = useState('')
+  const ssoHandled = useRef(false)
+
+  const finishLogin = (payload, keepSignedIn) => {
+    if (payload.mfa_required) {
+      setMfaToken(payload.mfa_token)
+      setMfaMethods(payload.mfa_methods || { totp: true, webauthn: false })
+      return
+    }
+
+    if (payload.token) saveSession(payload.token, payload.user, keepSignedIn)
+
+    // Privileged roles must enable MFA before using the workspace (Technical Spec §3.1).
+    if (payload.mfa_setup_required) {
+      navigate('/intranet/security?required=1', { replace: true })
+      return
+    }
+
+    navigate(destinationFor(payload.user?.role, requestedWorkspace), { replace: true })
+  }
+
+  useEffect(() => {
+    api.get('/auth/oidc/status')
+      .then((response) => setSsoProvider(response.data?.data?.enabled ? response.data.data.provider : ''))
+      .catch(() => {})
+    if (ssoHandled.current) return
+    ssoHandled.current = true
+    const failure = searchParams.get('sso_error')
+    if (failure) {
+      setError(t(SSO_ERRORS[failure] || SSO_ERRORS.failed))
+      window.history.replaceState(null, '', '/login')
+    } else if (searchParams.get('sso') === '1') {
+      window.history.replaceState(null, '', '/login')
+      setLoading(true)
+      api.post('/auth/oidc/complete')
+        .then((response) => finishLogin(response.data?.data || {}, false))
+        .catch(() => setError(t(SSO_ERRORS.failed)))
+        .finally(() => setLoading(false))
+    }
+    // Runs once when the login page opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -161,22 +212,7 @@ function Login() {
 
     try {
       const response = await api.post('/auth/login', { email, password })
-      const payload = response.data?.data || response.data || {}
-
-      if (payload.mfa_required) {
-        setMfaToken(payload.mfa_token)
-        return
-      }
-
-      if (payload.token) saveSession(payload.token, payload.user, remember)
-
-      // Privileged roles must enable MFA before using the workspace (Technical Spec §3.1).
-      if (payload.mfa_setup_required) {
-        navigate('/intranet/security?required=1', { replace: true })
-        return
-      }
-
-      navigate(destinationFor(payload.user?.role, requestedWorkspace), { replace: true })
+      finishLogin(response.data?.data || response.data || {}, remember)
     } catch (err) {
       setError(
         t(err.response?.data?.message || '') ||
@@ -200,6 +236,23 @@ function Login() {
       navigate(destinationFor(payload.user?.role, requestedWorkspace), { replace: true })
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid authentication code.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const useSecurityKey = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const options = await api.post('/auth/mfa/webauthn/login/options', { mfa_token: mfaToken })
+      const assertion = await startAuthentication({ optionsJSON: options.data.data })
+      const response = await api.post('/auth/mfa/webauthn/login/verify', { mfa_token: mfaToken, response: assertion })
+      const payload = response.data?.data || {}
+      saveSession(payload.token, payload.user, remember)
+      navigate(destinationFor(payload.user?.role, requestedWorkspace), { replace: true })
+    } catch (err) {
+      setError(t(err.response?.data?.message || 'The security key was not used or could not be verified.'))
     } finally {
       setLoading(false)
     }
@@ -264,22 +317,31 @@ function Login() {
 
           {mfaToken ? (
             <form onSubmit={verifyMfa} className="login-form">
-              <div className="login-field">
-                <label htmlFor="login-code"><LockIcon /> Authentication code</label>
-                <input
-                  id="login-code"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  required
-                  maxLength={6}
-                  value={mfaCode}
-                  onChange={(event) => setMfaCode(event.target.value)}
-                  placeholder="6-digit code from your authenticator"
-                />
-              </div>
-              <button type="submit" className="login-submit" disabled={loading}>
-                <SignInIcon /> {loading ? 'Verifying…' : 'Verify code'}
-              </button>
+              {mfaMethods.webauthn && (
+                <button type="button" className="login-submit" disabled={loading} onClick={useSecurityKey}>
+                  <ShieldIcon /> {loading ? t('Verifying…') : t('Use security key')}
+                </button>
+              )}
+              {mfaMethods.totp && (
+                <>
+                  <div className="login-field">
+                    <label htmlFor="login-code"><LockIcon /> {t('Authentication code')}</label>
+                    <input
+                      id="login-code"
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
+                      required
+                      maxLength={6}
+                      value={mfaCode}
+                      onChange={(event) => setMfaCode(event.target.value)}
+                      placeholder={t('6-digit code from your authenticator')}
+                    />
+                  </div>
+                  <button type="submit" className="login-submit" disabled={loading}>
+                    <SignInIcon /> {loading ? t('Verifying…') : t('Verify code')}
+                  </button>
+                </>
+              )}
             </form>
           ) : (
           <form onSubmit={handleSubmit} className="login-form">
@@ -339,6 +401,11 @@ function Login() {
               <SignInIcon />
               {loading ? t('Signing in…') : t('Sign In')}
             </button>
+            {ssoProvider && (
+              <a className="login-sso" href={`${api.defaults.baseURL}/auth/oidc/start`}>
+                {t('Continue with {provider}', { provider: ssoProvider })}
+              </a>
+            )}
           </form>
           )}
 

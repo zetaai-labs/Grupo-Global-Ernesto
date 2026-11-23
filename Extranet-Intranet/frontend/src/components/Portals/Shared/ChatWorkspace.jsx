@@ -5,7 +5,7 @@ import { getToken, getUser } from '../../../api/auth'
 import './ChatWorkspace.css'
 import { useT } from '../../../i18n'
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:5000'
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000')
 
 function timeLabel(value) {
   return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

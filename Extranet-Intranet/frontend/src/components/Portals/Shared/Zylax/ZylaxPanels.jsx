@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../../../api/client'
 import { getUser } from '../../../../api/auth'
-import { useT } from '../../../../i18n'
+import { getLanguage, useT } from '../../../../i18n'
+import { downloadFromApi } from '../../../../utils/download'
 import { errorText, euro, humanize, statusTone } from './zylaxFormat'
 
 export function ClockPanel({ onChange }) {
@@ -274,12 +275,13 @@ export function PosPanel() {
           <tbody>
             {invoices.map((row) => (
               <tr key={row.invoice_id}>
-                <td className="zx-mono">{row.invoice_number}</td><td>{new Date(row.created_at).toLocaleDateString()}</td><td>{row.payment_method ? t(humanize(row.payment_method)) : '—'}</td><td>{euro(row.total_eur)}</td>
+                <td className="zx-mono">{row.invoice_number}{row.kind === 'CORRECTIVE' ? ` · ${t('Corrective')}` : ''} <button type="button" className="zx-link" aria-label={`${t('Download PDF')} ${row.invoice_number}`} onClick={() => downloadFromApi(`/zylax/hub/pos/${external ? 'my-invoices' : 'invoices'}/${row.invoice_id}/pdf?lang=${getLanguage()}`, `${row.invoice_number}.pdf`).catch(() => setMessage(t('Could not create the PDF.')))}>PDF</button></td><td>{new Date(row.created_at).toLocaleDateString()}</td><td>{row.payment_method ? t(humanize(row.payment_method)) : '—'}</td><td>{euro(row.total_eur)}</td>
                 <td><span className={`zx-pill ${statusTone(row.status === 'ISSUED' ? 'OPEN' : row.status === 'REFUNDED' ? 'CANCELLED' : row.status)}`}>{t(humanize(row.status))}</span></td>
                 {!external && (
                   <td>
-                    {canPay && row.status === 'ISSUED' && <button type="button" className="zx-link" disabled={busy} onClick={() => act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/pay`, { payment_method: 'TRANSFER' }), () => t('Payment recorded.'))}>{t('Record payment')}</button>}
-                    {canRefund && row.status === 'PAID' && <button type="button" className="zx-link" disabled={busy} onClick={() => { if (window.confirm(t('Refund this invoice?'))) act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/refund`, {}), () => t('Invoice refunded.')) }}>{t('Refund')}</button>}
+                    {canPay && row.customer_org_id && <button type="button" className="zx-link" disabled={busy} onClick={() => act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/email`, { lang: getLanguage() }).then((response) => ({ data: { data: response.data } })), () => t('Email sent.'))}>{t('Email to customer')}</button>}{' '}
+                    {canPay && row.status === 'ISSUED' && row.kind !== 'CORRECTIVE' && <button type="button" className="zx-link" disabled={busy} onClick={() => act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/pay`, { payment_method: 'TRANSFER' }), () => t('Payment recorded.'))}>{t('Record payment')}</button>}
+                    {canRefund && row.status === 'PAID' && row.kind !== 'CORRECTIVE' && <button type="button" className="zx-link" disabled={busy} onClick={() => { const reason = window.prompt(t('Reason for the refund')); if (reason?.trim()) act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/refund`, { reason }), (invoice) => `${t('Invoice refunded.')} ${t('Corrective invoice')}: ${invoice.corrective_invoice_number}`) }}>{t('Refund')}</button>}
                   </td>
                 )}
               </tr>

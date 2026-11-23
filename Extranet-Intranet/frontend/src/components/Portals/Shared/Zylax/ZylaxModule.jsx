@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import api from '../../../../api/client'
 import { useT } from '../../../../i18n'
+import { translateServer } from '../../../../i18n/serverMessages'
 import { CatalogPanel, ClockPanel, MusterPanel, OrgChart, PosPanel } from './ZylaxPanels'
 import { errorText, formatValue, humanize, statusTone, toInputValue } from './zylaxFormat'
 import './Zylax.css'
@@ -309,7 +310,7 @@ function ZylaxModule() {
                 {detail.events.map((event) => (
                   <li key={event.event_id} className={event.internal ? 'zh-internal' : ''}>
                     <span>{new Date(event.created_at).toLocaleString()}{event.author ? ` · ${event.author}` : ''}{event.internal ? ` · ${t('Internal')}` : ''}</span>
-                    <div>{event.kind === 'status' && event.to_status ? `→ ${t(humanize(event.to_status))} ` : ''}{event.kind === 'created' ? t('Created') : ''}{event.kind === 'updated' ? t('Updated') : ''}{event.body ? ` ${event.body}` : ''}</div>
+                    <div>{event.kind === 'status' && event.to_status ? `→ ${t(humanize(event.to_status))} ` : ''}{event.kind === 'created' ? t('Created') : ''}{event.kind === 'updated' ? t('Updated') : ''}{event.body ? ` ${translateServer(event.body)}` : ''}</div>
                   </li>
                 ))}
               </ol>

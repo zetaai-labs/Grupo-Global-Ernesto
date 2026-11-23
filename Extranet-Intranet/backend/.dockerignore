@@ -1,0 +1,9 @@
+node_modules
+coverage
+storage
+test
+.env
+.env.*
+!.env.example
+*.log
+.zx*

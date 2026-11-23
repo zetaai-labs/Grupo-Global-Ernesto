@@ -7,7 +7,7 @@ import { generateSecret, otpauthUrl, verifyCode } from '../services/totp.js'
 import { sendMail, smtpConfigured } from '../services/email.service.js'
 import { MFA_REQUIRED_ROLES, roleCode } from '../config/roles.js'
 
-const USER_FIELDS = `
+export const USER_FIELDS = `
   SELECT u.id, u.uuid, u.name, u.email, u.password_hash, u.mfa_secret, u.mfa_enabled, u.org_id,
          r.name AS role, r.code AS role_code, rg.code AS region, o.legal_name AS organization
   FROM users u
@@ -18,7 +18,7 @@ const USER_FIELDS = `
 
 const USER_QUERY = `${USER_FIELDS} WHERE LOWER(u.email) = LOWER($1) AND u.status = 'active'`
 
-const publicUser = (user) => ({
+export const publicUser = (user) => ({
   id: user.id,
   uuid: user.uuid,
   name: user.name,
@@ -35,14 +35,14 @@ const publicUser = (user) => ({
 const mustSetUpMfa = (user) =>
   config.security.enforceMfa && MFA_REQUIRED_ROLES.includes(user.role) && !user.mfa_enabled
 
-async function audit(userId, action, details = {}) {
+export async function audit(userId, action, details = {}) {
   await query(
     'INSERT INTO audit_logs (user_id, action, entity, details) VALUES ($1, $2, $3, $4)',
     [userId, action, 'auth', JSON.stringify(details)],
   )
 }
 
-function signToken(user, extra = {}) {
+export function signToken(user, extra = {}) {
   return jwt.sign(
     { sub: user.id, name: user.name, email: user.email, role: user.role, ...extra },
     config.jwtSecret,
@@ -66,39 +66,48 @@ export async function login(req, res) {
   }
 
   await audit(user.id, 'LOGIN_SUCCESS')
+  return res.json({ data: await sessionResponse(user) })
+}
 
+/** The next login step after the first factor. Password and single sign-on share it, so MFA always applies. */
+export async function sessionResponse(user) {
   if (user.mfa_enabled) {
     const mfaToken = jwt.sign({ sub: user.id, purpose: 'mfa' }, config.jwtSecret, {
       expiresIn: '5m',
     })
-    return res.json({ data: { mfa_required: true, mfa_token: mfaToken } })
+    const keys = await query('SELECT COUNT(*)::int AS total FROM webauthn_credentials WHERE user_id = $1', [user.id])
+    return {
+      mfa_required: true,
+      mfa_token: mfaToken,
+      mfa_methods: { totp: Boolean(user.mfa_secret), webauthn: keys.rows[0].total > 0 },
+    }
   }
 
   if (mustSetUpMfa(user)) {
     await audit(user.id, 'MFA_SETUP_REQUIRED')
-    return res.json({
-      data: {
-        token: signToken(user, { mfa_setup: true }),
-        user: publicUser(user),
-        mfa_setup_required: true,
-      },
-    })
+    return {
+      token: signToken(user, { mfa_setup: true }),
+      user: publicUser(user),
+      mfa_setup_required: true,
+    }
   }
 
-  return res.json({
-    data: {
-      token: signToken(user),
-      user: publicUser(user),
-    },
-  })
+  return {
+    token: signToken(user),
+    user: publicUser(user),
+  }
 }
 
 export async function mfaSetup(req, res) {
   const secret = generateSecret()
-  await query('UPDATE users SET mfa_secret = $1, mfa_enabled = false WHERE id = $2', [
+  // Never replaces active MFA: a stolen session must not be able to switch it off without a code.
+  const { rowCount } = await query('UPDATE users SET mfa_secret = $1 WHERE id = $2 AND mfa_enabled = false', [
     secret,
     req.user.sub,
   ])
+  if (!rowCount) {
+    return res.status(409).json({ message: 'MFA is already active. Remove your current method before setting up a new authenticator.' })
+  }
   return res.json({
     data: { secret, uri: otpauthUrl(req.user.email, secret, 'Global Group') },
   })
@@ -125,16 +134,18 @@ export async function mfaEnable(req, res) {
 }
 
 export async function mfaDisable(req, res) {
-  if (config.security.enforceMfa && MFA_REQUIRED_ROLES.includes(req.user.role)) {
+  const keys = await query('SELECT COUNT(*)::int AS total FROM webauthn_credentials WHERE user_id = $1', [req.user.sub])
+  const keepsKeys = keys.rows[0].total > 0
+  if (!keepsKeys && config.security.enforceMfa && MFA_REQUIRED_ROLES.includes(req.user.role)) {
     return res.status(403).json({ message: 'MFA is mandatory for your role and cannot be disabled.' })
   }
   const secret = await currentSecret(req.user.sub)
   if (!secret || !verifyCode(secret, req.body?.code)) {
     return res.status(400).json({ message: 'Invalid authentication code.' })
   }
-  await query('UPDATE users SET mfa_enabled = false, mfa_secret = NULL WHERE id = $1', [req.user.sub])
-  await audit(req.user.sub, 'MFA_DISABLED')
-  return res.json({ message: 'Multi-factor authentication disabled.' })
+  await query('UPDATE users SET mfa_enabled = $2, mfa_secret = NULL WHERE id = $1', [req.user.sub, keepsKeys])
+  await audit(req.user.sub, keepsKeys ? 'MFA_TOTP_REMOVED' : 'MFA_DISABLED')
+  return res.json({ message: keepsKeys ? 'Authenticator app removed. Your security keys stay active.' : 'Multi-factor authentication disabled.' })
 }
 
 export async function mfaVerify(req, res) {

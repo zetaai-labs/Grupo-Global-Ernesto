@@ -1,6 +1,8 @@
 // Spanish (Spain) translations. Keys are the English source text.
 // Add entries here to translate more of the interface — untranslated text stays in English.
 import esZylax from './es.zylax'
+import esServer from './es.server'
+import esIntegrations from './es.integrations'
 
 const es = {
   // ---- Login & password reset ----
@@ -250,4 +252,4 @@ const es = {
   'Your records will appear here.': 'Tus registros aparecerán aquí.',
 }
 
-export default { ...esZylax, ...es }
+export default { ...esIntegrations, ...esServer, ...esZylax, ...es }

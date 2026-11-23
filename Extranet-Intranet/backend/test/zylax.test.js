@@ -38,6 +38,7 @@ after(async () => {
   await query(`DELETE FROM zx_records WHERE module = 'procurement' AND data->>'tender' = ANY($1::text[])`, [created])
   await query('DELETE FROM zx_records WHERE record_id = ANY($1::uuid[])', [created])
   await query(`DELETE FROM zx_records WHERE module = 'attendance' AND entity = 'attendance' AND created_by = $1`, [s.employee.user.id])
+  await query('DELETE FROM zx_invoices WHERE corrects_invoice_id = ANY($1::uuid[])', [invoices])
   await query('DELETE FROM zx_invoices WHERE invoice_id = ANY($1::uuid[])', [invoices])
 })
 

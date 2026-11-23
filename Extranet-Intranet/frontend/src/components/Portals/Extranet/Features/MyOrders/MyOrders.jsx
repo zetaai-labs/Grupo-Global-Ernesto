@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
-import { useT } from '../../../../../i18n'
+import { getLanguage, useT } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
+import { downloadFromApi } from '../../../../../utils/download'
 import { euro } from '../../../Intranet/Features/Commercial/format'
 import StatusPill from '../../../Intranet/Features/Commercial/StatusPill'
 import '../../../Intranet/Features/Commercial/Commercial.css'
@@ -19,7 +21,7 @@ function MyOrders() {
       setQuotes(quoteList.data?.data || [])
       setOrders(orderList.data?.data || [])
     } catch (error) {
-      setNotice(error.response?.data?.message || 'Could not load your orders.')
+      setNotice(translateServer(error.response?.data?.message || 'Could not load your orders.'))
     }
   }, [])
 
@@ -32,7 +34,7 @@ function MyOrders() {
       const response = await api.get(`/zylax/portal/${kind}/${id}`)
       setDetail({ kind, ...response.data.data })
     } catch (error) {
-      setNotice(error.response?.data?.message || t('Could not open this record.'))
+      setNotice(translateServer(error.response?.data?.message) || t('Could not open this record.'))
     }
   }
 
@@ -45,7 +47,7 @@ function MyOrders() {
       setDetail(null)
       await load()
     } catch (error) {
-      setNotice(error.response?.data?.message || t('The action could not be completed.'))
+      setNotice(translateServer(error.response?.data?.message) || t('The action could not be completed.'))
     } finally {
       setBusy(false)
     }
@@ -91,6 +93,11 @@ function MyOrders() {
             <ol className="zx-timeline">
               {detail.events.map((event) => <li key={event.event_id}><StatusPill status={event.status} /> <span>{new Date(event.created_at).toLocaleString()}</span></li>)}
             </ol>
+          )}
+          {detail.kind === 'quotes' && (
+            <div className="zx-form-actions">
+              <button type="button" onClick={() => downloadFromApi(`/zylax/portal/quotes/${detail.quote_id}/pdf?lang=${getLanguage()}`, `${detail.quote_number}.pdf`).catch(() => setNotice(t('Could not create the PDF.')))}>{t('Download PDF')}</button>
+            </div>
           )}
           {detail.kind === 'quotes' && detail.status === 'SENT' && (
             <div className="zx-form-actions">

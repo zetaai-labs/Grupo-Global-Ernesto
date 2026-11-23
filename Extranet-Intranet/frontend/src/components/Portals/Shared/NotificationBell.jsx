@@ -4,6 +4,7 @@ import api from '../../../api/client'
 import { getSharedSocket } from '../../../api/socket'
 import './NotificationBell.css'
 import { useT } from '../../../i18n'
+import { translateServer } from '../../../i18n/serverMessages'
 
 const TYPE_ICONS = {
   workflow: '⟳',
@@ -118,8 +119,8 @@ function NotificationBell({ accent = '' }) {
               >
                 <span className="notification-icon">{TYPE_ICONS[item.type] || '•'}</span>
                 <span className="notification-copy">
-                  <strong>{item.title}</strong>
-                  {item.body && <span>{item.body}</span>}
+                  <strong>{translateServer(item.title)}</strong>
+                  {item.body && <span>{translateServer(item.body)}</span>}
                   <small>{timeAgo(item.created_at, t)}</small>
                 </span>
               </button>

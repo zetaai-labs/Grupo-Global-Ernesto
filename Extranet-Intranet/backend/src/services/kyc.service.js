@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto'
 import { query, withTransaction } from '../config/database.js'
+import { checkVat } from '../integrations/vies/viesClient.js'
 
 /**
  * KYC / KYB onboarding (Schema Document §2.4).
@@ -72,8 +73,9 @@ export function validatePic(pic) {
 
 /**
  * Runs step-3 checks and records the result. Moves the organisation to stage 4 on success.
- * Registry lookups (tax authority / EU Funding & Tenders portal) are reported as format-only
- * until an official API integration is configured.
+ * EU VAT numbers are checked in VIES when enabled. A negative VIES answer is a warning for Compliance,
+ * not a failure: a genuine company may simply not be registered for intra-EU trade.
+ * PIC numbers are still format-only.
  */
 export async function runAutoValidation(orgId) {
   const { rows } = await query('SELECT * FROM organizations WHERE org_id = $1', [orgId])
@@ -86,6 +88,7 @@ export async function runAutoValidation(orgId) {
 
   const tax = validateTaxId(org.country, org.tax_id)
   const pic = validatePic(org.pic_code)
+  const vies = tax.ok ? await checkVat(org.country, tax.normalized) : { status: 'NOT_APPLICABLE' }
   const duplicate = await query(
     `SELECT legal_name FROM organizations
      WHERE org_id <> $1 AND verification_status = 'VERIFIED'
@@ -100,14 +103,20 @@ export async function runAutoValidation(orgId) {
   if (missingDocuments.length) issues.push(`Missing documents: ${missingDocuments.join(', ')}.`)
   if (duplicate.rowCount) issues.push(`Tax ID already registered to ${duplicate.rows[0].legal_name}.`)
 
+  const warnings = []
+  if (vies.status === 'INVALID') warnings.push('VIES: this VAT number is not active for intra-EU trade. Compliance must review it.')
+  if (vies.status === 'UNAVAILABLE') warnings.push('VIES could not be reached. Run the validation again before approving.')
+
   const passed = issues.length === 0
   const details = {
     tax_id: { value: tax.normalized, valid: tax.ok, rule: tax.rule },
     pic: pic.skipped ? { provided: false } : { value: org.pic_code, valid: pic.ok },
     documents: { required: REQUIRED_DOCUMENTS, missing: missingDocuments },
     duplicate_tax_id: duplicate.rowCount > 0,
-    registry_lookup: 'format-only (official registry API not configured)',
+    vies,
+    registry_lookup: vies.status === 'OFF' ? 'Format only (VIES is switched off)' : `VIES: ${vies.status}`,
     issues,
+    warnings,
   }
 
   await query(
