@@ -1,10 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import api from '../../../../api/client'
-import { useT } from '../../../../i18n'
+import { useT, dateLocale } from '../../../../i18n'
 import { translateServer } from '../../../../i18n/serverMessages'
 import { CatalogPanel, ClockPanel, MusterPanel, OrgChart, PosPanel } from './ZylaxPanels'
+import AttendanceTeam from './AttendanceTeam'
 import { errorText, formatValue, humanize, statusTone, toInputValue } from './zylaxFormat'
+import ZylaxReport from './ZylaxReport'
+import FleetPanel from './FleetPanel'
+import OnboardingAccounts from './OnboardingAccounts'
+import EventPanel from './EventPanel'
+import AiSmartSearch from './AiSmartSearch'
+import { AiSummaryButton } from '../AiAssistant'
+import { downloadFromApi } from '../../../../utils/download'
 import './Zylax.css'
 
 const hub = (module, entity) => `/zylax/hub/${module}/${entity}`
@@ -52,6 +60,7 @@ function ZylaxModule() {
   const [refOptions, setRefOptions] = useState({})
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [showReport, setShowReport] = useState(false)
   const [form, setForm] = useState(null)
   const [detail, setDetail] = useState(null)
   const [comment, setComment] = useState('')
@@ -116,6 +125,17 @@ function ZylaxModule() {
     setDetail(null)
     setSearch('')
     setStatusFilter('')
+  }
+
+  const exportList = async (format) => {
+    const params = new URLSearchParams({ format })
+    if (search) params.set('q', search)
+    if (statusFilter) params.set('status', statusFilter)
+    try {
+      await downloadFromApi(`${hub(module.key, entityKey)}/export?${params}`, `${module.key}-${entityKey}.${format}`)
+    } catch {
+      setNotice(t('Could not export this list.'))
+    }
   }
 
   const open = useCallback(async (id) => {
@@ -241,6 +261,7 @@ function ZylaxModule() {
       )}
 
       {module.view === 'clock' && <ClockPanel onChange={load} />}
+      {module.view === 'clock' && portal === 'intranet' && <AttendanceTeam />}
       {module.view === 'muster' && <MusterPanel onChange={load} />}
       {module.view === 'pos' && <PosPanel />}
       {module.view === 'catalog' && <CatalogPanel portal={portal} />}
@@ -291,6 +312,10 @@ function ZylaxModule() {
                   <div key={field.key} className={field.type === 'textarea' ? 'zh-wide' : ''}><dt>{t(field.label)}{field.secret ? ' 🔒' : ''}</dt><dd>{formatValue(field, detail.data[field.key], detail.labels, t)}</dd></div>
                 ))}
               </dl>
+              {module.key === 'onboarding' && entityKey === 'plans' && detail.status === 'IN_PROGRESS' && portal === 'intranet' && <OnboardingAccounts key={detail.record_id} planId={detail.record_id} onDone={() => open(detail.record_id)} />}
+              {portal === 'intranet' && <AiSummaryButton key={`ai-${detail.record_id}`} path={`/zylax/${module.key}/${entityKey}/${detail.record_id}/summary`} />}
+              {module.key === 'events' && entityKey === 'events' && portal === 'intranet' && <EventPanel key={detail.record_id} event={detail} />}
+              {module.key === 'fleet' && entityKey === 'vehicles' && portal === 'intranet' && <FleetPanel key={detail.record_id} vehicleId={detail.record_id} onShared={() => { load(); open(detail.record_id) }} />}
               <div className="zx-form-actions">
                 {detail.transitions.map((to) => (
                   <button key={to} type="button" className={['CANCELLED', 'REJECTED', 'DECLINED', 'LOST', 'WITHDRAWN'].includes(to) ? '' : 'primary-action'} disabled={busy} onClick={() => run(() => api.post(`${hub(module.key, entityKey)}/${detail.record_id}/transition`, { to }), 'Status updated.', detail.record_id)}>
@@ -309,7 +334,7 @@ function ZylaxModule() {
               <ol className="zx-timeline">
                 {detail.events.map((event) => (
                   <li key={event.event_id} className={event.internal ? 'zh-internal' : ''}>
-                    <span>{new Date(event.created_at).toLocaleString()}{event.author ? ` · ${event.author}` : ''}{event.internal ? ` · ${t('Internal')}` : ''}</span>
+                    <span>{new Date(event.created_at).toLocaleString(dateLocale())}{event.author ? ` · ${event.author}` : ''}{event.internal ? ` · ${t('Internal')}` : ''}</span>
                     <div>{event.kind === 'status' && event.to_status ? `→ ${t(humanize(event.to_status))} ` : ''}{event.kind === 'created' ? t('Created') : ''}{event.kind === 'updated' ? t('Updated') : ''}{event.body ? ` ${translateServer(event.body)}` : ''}</div>
                   </li>
                 ))}
@@ -324,12 +349,17 @@ function ZylaxModule() {
 
           <div className="zx-toolbar zh-toolbar">
             <input type="search" aria-label={t('Search')} placeholder={t('Search...')} value={search} onChange={(event) => setSearch(event.target.value)} />
+            {portal === 'intranet' && <AiSmartSearch moduleKey={module.key} entityKey={entityKey} onFilters={({ status, q }) => { setStatusFilter(status); setSearch(q) }} />}
             <select aria-label={t('Status')} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
               <option value="">{t('All statuses')}</option>
               {boardStatuses.map((status) => <option key={status} value={status}>{t(humanize(status))}</option>)}
             </select>
             {module.view === 'board' && entityKey === module.entities[0]?.key && <button type="button" className="zh-secondary" onClick={() => setBoardView((value) => !value)}>{t(boardView ? 'List view' : 'Board view')}</button>}
+            <button type="button" className="zh-secondary" aria-pressed={showReport} onClick={() => setShowReport((value) => !value)}>{t(showReport ? 'Hide report' : 'Report')}</button>
+            <button type="button" className="zh-secondary" onClick={() => exportList('xlsx')}>{t('Excel')}</button>
+            <button type="button" className="zh-secondary" onClick={() => exportList('csv')}>{t('CSV')}</button>
           </div>
+          {showReport && <ZylaxReport key={`${module.key}/${entityKey}`} path={hub(module.key, entityKey)} />}
 
           {boardView && entityKey === module.entities[0]?.key ? (
             <div className="zh-board">

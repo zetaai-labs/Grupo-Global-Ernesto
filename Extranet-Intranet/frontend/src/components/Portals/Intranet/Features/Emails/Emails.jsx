@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './Emails.css'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const EMPTY_FORM = { to: '', subject: '', body: '', in_reply_to: null }
 
@@ -18,8 +19,8 @@ function formatDate(value) {
   const date = new Date(value)
   const sameDay = date.toDateString() === new Date().toDateString()
   return sameDay
-    ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : date.toLocaleDateString([], { day: '2-digit', month: 'short' })
+    ? date.toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString(dateLocale(), { day: '2-digit', month: 'short' })
 }
 
 function Emails() {
@@ -75,7 +76,7 @@ function Emails() {
     compose({
       to: selected.folder === 'inbox' ? selected.from_address || '' : selected.to_address,
       subject: selected.subject.startsWith('Re:') ? selected.subject : `Re: ${selected.subject}`,
-      body: `\n\nOn ${new Date(selected.created_at).toLocaleString()}, ${selected.from_name || selected.from_address} wrote:\n${quoted}`,
+      body: `\n\n${t('On {date}, {name} wrote:', { date: new Date(selected.created_at).toLocaleString(dateLocale()), name: selected.from_name || selected.from_address })}\n${quoted}`,
       in_reply_to: selected.id,
     })
   }
@@ -118,31 +119,31 @@ function Emails() {
           <h1>{t('Emails')}</h1>
           <p>{t('Your private mailbox. Messages to colleagues arrive instantly; external mail uses the company mail server.')}</p>
         </div>
-        <button type="button" className="primary-action" onClick={() => compose()}>✎ Compose</button>
+        <button type="button" className="primary-action" onClick={() => compose()}>{t("✎ Compose")}</button>
       </div>
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Unread</span><span className="stat-icon">✉</span></div>
+          <div className="stat-top"><span>{t("Unread")}</span><span className="stat-icon">✉</span></div>
           <strong>{counts.unread || 0}</strong>
-          <small>of {counts.inbox || 0} in Inbox</small>
+          <small>{t("of")}{" "}{counts.inbox || 0}{" "}{t("in Inbox")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Sent</span><span className="stat-icon">↗</span></div>
+          <div className="stat-top"><span>{t("Sent")}</span><span className="stat-icon">↗</span></div>
           <strong>{counts.sent || 0}</strong>
-          <small>Messages you sent</small>
+          <small>{t("Messages you sent")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>External delivery</span><span className="stat-icon">⇄</span></div>
-          <strong>{smtp ? 'On' : 'Off'}</strong>
-          <small>{smtp ? 'SMTP configured' : 'Internal mail only until SMTP is set'}</small>
+          <div className="stat-top"><span>{t("External delivery")}</span><span className="stat-icon">⇄</span></div>
+          <strong>{smtp ? t("On") : t("Off")}</strong>
+          <small>{smtp ? t("SMTP configured") : t("Internal mail only until SMTP is set")}</small>
         </div>
       </div>
 
       {notice && (
         <div className="cloud-notice" role="status">
-          {notice}
-          <button type="button" className="mail-notice-close" onClick={() => setNotice('')} aria-label="Dismiss">✕</button>
+          {translateServer(notice)}
+          <button type="button" className="mail-notice-close" onClick={() => setNotice('')} aria-label={t("Dismiss")}>✕</button>
         </div>
       )}
 
@@ -158,7 +159,7 @@ function Emails() {
                 className={folder === name ? 'active' : ''}
                 onClick={() => { setSelected(null); setFolder(name) }}
               >
-                {name === 'inbox' ? 'Inbox' : 'Sent'}
+                {name === 'inbox' ? t("Inbox") : t("Sent")}
                 {name === 'inbox' && counts.unread > 0 && <span className="mailbox-badge">{counts.unread}</span>}
               </button>
             ))}
@@ -188,8 +189,8 @@ function Emails() {
           ) : (
             <div className="feature-empty-state">
               <div className="empty-icon">✉</div>
-              <h3>{folder === 'inbox' ? 'Your inbox is empty' : 'No sent messages'}</h3>
-              <p>{folder === 'inbox' ? 'New messages will appear here.' : 'Compose a message to get started.'}</p>
+              <h3>{folder === 'inbox' ? t("Your inbox is empty") : t("No sent messages")}</h3>
+              <p>{folder === 'inbox' ? t("New messages will appear here.") : t("Compose a message to get started.")}</p>
             </div>
           )}
         </aside>
@@ -197,13 +198,13 @@ function Emails() {
         <div className="mailbox-reader feature-panel">
           {composing && (
             <form className="email-form" onSubmit={send}>
-              <h3>{form.in_reply_to ? 'Reply' : 'New message'}</h3>
-              <input value={form.to} onChange={change('to')} placeholder="To — e.g. hr@gmail.com, manager@gmail.com" required />
-              <input value={form.subject} onChange={change('subject')} placeholder="Subject" required />
-              <textarea value={form.body} onChange={change('body')} placeholder="Message" rows="10" required />
+              <h3>{form.in_reply_to ? t("Reply") : t("New message")}</h3>
+              <input value={form.to} onChange={change('to')} placeholder={t("To — e.g. hr@gmail.com, manager@gmail.com")} required />
+              <input value={form.subject} onChange={change('subject')} placeholder={t("Subject")} required />
+              <textarea value={form.body} onChange={change('body')} placeholder={t("Message")} rows="10" required />
               <div className="mail-actions">
-                <button type="submit" className="primary-action" disabled={sending}>{sending ? 'Sending…' : '✉ Send'}</button>
-                <button type="button" onClick={() => setComposing(false)}>Cancel</button>
+                <button type="submit" className="primary-action" disabled={sending}>{sending ? t("Sending…") : t("✉ Send")}</button>
+                <button type="button" onClick={() => setComposing(false)}>{t("Cancel")}</button>
               </div>
             </form>
           )}
@@ -213,16 +214,16 @@ function Emails() {
               <header>
                 <h2>{selected.subject}</h2>
                 <div className="mail-meta">
-                  <span><strong>From:</strong> {selected.from_name} {selected.from_address && `<${selected.from_address}>`}</span>
-                  <span><strong>To:</strong> {selected.to_address}</span>
-                  <span><strong>Date:</strong> {new Date(selected.created_at).toLocaleString()}</span>
-                  {selected.source === 'imap' && <span className="mail-tag">External mail</span>}
+                  <span><strong>{t("From:")}</strong> {selected.from_name} {selected.from_address && `<${selected.from_address}>`}</span>
+                  <span><strong>{t("To:")}</strong> {selected.to_address}</span>
+                  <span><strong>{t("Date:")}</strong> {new Date(selected.created_at).toLocaleString(dateLocale())}</span>
+                  {selected.source === 'imap' && <span className="mail-tag">{t("External mail")}</span>}
                 </div>
               </header>
               <pre className="mail-body">{selected.body}</pre>
               <div className="mail-actions">
-                <button type="button" className="primary-action" onClick={reply}>↩ Reply</button>
-                <button type="button" onClick={remove}>Delete</button>
+                <button type="button" className="primary-action" onClick={reply}>{t("↩ Reply")}</button>
+                <button type="button" onClick={remove}>{t("Delete")}</button>
               </div>
             </article>
           )}
@@ -230,8 +231,8 @@ function Emails() {
           {!composing && !selected && (
             <div className="feature-empty-state">
               <div className="empty-icon">✉</div>
-              <h3>Select a message</h3>
-              <p>Choose an email from the list, or compose a new one.</p>
+              <h3>{t("Select a message")}</h3>
+              <p>{t("Choose an email from the list, or compose a new one.")}</p>
             </div>
           )}
         </div>

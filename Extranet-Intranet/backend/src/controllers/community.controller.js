@@ -3,10 +3,13 @@ import { query } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { getIo } from '../sockets/io.js'
 import { ROLE_DEFINITIONS, STAFF_ROLES } from '../config/roles.js'
+import { forgetPostTranslations, indexPost } from '../services/translation.service.js'
 
 /** Community module (Technical Spec §1.2): directory, activity feed, sector committees. */
 
 const uuid = z.string().uuid()
+/** Search text is matched literally: % and _ are not wildcards. */
+const escapeLike = (text) => text.replace(/[\\%_]/g, (char) => `\\${char}`)
 const fail = (res, status, message) => res.status(status).json({ message })
 
 export async function directory(req, res) {
@@ -16,14 +19,15 @@ export async function directory(req, res) {
     params.push(value)
     filters.push(sql.split('?').join(`$${params.length}`))
   }
-  if (req.query.q) add('(u.name ILIKE ? OR o.legal_name ILIKE ?)', `%${req.query.q}%`)
+  if (req.query.q) add("(u.name ILIKE ? OR o.legal_name ILIKE ? OR EXISTS (SELECT 1 FROM video_bios vb WHERE vb.user_id = u.id AND vb.status = 'READY' AND vb.transcript ILIKE ?))", `%${req.query.q}%`)
   if (req.query.corridor) add('rg.code = ?', String(req.query.corridor).toUpperCase())
   if (req.query.org) {
     if (!uuid.safeParse(req.query.org).success) return fail(res, 400, 'Invalid organisation.')
     add('u.org_id = ?', req.query.org)
   }
   const { rows } = await query(
-    `SELECT u.id, u.name, u.email, u.video_bio_url, r.name AS role, rg.code AS corridor, o.org_id, o.legal_name AS organization,
+    `SELECT u.id, u.name, u.email, u.video_bio_url,
+            EXISTS (SELECT 1 FROM video_bios vb WHERE vb.user_id = u.id AND vb.status = 'READY') AS has_video, r.name AS role, rg.code AS corridor, o.org_id, o.legal_name AS organization,
             COALESCE((SELECT json_agg(c.name ORDER BY c.name) FROM community_committee_members m
                       JOIN community_committees c ON c.committee_id = m.committee_id WHERE m.user_id = u.id), '[]'::json) AS committees
      FROM users u
@@ -88,7 +92,7 @@ export async function leaveCommittee(req, res) {
 }
 
 const POST_SELECT = `
-  SELECT p.post_id, p.body, p.created_at, p.committee_id, p.author_id, c.name AS committee,
+  SELECT p.post_id, p.body, p.lang, p.created_at, p.committee_id, p.author_id, c.name AS committee,
          u.name AS author, o.legal_name AS organization
   FROM community_posts p
   LEFT JOIN users u ON u.id = p.author_id
@@ -98,12 +102,19 @@ const POST_SELECT = `
 
 export async function feed(req, res) {
   const params = []
-  let where = ''
+  const filters = []
   if (req.query.committee) {
     if (!uuid.safeParse(req.query.committee).success) return fail(res, 400, 'Invalid committee.')
     params.push(req.query.committee)
-    where = 'WHERE p.committee_id = $1'
+    filters.push(`p.committee_id = $${params.length}`)
   }
+  // Search in any language: the post itself or its indexed translations (ES, EN, AR, HI, RU).
+  const q = String(req.query.q || '').trim().slice(0, 100)
+  if (q) {
+    params.push(`%${escapeLike(q)}%`)
+    filters.push(`(p.body ILIKE $${params.length} OR EXISTS (SELECT 1 FROM content_translations ct WHERE ct.source_hash = p.source_hash AND ct.text ILIKE $${params.length}))`)
+  }
+  const where = filters.length ? `WHERE ${filters.join(' AND ')}` : ''
   const { rows } = await query(`${POST_SELECT} ${where} ORDER BY p.created_at DESC LIMIT 100`, params)
   return res.json({ data: rows.map((row) => ({ ...row, can_delete: row.author_id === req.user.sub || req.user.role === 'admin' })) })
 }
@@ -126,6 +137,8 @@ export async function createPost(req, res) {
     [req.user.sub, committeeId || null, body],
   )
   const post = (await query(`${POST_SELECT} WHERE p.post_id = $1`, [rows[0].post_id])).rows[0]
+  // Index the post in every language in the background (no-op without an AI key).
+  indexPost(post.post_id).catch(() => {})
   // Real-time activity feed for connected staff.
   const io = getIo()
   if (io) {
@@ -140,10 +153,11 @@ export async function createPost(req, res) {
 
 export async function deletePost(req, res) {
   if (!uuid.safeParse(req.params.id).success) return fail(res, 400, 'Invalid post.')
-  const { rows } = await query('SELECT author_id FROM community_posts WHERE post_id = $1', [req.params.id])
+  const { rows } = await query('SELECT author_id, source_hash FROM community_posts WHERE post_id = $1', [req.params.id])
   if (!rows[0]) return fail(res, 404, 'Post not found.')
   if (rows[0].author_id !== req.user.sub && req.user.role !== 'admin') return fail(res, 403, 'You can only delete your own posts.')
   await query('DELETE FROM community_posts WHERE post_id = $1', [req.params.id])
+  await forgetPostTranslations(rows[0].source_hash)
   await writeAudit(req.user.sub, 'COMMUNITY_POST_DELETED', 'community_posts', req.params.id)
   return res.json({ message: 'Post deleted.' })
 }

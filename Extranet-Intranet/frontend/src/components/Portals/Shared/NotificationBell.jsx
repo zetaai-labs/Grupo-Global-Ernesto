@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../../api/client'
 import { getSharedSocket } from '../../../api/socket'
 import './NotificationBell.css'
-import { useT } from '../../../i18n'
+import AlertsToggle from '../../../pwa/AlertsToggle'
+import { useT, dateLocale } from '../../../i18n'
 import { translateServer } from '../../../i18n/serverMessages'
 
 const TYPE_ICONS = {
@@ -24,7 +25,7 @@ function timeAgo(value, t) {
   if (minutes < 60) return t('{n} min ago', { n: minutes })
   const hours = Math.round(minutes / 60)
   if (hours < 24) return t('{n} h ago', { n: hours })
-  return new Date(value).toLocaleDateString()
+  return new Date(value).toLocaleDateString(dateLocale())
 }
 
 /** Bell icon with unread badge and dropdown; new notifications arrive live over Socket.IO. */
@@ -126,6 +127,7 @@ function NotificationBell({ accent = '' }) {
               </button>
             ))}
           </div>
+          <AlertsToggle />
         </div>
       )}
     </div>

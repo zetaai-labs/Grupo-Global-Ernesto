@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './LinkedFolder.css'
 import { useT } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 function LinkedFolder() {
   const t = useT()
@@ -63,43 +64,43 @@ function LinkedFolder() {
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Linked folders</span><span className="stat-icon">⇄</span></div>
+          <div className="stat-top"><span>{t("Linked folders")}</span><span className="stat-icon">⇄</span></div>
           <strong>{links.length}</strong>
-          <small>Your shortcuts</small>
+          <small>{t("Your shortcuts")}</small>
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="feature-panel">
-        <div className="panel-heading"><div><h3>Add a shortcut</h3><p>Point to a folder you already have access to.</p></div></div>
+        <div className="panel-heading"><div><h3>{t("Add a shortcut")}</h3><p>{t("Point to a folder you already have access to.")}</p></div></div>
         <form className="linked-form" onSubmit={add}>
           <select value={folderId} onChange={(event) => setFolderId(event.target.value)} required>
-            {!folders.length && <option value="">No folders available</option>}
+            {!folders.length && <option value="">{t("No folders available")}</option>}
             {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
           </select>
-          <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Shortcut label" required />
-          <button type="submit" className="primary-action">＋ Link folder</button>
+          <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder={t("Shortcut label")} required />
+          <button type="submit" className="primary-action">{t("＋ Link folder")}</button>
         </form>
       </div>
 
       <div className="feature-panel">
-        <div className="panel-heading"><div><h3>Your shortcuts</h3><p>Remove links you no longer need.</p></div></div>
+        <div className="panel-heading"><div><h3>{t("Your shortcuts")}</h3><p>{t("Remove links you no longer need.")}</p></div></div>
         {links.length ? (
           <div className="feature-list">
             {links.map((link) => (
               <div className="linked-row" key={link.id}>
                 <span className="list-item-icon">⇄</span>
                 <span className="list-item-copy"><strong>{link.label}</strong><span>{link.folder_name}</span></span>
-                <button type="button" className="cloud-remove" onClick={() => remove(link)}>Remove</button>
+                <button type="button" className="cloud-remove" onClick={() => remove(link)}>{t("Remove")}</button>
               </div>
             ))}
           </div>
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">⇄</div>
-            <h3>No linked folders</h3>
-            <p>Add a shortcut from the form above.</p>
+            <h3>{t("No linked folders")}</h3>
+            <p>{t("Add a shortcut from the form above.")}</p>
           </div>
         )}
       </div>

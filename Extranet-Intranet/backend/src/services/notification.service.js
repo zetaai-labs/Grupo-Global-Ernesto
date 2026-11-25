@@ -1,5 +1,6 @@
 import { query } from '../config/database.js'
 import { getIo } from '../sockets/io.js'
+import { pushNotifications } from './push.service.js'
 
 /**
  * Creates a notification for each user and pushes it live to their open sessions.
@@ -17,6 +18,8 @@ export async function notify(userIds, { type, title, body = null, link = null })
     )
     const io = getIo()
     for (const row of rows) io?.to(`user:${row.user_id}`).emit('notification:new', row)
+    // Phone/desktop alerts in the background: a slow push service never delays the action.
+    pushNotifications(rows).catch(() => {})
     return rows
   } catch {
     return []

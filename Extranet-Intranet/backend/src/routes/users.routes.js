@@ -7,6 +7,7 @@ import {
   listMetadata,
   exportUser,
   eraseUserAccount,
+  unlinkSso,
 } from '../controllers/users.controller.js'
 import { requireAdmin, requireRole } from '../middleware/authorize.js'
 import { ACCOUNT_MANAGER_ROLES } from '../config/roles.js'
@@ -23,5 +24,6 @@ router.post('/', canManageAccounts, createUser)
 router.patch('/:id/status', canManageAccounts, updateUserStatus)
 router.get('/:id/export', requireAdmin, exportUser)
 router.post('/:id/erase', requireAdmin, eraseUserAccount)
+router.delete('/:id/sso-link', requireRole('admin', 'tech_admin'), unlinkSso)
 
 export default router

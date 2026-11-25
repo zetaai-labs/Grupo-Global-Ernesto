@@ -2,68 +2,9 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { getUser } from '../../../api/auth'
 import { useT } from '../../../i18n'
+import { visibleNavigation } from '../Shared/navigation'
+import { openHelp } from '../Shared/help/helpEvents'
 
-const navigation = [
-  {
-    label: 'WORKSPACE',
-    items: [
-      { name: 'Overview', path: '/intranet/overview', icon: '⌂' },
-      { name: 'ZYLAX Suite', path: '/intranet/zylax', icon: '◆' },
-      { name: 'Community', path: '/intranet/community', icon: '✦' }
-    ]
-  },
-  {
-    label: 'BUSINESS',
-    items: [
-      { name: 'Organizations & KYC', path: '/intranet/organizations', icon: '◈', roles: ['admin', 'tech_admin', 'hr', 'manager'] },
-      { name: 'Business Directory', path: '/intranet/data-import', icon: '⇪', roles: ['admin', 'tech_admin', 'manager'] },
-      { name: 'CRM Pipeline', path: '/intranet/crm', icon: '€' },
-      { name: 'Commercial', path: '/intranet/commercial', icon: '▣', roles: ['admin', 'manager', 'employee', 'finance'] },
-      { name: 'Projects & Programs', path: '/intranet/projects', icon: '▦' },
-      { name: 'Investor Vault', path: '/intranet/investor-vault', icon: '🔒', roles: ['admin'] }
-    ]
-  },
-  {
-    label: 'DOCUMENT MANAGEMENT',
-    items: [
-      { name: 'Cloud Folders', path: '/intranet/cloud-folders', icon: '▤' },
-      { name: 'Linked Folder', path: '/intranet/linked-folder', icon: '⇄' },
-      { name: 'MetaLinks', path: '/intranet/metalinks', icon: '↗' },
-      { name: 'Web Received Files', path: '/intranet/web-received-files', icon: '⇩' },
-      { name: 'Backups', path: '/intranet/backups', icon: '◷', roles: ['admin', 'tech_admin'] },
-      { name: 'Recycle Bin', path: '/intranet/recycle-bin', icon: '▧' }
-    ]
-  },
-  {
-    label: 'COLLABORATION',
-    items: [
-      { name: 'AutoFlow', path: '/intranet/autoflow', icon: '⟳' },
-      { name: 'Calendar', path: '/intranet/calendar', icon: '◷' },
-      { name: 'Emails', path: '/intranet/emails', icon: '✉' },
-      { name: 'External Shares', path: '/intranet/external-shares', icon: '♧' },
-      { name: 'Courses & Events', path: '/intranet/courses', icon: '🎓' }
-    ]
-  },
-  {
-    label: 'COMMUNICATION',
-    items: [
-      { name: 'Team Chat', path: '/intranet/chat', icon: '💬' },
-      { name: 'Video Conferencing', path: '/intranet/video-conferencing', icon: '📹' }
-    ]
-  },
-  {
-    label: 'ADMINISTRATION',
-    items: [
-      { name: 'System Web Page', path: '/intranet/system-web-page', icon: '▣' },
-      { name: 'Integrations', path: '/intranet/integrations', icon: '⧉', roles: ['admin', 'tech_admin'] },
-      { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin', 'tech_admin'] },
-      { name: 'User Management', path: '/intranet/user-management', icon: '♙', roles: ['admin', 'tech_admin', 'hr'] },
-      { name: 'Security (MFA)', path: '/intranet/security', icon: '✓' },
-      { name: 'Privacy (GDPR)', path: '/intranet/privacy', icon: '⛨' },
-      { name: 'Ethics & Compliance', path: '/intranet/ethics', icon: '⚖' }
-    ]
-  }
-]
 
 function IntranetSidebar() {
   const t = useT()
@@ -71,12 +12,7 @@ function IntranetSidebar() {
   const user = getUser()
   const role = String(user?.role || '').toLowerCase()
   // Hide screens this role cannot use (the API enforces the same rules).
-  const visibleNavigation = navigation
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => !item.roles || item.roles.includes(role)),
-    }))
-    .filter((group) => group.items.length)
+  const navigation = visibleNavigation('intranet', role)
 
   return (
     <aside className="portal-sidebar">
@@ -94,7 +30,7 @@ function IntranetSidebar() {
       </div>
 
       <nav className="sidebar-navigation">
-        {visibleNavigation.map((group) => (
+        {navigation.map((group) => (
           <div className="nav-group" key={group.label}>
             <p className="nav-group-label">{t(group.label)}</p>
 
@@ -115,13 +51,13 @@ function IntranetSidebar() {
       </nav>
 
       <div className="sidebar-bottom">
-        <div className="sidebar-help">
+        <button type="button" className="sidebar-help" onClick={openHelp}>
           <div className="help-icon">?</div>
           <div>
             <strong>{t('Need assistance?')}</strong>
-            <span>{t('Contact your administrator')}</span>
+            <span>{t('Help & support')}</span>
           </div>
-        </div>
+        </button>
 
         {user?.role === 'admin' && (
           <button

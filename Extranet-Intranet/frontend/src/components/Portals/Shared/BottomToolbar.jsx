@@ -4,7 +4,8 @@ import { getUser, clearSession } from '../../../api/auth'
 import { useSyncStatus } from './useSyncStatus'
 import { downloadFromApi } from '../../../utils/download'
 import './BottomToolbar.css'
-import { useT } from '../../../i18n'
+import { openHelp } from './help/helpEvents'
+import { useT, dateLocale } from '../../../i18n'
 
 const SYNC_LABELS = {
   connecting: { short: 'Connecting…', long: 'Connecting to server…' },
@@ -27,6 +28,7 @@ function BottomToolbar({ portal = 'intranet' }) {
         <div className="toolbar-popover">
           <strong>{user?.name || t('Guest')}</strong>
           <span>{user?.email || ''} · {user?.role ? t(user.role) : ''}</span>
+          <button type="button" onClick={() => { setPanel(null); openHelp() }}>{t('Help & support')}</button>
           <button
             type="button"
             onClick={() => downloadFromApi('/auth/me/export', 'my-global-group-data.json').catch(() => {})}
@@ -47,8 +49,9 @@ function BottomToolbar({ portal = 'intranet' }) {
       )}
       {panel === 'apps' && (
         <div className="toolbar-popover">
-          <Link to={`${base}/cloud-folders`}>{t('Cloud Folders')}</Link>
-          <Link to={`${base}/overview`}>{t('Overview')}</Link>
+          <Link to={`${base}/workspace`} onClick={() => setPanel(null)}>⊞ {t('All features')}</Link>
+          {portal === 'intranet' && <Link to={`${base}/cloud-folders`} onClick={() => setPanel(null)}>{t('Cloud Folders')}</Link>}
+          <Link to={`${base}/overview`} onClick={() => setPanel(null)}>{t('Overview')}</Link>
           <Link to="/">{t('Portal hub')}</Link>
         </div>
       )}
@@ -57,7 +60,7 @@ function BottomToolbar({ portal = 'intranet' }) {
           <span><span className={`sync-dot sync-dot--${sync.state}`} /> {t(SYNC_LABELS[sync.state].long)}</span>
           {sync.lastSyncedAt && (
             <span>
-              {t('Last sync {time}', { time: sync.lastSyncedAt.toLocaleTimeString() })}
+              {t('Last sync {time}', { time: sync.lastSyncedAt.toLocaleTimeString(dateLocale()) })}
               {sync.latencyMs !== null && ` · ${sync.latencyMs} ms`}
             </span>
           )}
@@ -71,6 +74,7 @@ function BottomToolbar({ portal = 'intranet' }) {
       </button>
       <Link to={`${base}/chat`}>💬 {t('Chat')}</Link>
       <Link to={`${base}/video-conferencing`}>📹 {t('Video')}</Link>
+      <button type="button" onClick={() => { setPanel(null); openHelp() }} title={t('Help & support')}>❓ {t('Help')}</button>
     </div>
   )
 }

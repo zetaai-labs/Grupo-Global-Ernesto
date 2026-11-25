@@ -6,7 +6,7 @@
 .email-form input,
 .email-form textarea {
   padding: 11px 13px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 10px;
   font: inherit;
   font-size: 12px;
@@ -23,7 +23,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
 }
 
 .email-row:last-child {
@@ -31,7 +31,7 @@
 }
 
 .email-row .list-item-arrow {
-  color: #94a3b8;
+  color: var(--tc-fg-94a3b8, #94a3b8);
   font-size: 11px;
 }
 
@@ -87,7 +87,7 @@
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--purple);
-  color: #fff;
+  color: var(--tc-fg-ffffff, #ffffff);
   font-size: 10px;
 }
 
@@ -164,15 +164,15 @@
   justify-self: start;
   padding: 2px 7px;
   border-radius: 999px;
-  background: #fff4e5;
-  color: #a35b00;
+  background: var(--tc-bg-fff4e5, #fff4e5);
+  color: var(--tc-fg-a35b00, #a35b00);
   font-size: 10px;
 }
 
 .mailbox-status.status-failed,
 .mailbox-status.status-not_sent {
-  background: #fff1f2;
-  color: #be123c;
+  background: var(--tc-bg-fff1f2, #fff1f2);
+  color: var(--tc-fg-be123c, #be123c);
 }
 
 .mailbox-reader {
@@ -196,7 +196,7 @@
 .mail-meta {
   display: grid;
   gap: 4px;
-  color: #5d6072;
+  color: var(--tc-fg-5d6072, #5d6072);
   font-size: 12px;
 }
 
@@ -227,7 +227,7 @@
   padding: 0 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   color: var(--text);
   font: inherit;
   font-size: 11px;

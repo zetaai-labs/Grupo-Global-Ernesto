@@ -23,10 +23,48 @@ function madridMinutes(date) {
 
 // ----- Attendance clock -----
 
+const CLOCK_ACTIONS = ['in', 'out', 'break_start', 'break_end']
+/** Shifts left open longer than this are flagged so HR can correct a forgotten clock-out. */
+const LONG_SHIFT_SECONDS = 14 * 3600
+
+/** Seconds of the shift's breaks; an open break counts up to `now`. */
+export function breakSeconds(breaks = [], now = new Date()) {
+  return breaks.reduce((sum, item) => sum + Math.max(0, ((item.end ? new Date(item.end) : now) - new Date(item.start)) / 1000), 0)
+}
+
+/** Net worked seconds: time since clock-in minus breaks. */
+export function workedSeconds(data, now = new Date()) {
+  const end = data.clock_out ? new Date(data.clock_out) : now
+  return Math.max(0, Math.round((end - new Date(data.clock_in)) / 1000 - breakSeconds(data.breaks, end)))
+}
+
+const openBreak = (data) => (data.breaks || []).find((item) => !item.end) || null
+
+function presentShift(row, now = new Date()) {
+  if (!row) return null
+  const current = openBreak(row.data)
+  return {
+    record_id: row.record_id,
+    clock_in: row.data.clock_in,
+    late: Boolean(row.data.late),
+    on_break: Boolean(current),
+    break_started_at: current?.start || null,
+    break_seconds: Math.round(breakSeconds(row.data.breaks, now)),
+    breaks: (row.data.breaks || []).length,
+    worked_seconds: workedSeconds(row.data, now),
+    long_shift: workedSeconds(row.data, now) > LONG_SHIFT_SECONDS,
+  }
+}
+
+/** Closed shifts' net seconds (older entries only stored decimal hours). */
+const closedSeconds = (filter) => `COALESCE(sum(COALESCE((data->>'worked_seconds')::numeric, (data->>'hours')::numeric * 3600, 0)) FILTER (WHERE ${filter}), 0)`
+
 export async function clockStatus(req, res) {
   if (!STAFF_ROLES.includes(req.user.role)) throw httpError(403, 'Staff only.')
   const year = String(new Date().getUTCFullYear())
-  const [open, used] = await Promise.all([
+  const madridDay = `((data->>'clock_in')::timestamptz AT TIME ZONE 'Europe/Madrid')::date`
+  const today = `(now() AT TIME ZONE 'Europe/Madrid')::date`
+  const [open, used, totals] = await Promise.all([
     query(`SELECT record_id, data FROM zx_records WHERE module = 'attendance' AND entity = 'attendance' AND assigned_to = $1 AND status = 'OPEN' LIMIT 1`, [req.user.sub]),
     query(
       `SELECT COALESCE(sum((data->>'days')::numeric), 0) AS days FROM zx_records
@@ -34,14 +72,32 @@ export async function clockStatus(req, res) {
        AND data->>'leave_type' = 'ANNUAL' AND left(data->>'start_date', 4) = $2`,
       [req.user.sub, year],
     ),
+    query(
+      `SELECT ${closedSeconds(`${madridDay} = ${today}`)} AS today,
+              ${closedSeconds(`${madridDay} >= date_trunc('week', ${today})::date`)} AS week
+       FROM zx_records WHERE module = 'attendance' AND entity = 'attendance' AND assigned_to = $1 AND status = 'CLOSED'
+       AND (data->>'clock_in')::timestamptz > now() - interval '8 days'`,
+      [req.user.sub],
+    ),
   ])
-  return res.json({ data: { open: open.rows[0] ? { record_id: open.rows[0].record_id, clock_in: open.rows[0].data.clock_in } : null, leave_total: ANNUAL_LEAVE_DAYS, leave_used: Number(used.rows[0].days) } })
+  const now = new Date()
+  const shift = presentShift(open.rows[0], now)
+  const running = shift?.worked_seconds || 0
+  return res.json({ data: {
+    server_now: now.toISOString(),
+    open: shift,
+    // The open shift counts toward today/this week (a shift is filed under the day it started).
+    today_seconds: Math.round(Number(totals.rows[0].today) + running),
+    week_seconds: Math.round(Number(totals.rows[0].week) + running),
+    leave_total: ANNUAL_LEAVE_DAYS,
+    leave_used: Number(used.rows[0].days),
+  } })
 }
 
 export async function clock(req, res) {
   if (!STAFF_ROLES.includes(req.user.role)) throw httpError(403, 'Staff only.')
   const action = req.body?.action
-  if (!['in', 'out'].includes(action)) throw httpError(400, 'Invalid clock action.')
+  if (!CLOCK_ACTIONS.includes(action)) throw httpError(400, 'Invalid clock action.')
   const def = findEntity('attendance', 'attendance')
   const result = await withTransaction(async (client) => {
     await lock(client, `zx-clock-${req.user.sub}`)
@@ -59,14 +115,35 @@ export async function clock(req, res) {
       }, req.user.sub, req.user.org_id)
       return { state: 'in', record_id: row.record_id, clock_in: row.data.clock_in, late: row.data.late }
     }
-    if (!open.rows[0]) throw httpError(409, 'You are not clocked in.')
-    const hours = Math.round(((now - new Date(open.rows[0].data.clock_in)) / 3600000) * 100) / 100
+    const shift = open.rows[0]
+    if (!shift) throw httpError(409, 'You are not clocked in.')
+    const breaks = [...(shift.data.breaks || [])]
+    const current = openBreak(shift.data)
+
+    if (action === 'break_start' || action === 'break_end') {
+      if (action === 'break_start' && current) throw httpError(409, 'You are already on a break.')
+      if (action === 'break_end' && !current) throw httpError(409, 'You are not on a break.')
+      if (action === 'break_start') breaks.push({ start: now.toISOString(), end: null })
+      else breaks[breaks.indexOf(current)] = { ...current, end: now.toISOString() }
+      await client.query(
+        `UPDATE zx_records SET data = data || $2::jsonb, updated_at = now() WHERE record_id = $1`,
+        [shift.record_id, JSON.stringify({ breaks })],
+      )
+      return { state: action === 'break_start' ? 'break' : 'in', record_id: shift.record_id, worked_seconds: workedSeconds({ ...shift.data, breaks }, now) }
+    }
+
+    // Clocking out ends a break that was left running.
+    if (current) breaks[breaks.indexOf(current)] = { ...current, end: now.toISOString() }
+    const final = { ...shift.data, breaks, clock_out: now.toISOString() }
+    const worked = workedSeconds(final, now)
+    const pause = Math.round(breakSeconds(breaks, now))
+    const hours = Math.round((worked / 3600) * 100) / 100
     await client.query(
       `UPDATE zx_records SET status = 'CLOSED', data = data || $2::jsonb, updated_at = now() WHERE record_id = $1`,
-      [open.rows[0].record_id, JSON.stringify({ clock_out: now.toISOString(), hours })],
+      [shift.record_id, JSON.stringify({ clock_out: final.clock_out, breaks, worked_seconds: worked, break_minutes: Math.round(pause / 60), hours })],
     )
-    await client.query(`INSERT INTO zx_record_events (record_id, kind, from_status, to_status, created_by) VALUES ($1, 'status', 'OPEN', 'CLOSED', $2)`, [open.rows[0].record_id, req.user.sub])
-    return { state: 'out', record_id: open.rows[0].record_id, hours }
+    await client.query(`INSERT INTO zx_record_events (record_id, kind, from_status, to_status, created_by) VALUES ($1, 'status', 'OPEN', 'CLOSED', $2)`, [shift.record_id, req.user.sub])
+    return { state: 'out', record_id: shift.record_id, hours, worked_seconds: worked, break_seconds: pause }
   })
   await writeAudit(req.user.sub, 'ZX_CLOCK', 'zx:attendance', result.record_id, { action })
   return res.json({ data: result })
@@ -139,7 +216,7 @@ async function partySnapshots(client, customerOrgId) {
   return { seller: party(seller, process.env.COMPANY_ADDRESS || null), buyer: party(buyer) }
 }
 
-async function insertInvoice(client, invoice, lines) {
+export async function insertInvoice(client, invoice, lines) {
   const corrective = invoice.kind === 'CORRECTIVE'
   const number = await nextInvoiceNumber(client, corrective)
   const parties = corrective
@@ -166,7 +243,7 @@ async function insertInvoice(client, invoice, lines) {
 export async function posSale(req, res) {
   if (!POS_ROLES.includes(req.user.role)) throw httpError(403, 'You cannot use the POS.')
   const { items, payment_method: method, customer_name: customerName } = req.body || {}
-  if (!['CASH', 'CARD', 'TRANSFER'].includes(method)) throw httpError(400, 'Choose a payment method.')
+  if (!['CASH', 'CARD', 'TRANSFER', 'TERMINAL'].includes(method)) throw httpError(400, 'Choose a payment method.')
   if (!Array.isArray(items) || !items.length || items.length > 200) throw httpError(400, 'Add at least one product.')
   const merged = new Map()
   for (const item of items) {
@@ -190,7 +267,7 @@ export async function posSale(req, res) {
     }
     const sum = totals(lines)
     return insertInvoice(client, {
-      source: 'POS', status: 'PAID', payment_method: method, customer_name: customerName ? String(customerName).trim().slice(0, 255) : null,
+      source: 'POS', status: method === 'TERMINAL' ? 'ISSUED' : 'PAID', payment_method: method === 'TERMINAL' ? null : method, customer_name: customerName ? String(customerName).trim().slice(0, 255) : null,
       ...sum, owner_org_id: req.user.org_id, created_by: req.user.sub,
     }, lines)
   })
@@ -275,6 +352,29 @@ export async function payInvoice(req, res) {
   })
   await writeAudit(req.user.sub, 'ZX_INVOICE_PAID', 'zx_invoices', invoice.invoice_id, { method })
   return res.json({ data: invoice })
+}
+
+/** Cancels an issued, unpaid invoice. A corrective invoice with negative amounts records it, as the law requires. */
+export async function cancelInvoice(req, res) {
+  if (!['admin', 'finance'].includes(req.user.role)) throw httpError(403, 'Only Finance can cancel invoices.')
+  const reason = String(req.body?.reason || '').trim().slice(0, 500)
+  if (reason.length < 3) throw httpError(400, 'Give a reason for the cancellation.')
+  const { invoice, corrective } = await withTransaction(async (client) => {
+    const row = await lockedInvoice(client, req)
+    if (row.kind === 'CORRECTIVE') throw httpError(409, 'A corrective invoice cannot be cancelled.')
+    if (row.status !== 'ISSUED') throw httpError(409, 'Only unpaid invoices can be cancelled. Refund paid ones instead.')
+    const { rows } = await client.query(`UPDATE zx_invoices SET status = 'CANCELLED', cancelled_at = now() WHERE invoice_id = $1 RETURNING *`, [row.invoice_id])
+    const originals = await client.query('SELECT product_id, sku, name, qty, unit_price_eur, discount_pct, tax_rate, net_eur, tax_eur FROM zx_invoice_lines WHERE invoice_id = $1', [row.invoice_id])
+    const negative = (value) => (-Number(value)).toFixed(2)
+    const correction = await insertInvoice(client, {
+      kind: 'CORRECTIVE', source: row.source, customer_org_id: row.customer_org_id, customer_name: row.customer_name, status: 'ISSUED',
+      net_eur: negative(row.net_eur), tax_eur: negative(row.tax_eur), total_eur: negative(row.total_eur), owner_org_id: row.owner_org_id, created_by: req.user.sub,
+      corrects_invoice_id: row.invoice_id, correction_reason: reason, seller_snapshot: row.seller_snapshot, buyer_snapshot: row.buyer_snapshot,
+    }, originals.rows.map((line) => ({ ...line, qty: -line.qty, net_eur: negative(line.net_eur), tax_eur: negative(line.tax_eur) })))
+    return { invoice: rows[0], corrective: correction }
+  })
+  await writeAudit(req.user.sub, 'ZX_INVOICE_CANCELLED', 'zx_invoices', invoice.invoice_id, { corrective: corrective.invoice_number })
+  return res.json({ data: { ...invoice, corrective_invoice_number: corrective.invoice_number } })
 }
 
 export async function refundInvoice(req, res) {

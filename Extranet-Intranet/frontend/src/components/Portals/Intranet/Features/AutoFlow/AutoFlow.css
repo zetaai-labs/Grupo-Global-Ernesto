@@ -8,7 +8,7 @@
   flex: 1;
   min-width: 200px;
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 10px;
   font: inherit;
   font-size: 12px;
@@ -20,7 +20,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
 }
 
 .autoflow-row:last-child {
@@ -29,18 +29,18 @@
 
 .autoflow-row button {
   padding: 7px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
-  background: #fff;
-  color: #4338ca;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-4338ca, #4338ca);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .autoflow-row .cloud-remove {
-  border-color: #fecdd3;
-  color: #be123c;
+  border-color: var(--tc-bd-fecdd3, #fecdd3);
+  color: var(--tc-fg-be123c, #be123c);
 }
 
 /* ------------------------- Approval chains ------------------------- */
@@ -53,9 +53,9 @@
 .autoflow-form select,
 .autoflow-form textarea {
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 10px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   font: inherit;
   font-size: 12px;
   outline: none;
@@ -100,7 +100,7 @@
   padding: 6px 11px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   color: var(--muted);
   font: inherit;
   font-size: 11px;
@@ -118,7 +118,7 @@
   display: grid;
   gap: 10px;
   padding: 14px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
 }
 
 .autoflow-card:last-child {
@@ -134,7 +134,7 @@
 
 .autoflow-description {
   margin: 0;
-  color: #5d6072;
+  color: var(--tc-fg-5d6072, #5d6072);
   font-size: 12px;
 }
 
@@ -145,8 +145,8 @@
 }
 
 .autoflow-status-rejected {
-  background: #fff1f2;
-  color: #be123c;
+  background: var(--tc-bg-fff1f2, #fff1f2);
+  color: var(--tc-fg-be123c, #be123c);
 }
 
 .autoflow-steps {
@@ -165,7 +165,7 @@
   padding: 6px 10px 6px 6px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
 }
 
 .step-dot {
@@ -192,12 +192,12 @@
 
 .autoflow-steps .step-approved .step-dot {
   background: var(--green);
-  color: #fff;
+  color: var(--tc-fg-ffffff, #ffffff);
 }
 
 .autoflow-steps .step-rejected .step-dot {
-  background: #e11d48;
-  color: #fff;
+  background: var(--tc-bg-e11d48, #e11d48);
+  color: var(--tc-fg-ffffff, #ffffff);
 }
 
 .autoflow-steps .step-current {
@@ -207,7 +207,7 @@
 
 .autoflow-steps .step-current .step-dot {
   background: var(--purple);
-  color: #fff;
+  color: var(--tc-fg-ffffff, #ffffff);
 }
 
 .autoflow-actions {
@@ -220,7 +220,7 @@
   flex: 1;
   min-width: 180px;
   padding: 8px 11px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
   font: inherit;
   font-size: 12px;
@@ -228,16 +228,16 @@
 
 .autoflow-actions button {
   padding: 7px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
-  background: #fff;
-  color: #4338ca;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-4338ca, #4338ca);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .autoflow-actions .cloud-remove {
-  border-color: #fecdd3;
-  color: #be123c;
+  border-color: var(--tc-bd-fecdd3, #fecdd3);
+  color: var(--tc-fg-be123c, #be123c);
 }

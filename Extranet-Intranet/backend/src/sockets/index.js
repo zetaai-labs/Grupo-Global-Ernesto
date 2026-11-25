@@ -4,6 +4,7 @@ import { query } from '../config/database.js'
 import { setIo } from './io.js'
 import { canJoinRoom } from '../controllers/calendar.controller.js'
 import { originSecretValid } from '../middleware/cloudflare.js'
+import { openMessage } from '../services/chatCrypto.service.js'
 
 const MAX_PARTICIPANTS = 8
 
@@ -26,10 +27,10 @@ export function registerSockets(io) {
       if (claims.purpose || claims.mfa_setup) return next(new Error("Unauthorized"))
 
       const { rows } = await query(
-        `SELECT u.id, u.name, u.status FROM users u WHERE u.id = $1`,
+        `SELECT u.id, u.name, u.status, u.session_version FROM users u WHERE u.id = $1`,
         [claims.sub],
       )
-      if (!rows[0] || rows[0].status !== 'active') return next(new Error('Unauthorized'))
+      if (!rows[0] || rows[0].status !== 'active' || (claims.sv ?? 0) !== rows[0].session_version) return next(new Error('Unauthorized'))
 
       socket.user = { ...claims, name: rows[0].name }
       socket.data.name = rows[0].name
@@ -70,7 +71,7 @@ export function registerSockets(io) {
         const message = rows[0]
         if (!message) return
         if (!(await isMember(message.conversation_id, socket.user.sub))) return
-        io.to(`conversation:${message.conversation_id}`).emit('chat:message', message)
+        io.to(`conversation:${message.conversation_id}`).emit('chat:message', { ...message, body: openMessage(message.body) })
       } catch {
         // Ignore malformed payloads.
       }

@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './Ethics.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const TIER_LABELS = {
   TIER_1_BASIC: 'Tier 1 — Basic',
@@ -78,7 +79,7 @@ function Ethics() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice eth-notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
+      {notice && <div className="cloud-notice eth-notice" role="status"><span>{translateServer(notice)}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
 
       <div className="eth-grid">
         <div className="feature-panel eth-code">
@@ -93,7 +94,7 @@ function Ethics() {
             <div className="eth-signed">
               <strong>✓ {t('Signed')} · {t(TIER_LABELS[mine.required_tier])}</strong>
               {mine.records.filter((record) => record.ethics_code_tier === mine.required_tier).map((record) => (
-                <small key={record.record_id} className="mono">{new Date(record.audit_timestamp).toLocaleString()} · {record.employment_contract_ref}</small>
+                <small key={record.record_id} className="mono">{new Date(record.audit_timestamp).toLocaleString(dateLocale())} · {record.employment_contract_ref}</small>
               ))}
             </div>
           ) : mine && (
@@ -162,7 +163,7 @@ function Ethics() {
                     <strong>{sanction.user_name} · {t(SANCTION_LABELS[sanction.tier])}</strong>
                     <span>{sanction.reason}</span>
                     <small>
-                      {sanction.status} · {t('issued by')} {sanction.issued_by_name} · {new Date(sanction.issued_at).toLocaleDateString()}
+                      {sanction.status} · {t('issued by')} {sanction.issued_by_name} · {new Date(sanction.issued_at).toLocaleDateString(dateLocale())}
                       {sanction.suspended_until ? ` · ${t('until')} ${sanction.suspended_until.slice(0, 10)}` : ''}
                       {sanction.remediation_due ? ` · ${t('due')} ${sanction.remediation_due.slice(0, 10)}` : ''}
                       {sanction.cleared_by_name ? ` · ${t('cleared by')} ${sanction.cleared_by_name}` : ''}

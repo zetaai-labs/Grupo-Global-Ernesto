@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
 import './AutoFlow.css'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const EMPTY_FORM = { title: '', description: '', template: 'purchase', approver_id: '', assigned_to: '', due_at: '' }
 const FILTERS = [
@@ -111,72 +112,72 @@ function AutoFlow() {
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Needs my action</span><span className="stat-icon">◷</span></div>
+          <div className="stat-top"><span>{t("Needs my action")}</span><span className="stat-icon">◷</span></div>
           <strong>{counts.action}</strong>
-          <small>Waiting for you</small>
+          <small>{t("Waiting for you")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>In progress</span><span className="stat-icon">⟳</span></div>
+          <div className="stat-top"><span>{t("In progress")}</span><span className="stat-icon">⟳</span></div>
           <strong>{counts.running}</strong>
-          <small>Moving through approval</small>
+          <small>{t("Moving through approval")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Approved</span><span className="stat-icon">✓</span></div>
+          <div className="stat-top"><span>{t("Approved")}</span><span className="stat-icon">✓</span></div>
           <strong>{counts.done}</strong>
-          <small>Approved or completed</small>
+          <small>{t("Approved or completed")}</small>
         </div>
       </div>
 
-      {notice && <div className="cloud-notice" role="status">{notice}</div>}
+      {notice && <div className="cloud-notice" role="status">{translateServer(notice)}</div>}
 
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>New request</h3>
-            <p>Pick a process template, or send it to a specific approver.</p>
+            <h3>{t("New request")}</h3>
+            <p>{t("Pick a process template, or send it to a specific approver.")}</p>
           </div>
         </div>
         <form className="autoflow-form autoflow-form--grid" onSubmit={create}>
-          <input value={form.title} onChange={change('title')} placeholder="What needs approval?" required />
-          <select value={form.template} onChange={change('template')} aria-label="Process">
+          <input value={form.title} onChange={change('title')} placeholder={t("What needs approval?")} required />
+          <select value={form.template} onChange={change('template')} aria-label={t("Process")}>
             {templates.map((template) => (
               <option key={template.key} value={template.key}>{template.name}</option>
             ))}
-            <option value="custom">Custom — choose an approver</option>
+            <option value="custom">{t("Custom — choose an approver")}</option>
           </select>
           {form.template === 'custom' && (
-            <select value={form.approver_id} onChange={change('approver_id')} aria-label="Approver" required>
-              <option value="">Choose approver…</option>
+            <select value={form.approver_id} onChange={change('approver_id')} aria-label={t("Approver")} required>
+              <option value="">{t("Choose approver…")}</option>
               {people.map((person) => (
                 <option key={person.id} value={person.id}>{person.name} ({person.role})</option>
               ))}
             </select>
           )}
-          <select value={form.assigned_to} onChange={change('assigned_to')} aria-label="Assignee">
-            <option value="">No assignee</option>
+          <select value={form.assigned_to} onChange={change('assigned_to')} aria-label={t("Assignee")}>
+            <option value="">{t("No assignee")}</option>
             {people.map((person) => (
-              <option key={person.id} value={person.id}>Assign to {person.name}</option>
+              <option key={person.id} value={person.id}>{t("Assign to")}{" "}{person.name}</option>
             ))}
           </select>
           <label className="autoflow-date">
-            Due
+            {t("Due")}
             <input type="date" value={form.due_at} onChange={change('due_at')} />
           </label>
-          <textarea value={form.description} onChange={change('description')} placeholder="Details (optional)" rows="2" />
+          <textarea value={form.description} onChange={change('description')} placeholder={t("Details (optional)")} rows="2" />
           {selectedTemplate && (
             <p className="autoflow-chain-hint">
-              Approval chain: {selectedTemplate.steps.map(roleLabel).join(' → ')}
+              {t("Approval chain:")}{" "}{selectedTemplate.steps.map(roleLabel).join(' → ')}
             </p>
           )}
-          <button type="submit" className="primary-action">＋ Submit request</button>
+          <button type="submit" className="primary-action">{t("＋ Submit request")}</button>
         </form>
       </div>
 
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>Requests</h3>
-            <p>Approve or reject the step that is waiting for you.</p>
+            <h3>{t("Requests")}</h3>
+            <p>{t("Approve or reject the step that is waiting for you.")}</p>
           </div>
           <div className="autoflow-filters" role="tablist">
             {FILTERS.map(([key, label]) => (
@@ -196,9 +197,9 @@ function AutoFlow() {
                   <span className="list-item-copy">
                     <strong>{workflow.title}</strong>
                     <span>
-                      {workflow.owner || 'System'} · {new Date(workflow.created_at).toLocaleDateString()}
-                      {workflow.due_at && ` · due ${new Date(workflow.due_at).toLocaleDateString()}`}
-                      {workflow.assignee && ` · assigned to ${workflow.assignee}`}
+                      {workflow.owner || t("System")} · {new Date(workflow.created_at).toLocaleDateString(dateLocale())}
+                      {workflow.due_at && ` · ${t('due {date}', { date: new Date(workflow.due_at).toLocaleDateString(dateLocale()) })}`}
+                      {workflow.assignee && ` · ${t('assigned to {name}', { name: workflow.assignee })}`}
                     </span>
                   </span>
                   <span className={`item-status autoflow-status-${workflow.status}`}>{workflow.status}</span>
@@ -214,7 +215,7 @@ function AutoFlow() {
                         <strong>{stepName(step)}</strong>
                         <small>
                           {step.status === 'pending'
-                            ? (workflow.status === 'pending' && step.order === workflow.current_step ? 'Waiting' : 'Next')
+                            ? (workflow.status === 'pending' && step.order === workflow.current_step ? t("Waiting") : t("Next"))
                             : `${step.status} by ${step.decided_by}${step.note ? ` — “${step.note}”` : ''}`}
                         </small>
                       </span>
@@ -227,15 +228,15 @@ function AutoFlow() {
                     <input
                       value={notes[workflow.id] || ''}
                       onChange={(event) => setNotes((current) => ({ ...current, [workflow.id]: event.target.value }))}
-                      placeholder="Comment (optional)"
+                      placeholder={t("Comment (optional)")}
                     />
-                    <button type="button" onClick={() => decide(workflow, 'approved')}>✓ Approve</button>
-                    <button type="button" className="cloud-remove" onClick={() => decide(workflow, 'rejected')}>✕ Reject</button>
+                    <button type="button" onClick={() => decide(workflow, 'approved')}>{t("✓ Approve")}</button>
+                    <button type="button" className="cloud-remove" onClick={() => decide(workflow, 'rejected')}>{t("✕ Reject")}</button>
                   </div>
                 )}
                 {workflow.can_complete && (
                   <div className="autoflow-actions">
-                    <button type="button" onClick={() => decide(workflow, 'completed')}>Mark as completed</button>
+                    <button type="button" onClick={() => decide(workflow, 'completed')}>{t("Mark as completed")}</button>
                   </div>
                 )}
               </div>
@@ -244,8 +245,8 @@ function AutoFlow() {
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">⟳</div>
-            <h3>{filter === 'action' ? 'Nothing waiting for you' : 'No requests yet'}</h3>
-            <p>{filter === 'action' ? 'You are all caught up.' : 'Submit a request to start an approval chain.'}</p>
+            <h3>{filter === 'action' ? t("Nothing waiting for you") : t("No requests yet")}</h3>
+            <p>{filter === 'action' ? t("You are all caught up.") : t("Submit a request to start an approval chain.")}</p>
           </div>
         )}
       </div>

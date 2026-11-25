@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './SharedLinks.css'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 function SharedLinks() {
   const t = useT()
@@ -29,11 +30,11 @@ function SharedLinks() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="feature-panel">
         <div className="panel-heading">
-          <div><h3>Available links</h3><p>Links to documents shared with your account.</p></div>
+          <div><h3>{t("Available links")}</h3><p>{t("Links to documents shared with your account.")}</p></div>
         </div>
         {links.length ? (
           <div className="feature-list">
@@ -42,17 +43,17 @@ function SharedLinks() {
                 <span className="list-item-icon">↗</span>
                 <span className="list-item-copy">
                   <strong>{link.label}</strong>
-                  <span>{link.file_name} · {link.downloads_count}/{link.max_downloads} downloads · expires {new Date(link.expires_at).toLocaleDateString()}</span>
+                  <span>{link.file_name} · {link.downloads_count}/{link.max_downloads}{" "}{t("downloads · expires")}{" "}{new Date(link.expires_at).toLocaleDateString(dateLocale())}</span>
                 </span>
-                <button type="button" onClick={() => copy(link)}>Copy link</button>
+                <button type="button" onClick={() => copy(link)}>{t("Copy link")}</button>
               </div>
             ))}
           </div>
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">↗</div>
-            <h3>No links available</h3>
-            <p>Links shared with your account will appear here.</p>
+            <h3>{t("No links available")}</h3>
+            <p>{t("Links shared with your account will appear here.")}</p>
           </div>
         )}
       </div>

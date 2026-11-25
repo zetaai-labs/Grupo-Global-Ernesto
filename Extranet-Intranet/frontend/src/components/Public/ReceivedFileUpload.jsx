@@ -2,6 +2,7 @@ import { useState } from 'react'
 import api from '../../api/client'
 import './ReceivedFileUpload.css'
 import { useT } from '../../i18n'
+import { translateServer } from '../../i18n/serverMessages'
 
 function ReceivedFileUpload() {
   const t = useT()
@@ -45,7 +46,7 @@ function ReceivedFileUpload() {
         <h1>{t('Send files to Global Group')}</h1>
         <p>{t('No account is required. Our staff will review the file you submit.')}</p>
 
-        {error && <div className="cloud-notice">{error}</div>}
+        {error && <div className="cloud-notice">{translateServer(error)}</div>}
         {status && <div className="public-upload-success">{status}</div>}
 
         <form onSubmit={submit}>

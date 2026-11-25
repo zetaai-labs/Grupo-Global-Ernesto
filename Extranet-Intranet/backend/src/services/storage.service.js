@@ -106,7 +106,7 @@ function contentDisposition(name) {
 }
 
 /** Streams a stored file to the client as a download. Returns false if it does not exist. */
-export async function sendStoredFile(res, storedName, downloadName, mimeType) {
+export async function sendStoredFile(res, storedName, downloadName, mimeType, { inline = false } = {}) {
   let stream
   let size
   let type = mimeType
@@ -128,7 +128,7 @@ export async function sendStoredFile(res, storedName, downloadName, mimeType) {
   }
 
   // Headers only once the file is known to exist.
-  res.setHeader('Content-Disposition', contentDisposition(downloadName))
+  res.setHeader('Content-Disposition', inline ? 'inline' : contentDisposition(downloadName))
   res.setHeader('X-Content-Type-Options', 'nosniff')
   res.setHeader('Content-Type', type || 'application/octet-stream')
   if (size) res.setHeader('Content-Length', size)

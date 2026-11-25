@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import { getUser, hasRole, COMPLIANCE_ROLES } from '../../../../../api/auth'
 import { downloadFromApi } from '../../../../../utils/download'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './Organizations.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const STEPS = [
   [1, 'Pre-registration'],
@@ -38,6 +39,9 @@ function stepState(org, step) {
   return 'todo'
 }
 
+const PERSON_ROLES = { DIRECTOR: 'Director', REPRESENTATIVE: 'Legal representative', BENEFICIAL_OWNER: 'Beneficial owner' }
+const EMPTY_PERSON = { full_name: '', person_role: 'DIRECTOR', ownership_pct: '', nationality: '', birth_year: '' }
+
 function Organizations() {
   const t = useT()
   const user = getUser()
@@ -50,6 +54,7 @@ function Organizations() {
   const [filters, setFilters] = useState({ status: '', type: '', corridor: '', q: '' })
   const [selected, setSelected] = useState(null)
   const [screening, setScreening] = useState({ sanctions: 'CLEAR', pep: 'CLEAR', adverse_media: 'CLEAR', notes: '' })
+  const [person, setPerson] = useState(EMPTY_PERSON)
   const [decisionNotes, setDecisionNotes] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [newOrg, setNewOrg] = useState(EMPTY_ORG)
@@ -173,7 +178,7 @@ function Organizations() {
 
       {notice && (
         <div className="cloud-notice org-notice" role="status">
-          <span>{notice}</span>
+          <span>{translateServer(notice)}</span>
           <button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button>
         </div>
       )}
@@ -317,13 +322,66 @@ function Organizations() {
               </section>
 
               <section>
+                <h3>{t('Directors and beneficial owners')}</h3>
+                {(selected.people || []).length > 0 ? (
+                  <ul className="org-screening">
+                    {selected.people.map((person) => {
+                      const hits = ['SANCTIONS', 'PEP', 'ADVERSE_MEDIA'].filter((type) => person.last_screening?.[type] === 'HIT')
+                      return (
+                        <li key={person.person_id}>
+                          <span>{person.erased_at ? t('Erased person') : person.full_name} · {t(PERSON_ROLES[person.person_role])}{person.ownership_pct != null ? ` · ${Number(person.ownership_pct)}%` : ''}{person.nationality ? ` · ${person.nationality}` : ''}{person.added_by_applicant ? ` · ${t('declared by applicant')}` : ''}</span>
+                          <span className={`org-check-pill ${!person.screened_at ? '' : hits.length ? 'bad' : 'ok'}`}>{!person.screened_at ? t('Not screened') : hits.length ? hits.map((hit) => t(hit)).join(', ') : t('CLEAR')}</span>
+                          {isCompliance && pending && <button type="button" className="org-secondary" onClick={() => act(() => api.delete(`/organizations/${selected.org_id}/people/${person.person_id}`), 'Person removed.')}>{t('Remove')}</button>}
+                          {isCompliance && !pending && !person.erased_at && (
+                            <button
+                              type="button"
+                              className="org-secondary"
+                              onClick={() => {
+                                const reason = window.prompt(t('Reason for erasing this person’s data (GDPR request or end of the AML retention period)'))
+                                if (reason?.trim()) act(() => api.post(`/organizations/${selected.org_id}/people/${person.person_id}/erase`, { reason }), 'Personal data erased.')
+                              }}
+                            >
+                              {t('Erase personal data')}
+                            </button>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : <p className="org-muted">{t('No directors or owners recorded yet.')}</p>}
+                {isCompliance && pending && (
+                  <form className="org-screening-form" onSubmit={(event) => {
+                    event.preventDefault()
+                    const body = { ...person, ownership_pct: person.ownership_pct === '' ? null : Number(person.ownership_pct), birth_year: person.birth_year === '' ? null : Number(person.birth_year), nationality: person.nationality || null }
+                    act(() => api.post(`/organizations/${selected.org_id}/people`, body), 'Person added.').then((done) => { if (done) setPerson(EMPTY_PERSON) })
+                  }}>
+                    <input required minLength="3" maxLength="200" placeholder={t('Full name')} value={person.full_name} onChange={(e) => setPerson({ ...person, full_name: e.target.value })} />
+                    <select aria-label={t('Role')} value={person.person_role} onChange={(e) => setPerson({ ...person, person_role: e.target.value })}>
+                      {Object.entries(PERSON_ROLES).map(([key, label]) => <option key={key} value={key}>{t(label)}</option>)}
+                    </select>
+                    <input type="number" min="0" max="100" step="0.01" placeholder={t('Ownership %')} value={person.ownership_pct} onChange={(e) => setPerson({ ...person, ownership_pct: e.target.value })} />
+                    <input maxLength="3" placeholder={t('Nationality (ESP)')} value={person.nationality} onChange={(e) => setPerson({ ...person, nationality: e.target.value.toUpperCase() })} />
+                    <input type="number" min="1900" max="2100" placeholder={t('Birth year')} value={person.birth_year} onChange={(e) => setPerson({ ...person, birth_year: e.target.value })} />
+                    <button type="submit">{t('Add person')}</button>
+                  </form>
+                )}
+              </section>
+
+              <section>
                 <h3>{t('AML / sanctions / PEP screening')}</h3>
                 {selected.screening.length > 0 && (
                   <ul className="org-screening">
                     {selected.screening.map((check) => (
-                      <li key={check.check_type}><span>{t(check.check_type)}</span><span className={`org-check-pill ${check.result === 'CLEAR' ? 'ok' : 'bad'}`}>{t(check.result)}</span></li>
+                      <li key={check.check_type}>
+                        <span>{t(check.check_type)}{check.details?.method === 'automatic' ? ` · ${t('automatic')}` : ''}</span>
+                        <span className={`org-check-pill ${check.result === 'CLEAR' ? 'ok' : 'bad'}`}>{t(check.result)}</span>
+                        {(check.details?.matches || []).map((match) => <small key={match.id} className="org-muted">{match.name} ({Math.round(match.score * 100)}%)</small>)}
+                      </li>
                     ))}
                   </ul>
+                )}
+                {isCompliance && pending && selected.onboarding_stage >= 4 && selected.automatic_screening && (
+                  <button type="button" className="org-secondary" onClick={() => act(() => api.post(`/organizations/${selected.org_id}/screening/auto`), 'Automatic screening finished.')}>{t('Run automatic screening')}</button>
                 )}
                 {isCompliance && pending && selected.onboarding_stage >= 4 && (
                   <form className="org-screening-form" onSubmit={submitScreening}>
@@ -363,7 +421,7 @@ function Organizations() {
                 <section>
                   <h3>{t('Confidentiality agreement (NDA)')}</h3>
                   <p className="mono org-hash">{latestNda.nda_version} · SHA-256 {latestNda.document_hash}</p>
-                  <p>{latestNda.accepted_at ? `${t('Accepted by')} ${latestNda.accepted_by} · ${new Date(latestNda.accepted_at).toLocaleString()}` : t('Issued — awaiting acceptance by the organisation.')}</p>
+                  <p>{latestNda.accepted_at ? `${t('Accepted by')} ${latestNda.accepted_by} · ${new Date(latestNda.accepted_at).toLocaleString(dateLocale())}` : t('Issued — awaiting acceptance by the organisation.')}</p>
                 </section>
               )}
 

@@ -1,0 +1,68 @@
+.sh-panel {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 18px 22px;
+  border-radius: 14px;
+  border-inline-start: 4px solid var(--green, #16a34a);
+}
+
+.sh-panel.sh-warn { border-inline-start-color: var(--tc-fg-a35b00, #b45309); }
+.sh-panel.sh-bad { border-inline-start-color: var(--tc-fg-be123c, #be123c); }
+
+.sh-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sh-head h2 { margin: 0 0 4px; font-size: 18px; }
+.sh-head p { margin: 0; color: var(--muted); font-size: 13px; }
+
+.sh-badge {
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 13px;
+  background: var(--green-soft, #dcfce7);
+  color: var(--green-dark, #166534);
+}
+
+.sh-badge.sh-warn { background: var(--tc-bg-fff4e5, #fff4e5); color: var(--tc-fg-a35b00, #a35b00); }
+.sh-badge.sh-bad { background: var(--tc-bg-fff1f2, #fff1f2); color: var(--tc-fg-be123c, #be123c); }
+
+.sh-problems {
+  margin: 0;
+  padding-inline-start: 18px;
+  color: var(--tc-fg-be123c, #be123c);
+  font-weight: 600;
+}
+
+.sh-stale { color: var(--muted); }
+
+.sh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.sh-grid div { display: grid; gap: 2px; }
+.sh-grid span { font-size: 12px; color: var(--muted); }
+.sh-grid b { font-size: 16px; color: var(--text); font-variant-numeric: tabular-nums; }
+.sh-grid small { color: var(--muted); font-size: 12px; }
+.sh-grid b.sh-ok { color: var(--green-dark, #166534); }
+.sh-grid b.sh-bad { color: var(--tc-fg-be123c, #be123c); }
+
+.sh-section summary { cursor: pointer; font-weight: 600; }
+.sh-table-wrap { overflow-x: auto; margin-top: 8px; }
+.sh-table-wrap table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sh-table-wrap th, .sh-table-wrap td { padding: 7px 8px; border-bottom: 1px solid var(--border); text-align: start; vertical-align: top; }
+.sh-table-wrap td small { display: block; color: var(--tc-fg-be123c, #be123c); }
+.sh-row-bad td:first-child { color: var(--tc-fg-be123c, #be123c); font-weight: 600; }
+
+.sh-errors { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.sh-errors li { display: flex; flex-wrap: wrap; gap: 8px; }
+.sh-errors time { color: var(--muted); }
+.sh-errors code { font-size: 12px; }

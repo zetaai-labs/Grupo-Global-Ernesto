@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import api from '../../../../../api/client'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './ProjectUpdates.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const PHASE_LABELS = { INITIATION: 'Initiation', PLANNING: 'Planning', EXECUTION: 'Execution', MONITORING: 'Monitoring', COMPLETED: 'Completed' }
 const STATUS_LABELS = { PLANNED: 'Planned', IN_PROGRESS: 'In progress', DONE: 'Done', BLOCKED: 'Blocked' }
@@ -30,7 +31,7 @@ function ProjectUpdates() {
         </div>
       </div>
 
-      {error && <div className="cloud-notice" role="alert">{error}</div>}
+      {error && <div className="cloud-notice" role="alert">{translateServer(error)}</div>}
 
       {loaded && !projects.length && (
         <div className="feature-panel feature-empty-state">
@@ -48,7 +49,7 @@ function ProjectUpdates() {
               <header>
                 <div>
                   <h2>{project.title}</h2>
-                  <p>{project.lead_entity_name}{project.end_date ? ` · ${t('target')} ${new Date(project.end_date).toLocaleDateString()}` : ''}</p>
+                  <p>{project.lead_entity_name}{project.end_date ? ` · ${t('target')} ${new Date(project.end_date).toLocaleDateString(dateLocale())}` : ''}</p>
                 </div>
                 <span className="pu-phase">{t(PHASE_LABELS[project.phase])}</span>
               </header>
@@ -63,7 +64,7 @@ function ProjectUpdates() {
                         <span className="pu-dot" aria-hidden="true">{milestone.status === 'DONE' ? '✓' : ''}</span>
                         <span className="pu-copy">
                           <strong>{milestone.title}</strong>
-                          <small>{milestone.due_date ? new Date(milestone.due_date).toLocaleDateString() : t('No date')} · {t(STATUS_LABELS[milestone.status])}</small>
+                          <small>{milestone.due_date ? new Date(milestone.due_date).toLocaleDateString(dateLocale()) : t('No date')} · {t(STATUS_LABELS[milestone.status])}</small>
                         </span>
                       </li>
                     ))}

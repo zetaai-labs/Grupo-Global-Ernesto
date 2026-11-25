@@ -8,7 +8,7 @@ import { sendMail, smtpConfigured } from '../services/email.service.js'
 import { MFA_REQUIRED_ROLES, roleCode } from '../config/roles.js'
 
 export const USER_FIELDS = `
-  SELECT u.id, u.uuid, u.name, u.email, u.password_hash, u.mfa_secret, u.mfa_enabled, u.org_id,
+  SELECT u.id, u.uuid, u.name, u.email, u.password_hash, u.mfa_secret, u.mfa_enabled, u.org_id, u.session_version, u.avatar_updated_at,
          r.name AS role, r.code AS role_code, rg.code AS region, o.legal_name AS organization
   FROM users u
   JOIN roles r ON r.id = u.role_id
@@ -29,6 +29,8 @@ export const publicUser = (user) => ({
   org_id: user.org_id,
   organization: user.organization,
   mfa_enabled: Boolean(user.mfa_enabled),
+  // Changes whenever the photo changes, so browsers never show an old cached one.
+  avatar_version: user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : null,
 })
 
 /** Technical Spec §3.1: privileged roles must use MFA (enforced when MFA_ENFORCE=true). */
@@ -44,7 +46,7 @@ export async function audit(userId, action, details = {}) {
 
 export function signToken(user, extra = {}) {
   return jwt.sign(
-    { sub: user.id, name: user.name, email: user.email, role: user.role, ...extra },
+    { sub: user.id, name: user.name, email: user.email, role: user.role, sv: user.session_version ?? 0, ...extra },
     config.jwtSecret,
     { expiresIn: '8h' },
   )
@@ -166,12 +168,7 @@ export async function mfaVerify(req, res) {
     return res.status(401).json({ message: 'Invalid authentication code.' })
   }
 
-  const access = jwt.sign(
-    { sub: user.id, name: user.name, email: user.email, role: user.role, region: user.region },
-    config.jwtSecret,
-    { expiresIn: '8h' },
-  )
-  return res.json({ data: { token: access, user: publicUser(user) } })
+  return res.json({ data: { token: signToken(user, { region: user.region }), user: publicUser(user) } })
 }
 
 const RESET_MESSAGE = 'If an account exists for that email, a password reset link has been sent.'
@@ -229,10 +226,41 @@ export async function confirmPasswordReset(req, res) {
   if (!rows[0]) return res.status(400).json({ message: 'Invalid or expired reset token.' })
 
   const hash = await bcrypt.hash(String(new_password), 12)
-  await query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, rows[0].user_id])
+  // Every existing session ends: someone who stole the old password is signed out too.
+  await query('UPDATE users SET password_hash = $1, session_version = session_version + 1 WHERE id = $2', [hash, rows[0].user_id])
   await query('UPDATE password_resets SET used_at = now() WHERE token = $1', [token])
   await audit(rows[0].user_id, 'PASSWORD_RESET_COMPLETED')
   return res.json({ message: 'Password updated. You can sign in now.' })
+}
+
+/** Signed-in users change their own password. Existing sessions stay valid until they expire. */
+export async function changePassword(req, res) {
+  const current = String(req.body?.current_password || '')
+  const next = String(req.body?.new_password || '')
+  if (next.length < 12 || next.length > 200) {
+    return res.status(400).json({ message: 'The new password must have 12 to 200 characters.' })
+  }
+  const { rows } = await query("SELECT password_hash FROM users WHERE id = $1 AND status = 'active'", [req.user.sub])
+  if (!rows[0] || !(await bcrypt.compare(current, rows[0].password_hash))) {
+    await audit(req.user.sub, 'PASSWORD_CHANGE_FAILED')
+    return res.status(400).json({ message: 'Your current password is not correct.' })
+  }
+  if (await bcrypt.compare(next, rows[0].password_hash)) {
+    return res.status(400).json({ message: 'Choose a password you have not used here before.' })
+  }
+  await query('UPDATE users SET password_hash = $1, session_version = session_version + 1 WHERE id = $2', [await bcrypt.hash(next, 12), req.user.sub])
+  await query('UPDATE password_resets SET used_at = now() WHERE user_id = $1 AND used_at IS NULL', [req.user.sub])
+  await audit(req.user.sub, 'PASSWORD_CHANGED')
+  // Other devices are signed out; this one gets a fresh session.
+  const { rows: fresh } = await query(`${USER_FIELDS} WHERE u.id = $1`, [req.user.sub])
+  return res.json({ message: 'Password changed.', data: { token: signToken(fresh[0]), user: publicUser(fresh[0]) } })
+}
+
+/** Ends every session of the signed-in user, on all devices, including this one. */
+export async function logoutEverywhere(req, res) {
+  await query('UPDATE users SET session_version = session_version + 1 WHERE id = $1', [req.user.sub])
+  await audit(req.user.sub, 'LOGOUT_EVERYWHERE')
+  return res.json({ message: 'Signed out on all devices.' })
 }
 
 export async function me(req, res) {

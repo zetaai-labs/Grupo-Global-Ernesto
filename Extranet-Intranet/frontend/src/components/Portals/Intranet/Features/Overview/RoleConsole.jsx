@@ -26,7 +26,7 @@ function RoleConsole() {
             <>
               <span>{t(card.label)}</span>
               <strong>{card.format === 'eur' ? euro(card.value) : t(String(card.value))}</strong>
-              <small>{t(card.note)}</small>
+              <small>{t(card.note, card.noteValues)}</small>
             </>
           )
           const className = `role-card ${card.alert ? 'is-alert' : ''}`

@@ -9,7 +9,7 @@
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   color: var(--purple);
   font-size: 11px;
   font-weight: 700;
@@ -51,9 +51,9 @@
 .org-upload input {
   min-width: 0;
   padding: 9px 11px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   font: inherit;
   font-size: 12px;
 }
@@ -135,9 +135,9 @@
 }
 
 .org-status-verified { background: var(--green-soft); color: var(--green-dark); }
-.org-status-pending { background: #fff4e5; color: #a35b00; }
+.org-status-pending { background: var(--tc-bg-fff4e5, #fff4e5); color: var(--tc-fg-a35b00, #a35b00); }
 .org-status-suspended,
-.org-status-rejected { background: #fff1f2; color: #be123c; }
+.org-status-rejected { background: var(--tc-bg-fff1f2, #fff1f2); color: var(--tc-fg-be123c, #be123c); }
 
 .org-stage {
   display: flex;
@@ -249,10 +249,10 @@
   font-weight: 700;
 }
 
-.kyc-done .kyc-dot { background: var(--green); color: #fff; }
+.kyc-done .kyc-dot { background: var(--green); color: var(--tc-fg-ffffff, #ffffff); }
 .kyc-current { border-color: var(--purple); background: var(--purple-soft); }
-.kyc-current .kyc-dot { background: var(--purple); color: #fff; }
-.kyc-failed .kyc-dot { background: #e11d48; color: #fff; }
+.kyc-current .kyc-dot { background: var(--purple); color: var(--tc-fg-ffffff, #ffffff); }
+.kyc-failed .kyc-dot { background: var(--tc-bg-e11d48, #e11d48); color: var(--tc-fg-ffffff, #ffffff); }
 
 .org-docs,
 .org-screening,
@@ -292,10 +292,10 @@
 
 .org-detail button:not(.primary-action) {
   padding: 7px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
-  background: #fff;
-  color: #4338ca;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-4338ca, #4338ca);
   font: inherit;
   font-size: 11px;
   font-weight: 700;
@@ -303,8 +303,8 @@
 }
 
 .org-detail .org-danger {
-  border-color: #fecdd3;
-  color: #be123c;
+  border-color: var(--tc-bd-fecdd3, #fecdd3);
+  color: var(--tc-fg-be123c, #be123c);
 }
 
 .org-detail .primary-action:disabled {
@@ -328,7 +328,7 @@
 }
 
 .org-check-pass { background: var(--green-soft); }
-.org-check-fail { background: #fff1f2; }
+.org-check-fail { background: var(--tc-bg-fff1f2, #fff1f2); }
 .org-check small { color: var(--muted); }
 
 .org-secondary {
@@ -343,7 +343,7 @@
 }
 
 .org-check-pill.ok { background: var(--green-soft); color: var(--green-dark); }
-.org-check-pill.bad { background: #fff1f2; color: #be123c; }
+.org-check-pill.bad { background: var(--tc-bg-fff1f2, #fff1f2); color: var(--tc-fg-be123c, #be123c); }
 
 .org-screening-form {
   display: grid;

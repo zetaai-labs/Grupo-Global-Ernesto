@@ -41,7 +41,8 @@ export async function listCourses(req, res) {
     `SELECT c.item_id, c.module_type, c.title, c.description, c.access_tier, c.pass_mark, c.starts_at,
             jsonb_array_length(c.lessons) AS lessons, jsonb_array_length(c.quiz) AS questions,
             e.status, e.best_score, e.attempts, e.completed_at, e.certificate_hash,
-            (SELECT COUNT(*)::int FROM course_enrollments x WHERE x.item_id = c.item_id AND x.status = 'COMPLETED') AS completions
+            (SELECT COUNT(*)::int FROM course_enrollments x WHERE x.item_id = c.item_id AND x.status = 'COMPLETED') AS completions,
+            (SELECT p.standard FROM course_packages p WHERE p.item_id = c.item_id) AS package_standard
      FROM community_events_courses c
      LEFT JOIN course_enrollments e ON e.item_id = c.item_id AND e.user_id = $1
      WHERE c.access_tier = ANY($2::text[])
@@ -74,12 +75,22 @@ async function loadCourse(req, res) {
   return rows[0]
 }
 
+export { loadCourse, COURSE_AUTHORS }
+
 export async function getCourse(req, res) {
   const course = await loadCourse(req, res)
   if (!course) return undefined
   const enrollment = await query('SELECT status, best_score, attempts, completed_at, certificate_hash FROM course_enrollments WHERE item_id = $1 AND user_id = $2', [course.item_id, req.user.sub])
+  const pkg = await query(
+    `SELECT p.package_id, p.standard, p.title, p.file_count, p.total_bytes, p.original_name, p.mastery_score, p.created_at,
+            a.lesson_status, a.score, a.total_seconds, a.launches, a.completed_at
+     FROM course_packages p
+     LEFT JOIN course_attempts a ON a.package_id = p.package_id AND a.user_id = $2
+     WHERE p.item_id = $1`,
+    [course.item_id, req.user.sub],
+  )
   const { quiz, ...rest } = course
-  return res.json({ data: { ...rest, quiz: publicQuiz(quiz), enrollment: enrollment.rows[0] || null } })
+  return res.json({ data: { ...rest, quiz: publicQuiz(quiz), enrollment: enrollment.rows[0] || null, package: pkg.rows[0] || null, can_author: COURSE_AUTHORS.includes(req.user.role) } })
 }
 
 const courseSchema = z.object({
@@ -141,9 +152,24 @@ export async function submitQuiz(req, res) {
 
   const score = gradeQuiz(course.quiz, answers)
   const passed = score >= course.pass_mark
-  const completedAt = passed ? new Date().toISOString() : null
-  const hash = passed ? certificateHash({ itemId: course.item_id, userUuid: req.user.uuid, score, completedAt }) : null
+  const result = await recordResult({ course, user: req.user, score, passed })
+  return res.json({
+    data: { passed, score, pass_mark: course.pass_mark, certificate_hash: result.certificate_hash },
+    message: passed ? `Passed with ${score}%. Certificate issued.` : `Score ${score}%. You need ${course.pass_mark}% to pass. Try again.`,
+  })
+}
 
+/**
+ * Records a quiz or package result for the signed-in user (`user` = req.user: sub, uuid, name).
+ * A pass issues the SHA-256 certificate once and clears any sanction that required this course.
+ */
+export async function recordResult({ course, user, score, passed }) {
+  const existing = await query('SELECT status, certificate_hash, best_score FROM course_enrollments WHERE item_id = $1 AND user_id = $2', [course.item_id, user.sub])
+  if (existing.rows[0]?.status === 'COMPLETED') return { already: true, certificate_hash: existing.rows[0].certificate_hash, best_score: existing.rows[0].best_score }
+
+  const safeScore = Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : null
+  const completedAt = passed ? new Date().toISOString() : null
+  const hash = passed ? certificateHash({ itemId: course.item_id, userUuid: user.uuid, score: safeScore ?? 100, completedAt }) : null
   await query(
     `INSERT INTO course_enrollments (item_id, user_id, status, attempts, best_score, completed_at, certificate_hash)
      VALUES ($1, $2, $3, 1, $4, $5, $6)
@@ -153,14 +179,11 @@ export async function submitQuiz(req, res) {
        best_score = GREATEST(course_enrollments.best_score, EXCLUDED.best_score),
        completed_at = EXCLUDED.completed_at,
        certificate_hash = EXCLUDED.certificate_hash`,
-    [course.item_id, req.user.sub, passed ? 'COMPLETED' : 'FAILED', score, completedAt, hash],
+    [course.item_id, user.sub, passed ? 'COMPLETED' : 'FAILED', passed ? (safeScore ?? 100) : safeScore, completedAt, hash],
   )
-  await writeAudit(req.user.sub, passed ? 'COURSE_PASSED' : 'COURSE_FAILED', 'community_events_courses', course.item_id, { score })
-  if (passed) await resolveRemediation(req.user.sub, req.user.name, course.item_id)
-  return res.json({
-    data: { passed, score, pass_mark: course.pass_mark, certificate_hash: hash },
-    message: passed ? `Passed with ${score}%. Certificate issued.` : `Score ${score}%. You need ${course.pass_mark}% to pass. Try again.`,
-  })
+  await writeAudit(user.sub, passed ? 'COURSE_PASSED' : 'COURSE_FAILED', 'community_events_courses', course.item_id, { score: safeScore })
+  if (passed) await resolveRemediation(user.sub, user.name, course.item_id)
+  return { already: false, certificate_hash: hash, best_score: safeScore }
 }
 
 /** Public certificate verification by SHA-256 hash (no personal data beyond the holder's name). */

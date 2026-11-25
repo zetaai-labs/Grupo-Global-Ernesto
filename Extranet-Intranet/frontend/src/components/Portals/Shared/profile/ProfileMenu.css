@@ -1,0 +1,88 @@
+.profile-menu { position: relative; }
+.profile-menu .topbar-profile { cursor: pointer; }
+.avatar-photo { object-fit: cover; padding: 0; }
+
+.profile-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  z-index: 60;
+  display: grid;
+  gap: 12px;
+  width: min(340px, calc(100vw - 24px));
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface, var(--tc-bg-ffffff, #ffffff));
+  color: var(--text);
+  box-shadow: 0 16px 40px rgba(20, 22, 40, 0.16);
+}
+
+.pm-head { display: flex; gap: 12px; align-items: flex-start; }
+.pm-photo { position: relative; flex: none; }
+.pm-photo-edit {
+  position: absolute;
+  inset-inline-end: -4px;
+  bottom: -4px;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--surface, #ffffff);
+  border-radius: 50%;
+  background: var(--purple, #6d28d9);
+  color: #ffffff;
+  font-size: 11px;
+  cursor: pointer;
+}
+.pm-who { display: grid; gap: 2px; min-width: 0; }
+.pm-who strong { font-size: 15px; }
+.pm-who span, .pm-who small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pm-photo-actions { display: flex; gap: 10px; margin-top: 4px; }
+.pm-photo-actions button { border: 0; padding: 0; background: transparent; color: var(--purple, #6d28d9); font-size: 12px; font-weight: 600; cursor: pointer; }
+.pm-message { margin: 0; font-size: 12px; color: var(--muted); }
+
+.pm-section { display: grid; gap: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
+.pm-label { font-size: 11px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); }
+.pm-choices { display: flex; flex-wrap: wrap; gap: 6px; }
+.pm-choices button {
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  cursor: pointer;
+}
+.pm-choices button.on { border-color: var(--purple, #6d28d9); background: var(--purple-soft, #ede9fe); color: var(--purple-dark, #4c1d95); font-weight: 600; }
+
+.pm-links { display: grid; padding-top: 6px; border-top: 1px solid var(--border); }
+.pm-links a, .pm-links button {
+  display: block;
+  padding: 9px 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: start;
+  text-decoration: none;
+  cursor: pointer;
+}
+.pm-links a:hover, .pm-links button:hover, .pm-links a:focus-visible, .pm-links button:focus-visible { background: var(--tc-bg-f8fafc, #f8fafc); }
+
+.pm-signout {
+  padding: 10px;
+  border: 1px solid var(--tc-bd-fecdd3, #fecdd3);
+  border-radius: 10px;
+  background: var(--tc-bg-fff1f2, #fff1f2);
+  color: var(--tc-fg-be123c, #be123c);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* On small screens the language buttons move into this menu. */
+@media (max-width: 900px) {
+  .topbar-actions > .language-switch { display: none; }
+}

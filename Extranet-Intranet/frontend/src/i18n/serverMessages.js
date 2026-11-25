@@ -39,9 +39,11 @@ const PATTERNS = [
 ]
 
 export function translateServer(text) {
-  if (!text || getLanguage() !== 'es') return text
+  if (!text || getLanguage() === 'en') return text
   const exact = translate(text)
   if (exact !== text) return exact
+  // The patterns below build Spanish sentences; other languages show the English text when there is no exact match.
+  if (getLanguage() !== 'es') return text
   for (const [pattern, build] of PATTERNS) {
     const match = String(text).match(pattern)
     if (!match) continue

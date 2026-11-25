@@ -1,4 +1,5 @@
 import { translateServer } from '../../../../i18n/serverMessages'
+import { dateLocale } from '../../../../i18n'
 
 export const humanize = (value) => {
   const text = String(value || '').replaceAll('_', ' ').toLowerCase()
@@ -27,7 +28,7 @@ export function formatValue(field, value, labels = {}, t = (text) => text) {
     case 'money': return euro(value)
     case 'percent': return `${value}%`
     case 'boolean': return t(value ? 'Yes' : 'No')
-    case 'datetime': return new Date(value).toLocaleString()
+    case 'datetime': return new Date(value).toLocaleString(dateLocale())
     case 'select': return t(humanize(value))
     case 'user': case 'org': case 'product': case 'ref': return labels?.[value] || '—'
     default: return String(value)

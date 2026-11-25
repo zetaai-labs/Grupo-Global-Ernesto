@@ -1,0 +1,23 @@
+// Arabic dictionary. The English text is the key; missing keys fall back to English.
+import ar1 from './ar.1'
+import ar2 from './ar.2'
+import ar3 from './ar.3'
+import ar4 from './ar.4'
+import ar5 from './ar.5'
+import ar6 from './ar.6'
+import { landingAr } from './landing'
+import { coursePackagesAr } from './courses.packages'
+import { orgPeopleAr } from './org.people'
+import { zylaxDepthAr } from './zylax.depth'
+import { eventsHybridAr } from './events.hybrid'
+import { aiAr } from './ai'
+import { pwaAr } from './pwa'
+import { aiEngineAr } from './ai.engine'
+import { clockAr } from './clock'
+import { videoAr } from './video'
+import { monitoringAr } from './monitoring'
+import { attendanceAr } from './attendance'
+import { translateAr } from './translate'
+import { workspaceAr } from './workspace'
+
+export default { ...ar1, ...ar2, ...ar3, ...ar4, ...ar5, ...ar6, ...landingAr, ...coursePackagesAr, ...orgPeopleAr, ...zylaxDepthAr, ...eventsHybridAr, ...aiAr, ...pwaAr, ...aiEngineAr, ...clockAr, ...videoAr, ...monitoringAr, ...attendanceAr, ...translateAr, ...workspaceAr }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
-import { getLanguage, useT } from '../../../../../i18n'
+import { getLanguage, useT, dateLocale } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
 import { downloadFromApi } from '../../../../../utils/download'
 import { euro } from '../../../Intranet/Features/Commercial/format'
@@ -91,7 +91,7 @@ function MyOrders() {
           {detail.notes && <p className="zx-note">{detail.notes}</p>}
           {detail.events && (
             <ol className="zx-timeline">
-              {detail.events.map((event) => <li key={event.event_id}><StatusPill status={event.status} /> <span>{new Date(event.created_at).toLocaleString()}</span></li>)}
+              {detail.events.map((event) => <li key={event.event_id}><StatusPill status={event.status} /> <span>{new Date(event.created_at).toLocaleString(dateLocale())}</span></li>)}
             </ol>
           )}
           {detail.kind === 'quotes' && (

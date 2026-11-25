@@ -3,6 +3,7 @@ import api from '../../../../../api/client'
 import { useT } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
 import './Integrations.css'
+import SystemHealth from './SystemHealth'
 
 const STATUS = {
   CONFIGURED: ['Keys added', 'ig-good'],
@@ -45,6 +46,8 @@ function Integrations() {
           <p>{t('See which outside services are ready and what is still needed. Secret values are never shown.')}</p>
         </div>
       </div>
+
+      <SystemHealth />
 
       {error && <div className="cloud-notice" role="alert">{translateServer(error)}</div>}
       {!report && !error && <p className="ig-empty">{t('Loading...')}</p>}

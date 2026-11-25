@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './ExternalShares.css'
 import { useT } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 function ExternalShares() {
   const t = useT()
@@ -67,51 +68,51 @@ function ExternalShares() {
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Active shares</span><span className="stat-icon">♧</span></div>
+          <div className="stat-top"><span>{t("Active shares")}</span><span className="stat-icon">♧</span></div>
           <strong>{shares.length}</strong>
-          <small>External accounts</small>
+          <small>{t("External accounts")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Partners</span><span className="stat-icon">♙</span></div>
+          <div className="stat-top"><span>{t("Partners")}</span><span className="stat-icon">♙</span></div>
           <strong>{partners.length}</strong>
-          <small>Available accounts</small>
+          <small>{t("Available accounts")}</small>
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="feature-panel">
-        <div className="panel-heading"><div><h3>Share a folder</h3><p>Partners can read files in the selected folder.</p></div></div>
+        <div className="panel-heading"><div><h3>{t("Share a folder")}</h3><p>{t("Partners can read files in the selected folder.")}</p></div></div>
         <form className="external-share-form" onSubmit={share}>
           <select value={folderId} onChange={(event) => setFolderId(event.target.value)} required>
-            {!folders.length && <option value="">No folders available</option>}
+            {!folders.length && <option value="">{t("No folders available")}</option>}
             {folders.map((folder) => <option key={folder.id} value={folder.id}>{folder.name}</option>)}
           </select>
           <select value={userId} onChange={(event) => setUserId(event.target.value)} required>
-            {!partners.length && <option value="">No external accounts</option>}
+            {!partners.length && <option value="">{t("No external accounts")}</option>}
             {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name} ({partner.role})</option>)}
           </select>
-          <button type="submit" className="primary-action">♧ Share folder</button>
+          <button type="submit" className="primary-action">{t("♧ Share folder")}</button>
         </form>
       </div>
 
       <div className="feature-panel">
-        <div className="panel-heading"><div><h3>Current shares</h3><p>Revoke access at any time.</p></div></div>
+        <div className="panel-heading"><div><h3>{t("Current shares")}</h3><p>{t("Revoke access at any time.")}</p></div></div>
         {shares.length ? (
           <div className="feature-list">
             {shares.map((share) => (
               <div className="external-share-row" key={share.id}>
                 <span className="list-item-icon">♧</span>
                 <span className="list-item-copy"><strong>{share.folder_name}</strong><span>{share.user_name} · {share.user_email}</span></span>
-                <button type="button" className="cloud-remove" onClick={() => revoke(share)}>Revoke</button>
+                <button type="button" className="cloud-remove" onClick={() => revoke(share)}>{t("Revoke")}</button>
               </div>
             ))}
           </div>
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">♧</div>
-            <h3>No external shares</h3>
-            <p>Folders shared with external accounts will appear here.</p>
+            <h3>{t("No external shares")}</h3>
+            <p>{t("Folders shared with external accounts will appear here.")}</p>
           </div>
         )}
       </div>

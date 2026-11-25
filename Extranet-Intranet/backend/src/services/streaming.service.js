@@ -41,7 +41,7 @@ function sign(payload, keyId, privateKey, ttl) {
  * Returns { provider, hls, dash, expires_at } for an already-authorised viewer, or null when
  * streaming is not configured. Mux delivers HLS only, so `dash` is null for Mux.
  */
-export function signPlayback({ videoId, ttlSeconds } = {}) {
+export function signPlayback({ videoId, ttlSeconds, audience = 'v' } = {}) {
   const provider = streamingProvider()
   if (!provider) return null
   if (!VIDEO_ID.test(String(videoId || ''))) {
@@ -51,8 +51,9 @@ export function signPlayback({ videoId, ttlSeconds } = {}) {
   const expires_at = new Date(Date.now() + ttl * 1000).toISOString()
 
   if (provider === 'mux') {
-    const token = sign({ sub: videoId, aud: 'v' }, process.env.MUX_SIGNING_KEY_ID, process.env.MUX_SIGNING_PRIVATE_KEY, ttl)
-    return { provider, hls: `https://stream.mux.com/${videoId}.m3u8?token=${token}`, dash: null, expires_at }
+    // Mux audiences: 'v' video playback, 't' text tracks (captions), 's' storyboards.
+    const token = sign({ sub: videoId, aud: ['v', 't', 's'].includes(audience) ? audience : 'v' }, process.env.MUX_SIGNING_KEY_ID, process.env.MUX_SIGNING_PRIVATE_KEY, ttl)
+    return { provider, token, hls: `https://stream.mux.com/${videoId}.m3u8?token=${token}`, dash: null, expires_at }
   }
 
   const token = sign({ sub: videoId, kid: process.env.CF_STREAM_KEY_ID }, process.env.CF_STREAM_KEY_ID, process.env.CF_STREAM_PRIVATE_KEY, ttl)

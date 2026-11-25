@@ -3,7 +3,11 @@ import { useLocation } from 'react-router-dom'
 import { getUser } from '../../../api/auth'
 import NotificationBell from '../Shared/NotificationBell'
 import LanguageSwitch from '../../../i18n/LanguageSwitch'
+import ThemeSwitch from '../../../theme/ThemeSwitch'
+import InstallAppButton from '../../../pwa/InstallAppButton'
 import { useT } from '../../../i18n'
+import ProfileMenu from '../Shared/profile/ProfileMenu'
+import QuickSearch from '../Shared/workspace/QuickSearch'
 
 const ROLE_LABELS = {
   partner: 'Partner',
@@ -14,6 +18,7 @@ const ROLE_LABELS = {
 
 const pageNames = {
   overview: 'Overview',
+  workspace: 'All features',
   'shared-documents': 'Shared Documents',
   'my-submissions': 'My Submissions',
   'shared-links': 'Shared Links',
@@ -25,6 +30,8 @@ const pageNames = {
   ethics: 'Ethics & Compliance',
   courses: 'Required Training',
   privacy: 'Privacy (GDPR)',
+  security: 'Security',
+  billing: 'Billing',
   chat: 'Team Chat',
   'video-conferencing': 'Video Meetings'
 }
@@ -45,25 +52,16 @@ function ExtranetTopbar() {
       </div>
 
       <div className="topbar-actions">
-        <div className="topbar-search">
-          <span>⌕</span>
-          <input type="search" placeholder={t('Search shared workspace...')} />
-          <kbd>⌘ K</kbd>
-        </div>
+        <QuickSearch portal="extranet" placeholder={t('Search shared workspace...')} />
 
+        <InstallAppButton />
+        <ThemeSwitch />
         <LanguageSwitch />
         <NotificationBell accent="green" />
 
         <div className="topbar-divider" />
 
-        <div className="topbar-profile">
-          <div className="profile-avatar green-avatar">{(user?.name || 'P').charAt(0).toUpperCase()}</div>
-          <div className="profile-copy">
-            <strong>{user?.name || t('External user')}</strong>
-            <span>{t(ROLE_LABELS[user?.role] || 'External collaborator')}</span>
-          </div>
-          <span className="profile-chevron">⌄</span>
-        </div>
+        <ProfileMenu portal="extranet" roleLabel={t(ROLE_LABELS[user?.role] || 'External collaborator')} />
       </div>
     </header>
   )

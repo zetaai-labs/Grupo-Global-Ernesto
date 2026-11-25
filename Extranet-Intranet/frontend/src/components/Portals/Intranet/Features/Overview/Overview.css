@@ -7,15 +7,15 @@
 
 .overview-links a {
   padding: 10px 14px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
   border-radius: 10px;
-  background: #f8fafc;
-  color: #4338ca;
+  background: var(--tc-bg-f8fafc, #f8fafc);
+  color: var(--tc-fg-4338ca, #4338ca);
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
 }
 
 .overview-links a:hover {
-  background: #eef2ff;
+  background: var(--tc-bg-eef2ff, #eef2ff);
 }

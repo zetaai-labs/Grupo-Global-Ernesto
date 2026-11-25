@@ -1,46 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import api from '../../../../api/client'
 import { getUser } from '../../../../api/auth'
-import { getLanguage, useT } from '../../../../i18n'
+import { getLanguage, useT, dateLocale } from '../../../../i18n'
 import { downloadFromApi } from '../../../../utils/download'
 import { errorText, euro, humanize, statusTone } from './zylaxFormat'
+import { translateServer } from '../../../../i18n/serverMessages'
+import ClockCard from '../clock/ClockCard'
 
 export function ClockPanel({ onChange }) {
-  const t = useT()
-  const [state, setState] = useState(null)
-  const [message, setMessage] = useState('')
-  const [busy, setBusy] = useState(false)
-
-  const load = useCallback(() => api.get('/zylax/hub/attendance/clock').then((response) => setState(response.data.data)).catch(() => {}), [])
-  useEffect(() => {
-    load()
-  }, [load])
-
-  const clock = async (action) => {
-    setBusy(true)
-    try {
-      const response = await api.post('/zylax/hub/attendance/clock', { action })
-      const result = response.data.data
-      setMessage(action === 'in' ? t(result.late ? 'Clocked in (late).' : 'Clocked in.') : `${t('Clocked out.')} ${result.hours} h`)
-      await load()
-      onChange?.()
-    } catch (error) {
-      setMessage(errorText(error, t('The action could not be completed.')))
-    } finally {
-      setBusy(false)
-    }
-  }
-  if (!state) return null
-  return (
-    <div className="zh-panel zh-clock">
-      <div>
-        <strong>{state.open ? `${t('Clocked in since')} ${new Date(state.open.clock_in).toLocaleTimeString()}` : t('You are not clocked in')}</strong>
-        <small>{t('Annual leave')}: {state.leave_total - state.leave_used} / {state.leave_total} {t('days left')}</small>
-        {message && <small role="status">{message}</small>}
-      </div>
-      <button type="button" className="primary-action" disabled={busy} onClick={() => clock(state.open ? 'out' : 'in')}>{t(state.open ? 'Clock out' : 'Clock in')}</button>
-    </div>
-  )
+  return <ClockCard showLeave onChange={onChange} />
 }
 
 export function MusterPanel({ onChange }) {
@@ -87,7 +55,7 @@ export function MusterPanel({ onChange }) {
         <div>
           <strong>{t('EMERGENCY')}: {item.title}</strong>
           <small>{item.data.location} · {item.data.instructions}</small>
-          {message && <small role="status">{message}</small>}
+          {message && <small role="status">{translateServer(message)}</small>}
           {summary && <small>{t('Safe')}: {summary.safe} · {t('Needs help')}: {summary.needs_help} · {t('Off site')}: {summary.off_site} · {t('Unaccounted')}: {summary.unaccounted} / {summary.total}</small>}
         </div>
         <div className="zx-form-actions">
@@ -155,7 +123,7 @@ export function CatalogPanel({ portal }) {
 
   return (
     <div>
-      {message && <div className="cloud-notice" role="status">{message}</div>}
+      {message && <div className="cloud-notice" role="status">{translateServer(message)}</div>}
       <div className="zx-toolbar"><input type="search" aria-label={t('Search products')} placeholder={t('Search products...')} value={search} onChange={(event) => setSearch(event.target.value)} /></div>
       <div className="zh-grid">
         {items.map((item) => (
@@ -193,6 +161,20 @@ export function PosPanel() {
   const [customer, setCustomer] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+  const [readers, setReaders] = useState([])
+  const [readerId, setReaderId] = useState('')
+  const [waiting, setWaiting] = useState(null)
+
+  useEffect(() => {
+    if (!canSell) return
+    api.get('/zylax/hub/pos/terminal/readers')
+      .then((response) => {
+        const list = response.data?.data || []
+        setReaders(list)
+        setReaderId((current) => current || list[0]?.id || '')
+      })
+      .catch(() => setReaders([]))
+  }, [canSell])
 
   const load = useCallback(async () => {
     const [items, bills] = await Promise.all([
@@ -205,6 +187,32 @@ export function PosPanel() {
   useEffect(() => {
     load().catch(() => {})
   }, [load])
+
+  // While the customer pays on the card reader, check every 2 seconds (up to 3 minutes).
+  useEffect(() => {
+    if (!waiting) return undefined
+    const started = Date.now()
+    const timer = setInterval(async () => {
+      try {
+        const response = await api.get(`/zylax/hub/pos/invoices/${waiting.invoice_id}/terminal`)
+        const { invoice_status: status, payment_status: payment } = response.data?.data || {}
+        if (status === 'PAID') {
+          setMessage(`${t('Card payment received')}: ${waiting.invoice_number}`)
+          setWaiting(null)
+          load().catch(() => {})
+        } else if (payment === 'FAILED') {
+          setMessage(t('The card payment failed or was cancelled. Try again or choose another method.'))
+          setWaiting(null)
+        } else if (Date.now() - started > 3 * 60 * 1000) {
+          setMessage(t('No answer from the card reader yet. Check the reader, then look at the invoice list.'))
+          setWaiting(null)
+        }
+      } catch {
+        // Keep waiting; the network may be briefly unavailable.
+      }
+    }, 2000)
+    return () => clearInterval(timer)
+  }, [waiting, load, t])
 
   const lines = products.filter((item) => cart[item.product_id]).map((item) => ({ ...item, qty: cart[item.product_id] }))
   const total = lines.reduce((sum, line) => sum + Math.round(line.qty * line.unit_price_eur * (100 + Number(line.tax_rate))) / 100, 0)
@@ -231,6 +239,24 @@ export function PosPanel() {
   }
   const charge = async () => {
     const items = lines.map((line) => ({ product_id: line.product_id, qty: line.qty }))
+    if (method === 'TERMINAL') {
+      setBusy(true)
+      try {
+        const sale = await api.post('/zylax/hub/pos/sales', { items, payment_method: 'TERMINAL', customer_name: customer || null })
+        const invoice = sale.data.data
+        await api.post(`/zylax/hub/pos/invoices/${invoice.invoice_id}/terminal`, { reader_id: readerId })
+        setCart({})
+        setCustomer('')
+        setMessage(t('Ask the customer to present their card.'))
+        setWaiting({ invoice_id: invoice.invoice_id, invoice_number: invoice.invoice_number })
+        await load()
+      } catch (error) {
+        setMessage(errorText(error, t('The action could not be completed.')))
+      } finally {
+        setBusy(false)
+      }
+      return
+    }
     const ok = await act(() => api.post('/zylax/hub/pos/sales', { items, payment_method: method, customer_name: customer || null }), (invoice) => `${t('Sale completed')}: ${invoice.invoice_number}`)
     if (ok) {
       setCart({})
@@ -238,9 +264,20 @@ export function PosPanel() {
     }
   }
 
+  const cancelCard = async () => {
+    if (!waiting) return
+    try {
+      await api.post(`/zylax/hub/pos/invoices/${waiting.invoice_id}/terminal/cancel`, { reader_id: readerId })
+      setMessage(t('Card payment cancelled.'))
+    } catch (error) {
+      setMessage(errorText(error, t('The action could not be completed.')))
+    }
+    setWaiting(null)
+  }
+
   return (
     <div>
-      {message && <div className="cloud-notice" role="status">{message}</div>}
+      {message && <div className="cloud-notice" role="status">{translateServer(message)}</div>}
       {canSell && (
         <div className="zh-pos">
           <div className="zh-grid">
@@ -261,10 +298,18 @@ export function PosPanel() {
             {!lines.length && <small>{t('Tap products to add them.')}</small>}
             <input aria-label={t('Customer name')} placeholder={t('Customer name (optional)')} value={customer} maxLength="255" onChange={(event) => setCustomer(event.target.value)} />
             <select aria-label={t('Payment method')} value={method} onChange={(event) => setMethod(event.target.value)}>
-              {['CARD', 'CASH', 'TRANSFER'].map((option) => <option key={option} value={option}>{t(humanize(option))}</option>)}
+              {readers.length > 0 && <option value="TERMINAL">{t('Card reader')}</option>}
+              {['CARD', 'CASH', 'TRANSFER'].map((option) => <option key={option} value={option}>{t(option === 'CARD' ? 'Card (separate machine)' : humanize(option))}</option>)}
             </select>
+            {method === 'TERMINAL' && readers.length > 1 && (
+              <select aria-label={t('Card reader')} value={readerId} onChange={(event) => setReaderId(event.target.value)}>
+                {readers.map((reader) => <option key={reader.id} value={reader.id}>{reader.label}</option>)}
+              </select>
+            )}
             <div className="zh-total"><span>{t('Total with VAT')}</span><strong>{euro(total)}</strong></div>
-            <button type="button" className="primary-action" disabled={busy || !lines.length} onClick={charge}>{t('Charge')}</button>
+            {waiting
+              ? <button type="button" onClick={cancelCard}>{t('Cancel card payment')}</button>
+              : <button type="button" className="primary-action" disabled={busy || !lines.length} onClick={charge}>{t('Charge')}</button>}
           </aside>
         </div>
       )}
@@ -275,11 +320,12 @@ export function PosPanel() {
           <tbody>
             {invoices.map((row) => (
               <tr key={row.invoice_id}>
-                <td className="zx-mono">{row.invoice_number}{row.kind === 'CORRECTIVE' ? ` · ${t('Corrective')}` : ''} <button type="button" className="zx-link" aria-label={`${t('Download PDF')} ${row.invoice_number}`} onClick={() => downloadFromApi(`/zylax/hub/pos/${external ? 'my-invoices' : 'invoices'}/${row.invoice_id}/pdf?lang=${getLanguage()}`, `${row.invoice_number}.pdf`).catch(() => setMessage(t('Could not create the PDF.')))}>PDF</button></td><td>{new Date(row.created_at).toLocaleDateString()}</td><td>{row.payment_method ? t(humanize(row.payment_method)) : '—'}</td><td>{euro(row.total_eur)}</td>
+                <td className="zx-mono">{row.invoice_number}{row.kind === 'CORRECTIVE' ? ` · ${t('Corrective')}` : ''} <button type="button" className="zx-link" aria-label={`${t('Download PDF')} ${row.invoice_number}`} onClick={() => downloadFromApi(`/zylax/hub/pos/${external ? 'my-invoices' : 'invoices'}/${row.invoice_id}/pdf?lang=${getLanguage()}`, `${row.invoice_number}.pdf`).catch(() => setMessage(t('Could not create the PDF.')))}>PDF</button></td><td>{new Date(row.created_at).toLocaleDateString(dateLocale())}</td><td>{row.payment_method ? t(humanize(row.payment_method)) : '—'}</td><td>{euro(row.total_eur)}</td>
                 <td><span className={`zx-pill ${statusTone(row.status === 'ISSUED' ? 'OPEN' : row.status === 'REFUNDED' ? 'CANCELLED' : row.status)}`}>{t(humanize(row.status))}</span></td>
                 {!external && (
                   <td>
                     {canPay && row.customer_org_id && <button type="button" className="zx-link" disabled={busy} onClick={() => act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/email`, { lang: getLanguage() }).then((response) => ({ data: { data: response.data } })), () => t('Email sent.'))}>{t('Email to customer')}</button>}{' '}
+                    {canPay && row.status === 'ISSUED' && row.kind !== 'CORRECTIVE' && <button type="button" className="zx-link" disabled={busy} onClick={() => { const reason = window.prompt(t('Reason for cancelling this invoice')); if (reason?.trim()) act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/cancel`, { reason }), (invoice) => `${t('Invoice cancelled.')} ${t('Corrective invoice')}: ${invoice.corrective_invoice_number}`) }}>{t('Cancel invoice')}</button>}{' '}
                     {canPay && row.status === 'ISSUED' && row.kind !== 'CORRECTIVE' && <button type="button" className="zx-link" disabled={busy} onClick={() => act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/pay`, { payment_method: 'TRANSFER' }), () => t('Payment recorded.'))}>{t('Record payment')}</button>}
                     {canRefund && row.status === 'PAID' && row.kind !== 'CORRECTIVE' && <button type="button" className="zx-link" disabled={busy} onClick={() => { const reason = window.prompt(t('Reason for the refund')); if (reason?.trim()) act(() => api.post(`/zylax/hub/pos/invoices/${row.invoice_id}/refund`, { reason }), (invoice) => `${t('Invoice refunded.')} ${t('Corrective invoice')}: ${invoice.corrective_invoice_number}`) }}>{t('Refund')}</button>}
                   </td>

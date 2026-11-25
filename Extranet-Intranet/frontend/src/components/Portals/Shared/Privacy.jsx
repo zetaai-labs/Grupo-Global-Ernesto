@@ -2,8 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../api/client'
 import { getUser } from '../../../api/auth'
 import { downloadFromApi } from '../../../utils/download'
-import { useT } from '../../../i18n'
+import { useT, dateLocale } from '../../../i18n'
 import './Privacy.css'
+import { translateServer } from '../../../i18n/serverMessages'
 
 const TYPE_LABELS = { RECTIFICATION: 'Rectification', CANCELLATION: 'Cancellation (erasure)', OPPOSITION: 'Opposition' }
 const TYPE_HELP = {
@@ -80,7 +81,7 @@ function Privacy() {
         </button>
       </div>
 
-      {notice && <div className="cloud-notice prv-notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
+      {notice && <div className="cloud-notice prv-notice" role="status"><span>{translateServer(notice)}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
       {mine.processing_opposed && <div className="prv-flag">{t('Your opposition is active: you are excluded from the directory and optional profiling.')}</div>}
 
       <div className="prv-grid">
@@ -130,7 +131,7 @@ function Privacy() {
                 <span className={`prv-pill prv-${request.status.toLowerCase()}`}>{t(request.status)}</span>
                 <p>{request.details}</p>
                 {request.requested_value && <small>{request.field}: {request.requested_value}</small>}
-                <small>{t('Respond by')} {new Date(request.due_at).toLocaleDateString()}{request.decided_by_name ? ` · ${request.decided_by_name}` : ''}</small>
+                <small>{t('Respond by')} {new Date(request.due_at).toLocaleDateString(dateLocale())}{request.decided_by_name ? ` · ${request.decided_by_name}` : ''}</small>
                 {request.status === 'PENDING' && request.user_id !== user?.id && (
                   <div className="prv-decide">
                     <input value={responses[request.request_id] || ''} onChange={(e) => setResponses({ ...responses, [request.request_id]: e.target.value })} placeholder={t('Response to the person')} aria-label={t('Response to the person')} />

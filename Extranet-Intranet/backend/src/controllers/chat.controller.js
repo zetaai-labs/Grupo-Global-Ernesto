@@ -1,6 +1,7 @@
 import { query } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { notify, notifyRoles } from '../services/notification.service.js'
+import { chatEncryptionOn, openMessage, sealMessage } from '../services/chatCrypto.service.js'
 
 async function isMember(conversationId, userId) {
   const { rowCount } = await query(
@@ -22,7 +23,7 @@ export async function listConversations(req, res) {
      ORDER BY c.id`,
     [req.user.sub, portal],
   )
-  return res.json({ data: rows })
+  return res.json({ data: rows.map((row) => ({ ...row, last_message: openMessage(row.last_message) })) })
 }
 
 export async function listMessages(req, res) {
@@ -34,7 +35,7 @@ export async function listMessages(req, res) {
      FROM messages m WHERE m.conversation_id = $1 ORDER BY m.id LIMIT 200`,
     [req.params.id],
   )
-  return res.json({ data: rows })
+  return res.json({ data: rows.map((row) => ({ ...row, body: openMessage(row.body) })) })
 }
 
 export async function createMessage(req, res) {
@@ -48,8 +49,9 @@ export async function createMessage(req, res) {
     `INSERT INTO messages (conversation_id, user_id, sender_name, body)
      VALUES ($1, $2, $3, $4)
      RETURNING id, body, sender_name, user_id, created_at, conversation_id`,
-    [req.params.id, req.user.sub, req.user.name || req.user.email, body],
+    [req.params.id, req.user.sub, req.user.name || req.user.email, sealMessage(body)],
   )
+  rows[0].body = body
   await writeAudit(req.user.sub, 'CHAT_MESSAGE_SENT', 'conversations', req.params.id)
 
   const members = await query(
@@ -63,7 +65,7 @@ export async function createMessage(req, res) {
     await notify(members.rows.map((row) => row.user_id), {
       type: 'chat',
       title: `${req.user.name || 'New message'} in ${name}`,
-      body: body.length > 120 ? `${body.slice(0, 117)}…` : body,
+      body: chatEncryptionOn() ? 'New message' : body.length > 120 ? `${body.slice(0, 117)}…` : body,
       link: `/${portal}/chat`,
     })
   }

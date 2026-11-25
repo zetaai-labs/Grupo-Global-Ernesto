@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../../../../api/client'
-import { getUser } from '../../../../../api/auth'
+import { PORTAL_ROLES, getUser } from '../../../../../api/auth'
 import RoleConsole from './RoleConsole'
+import ClockCard from '../../../Shared/clock/ClockCard'
 import './Overview.css'
 import { useT } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 function Overview() {
   const t = useT()
@@ -41,7 +43,9 @@ function Overview() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
+
+      {PORTAL_ROLES.intranet.includes(user?.role) && <ClockCard showLeave />}
 
       <RoleConsole />
 
@@ -63,10 +67,10 @@ function Overview() {
           </div>
         </div>
         <div className="overview-links">
-          <Link to="/intranet/cloud-folders">▤ Cloud Folders</Link>
-          <Link to="/intranet/autoflow">⟳ AutoFlow</Link>
-          <Link to="/intranet/metalinks">↗ MetaLinks</Link>
-          <Link to="/intranet/recycle-bin">▧ Recycle Bin</Link>
+          <Link to="/intranet/cloud-folders">{t("▤ Cloud Folders")}</Link>
+          <Link to="/intranet/autoflow">{t("⟳ AutoFlow")}</Link>
+          <Link to="/intranet/metalinks">{t("↗ MetaLinks")}</Link>
+          <Link to="/intranet/recycle-bin">{t("▧ Recycle Bin")}</Link>
         </div>
       </div>
     </section>

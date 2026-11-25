@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './WebReceivedFiles.css'
 import { useT } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 function formatSize(bytes) {
   return bytes < 1024 * 1024 ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / 1048576).toFixed(1)} MB`
@@ -60,27 +61,27 @@ function WebReceivedFiles() {
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Received files</span><span className="stat-icon">⇩</span></div>
+          <div className="stat-top"><span>{t("Received files")}</span><span className="stat-icon">⇩</span></div>
           <strong>{items.length}</strong>
-          <small>All incoming files</small>
+          <small>{t("All incoming files")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Pending review</span><span className="stat-icon">◷</span></div>
+          <div className="stat-top"><span>{t("Pending review")}</span><span className="stat-icon">◷</span></div>
           <strong>{items.filter((item) => item.status === 'pending').length}</strong>
-          <small>Awaiting attention</small>
+          <small>{t("Awaiting attention")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Approved</span><span className="stat-icon">✓</span></div>
+          <div className="stat-top"><span>{t("Approved")}</span><span className="stat-icon">✓</span></div>
           <strong>{items.filter((item) => item.status === 'approved').length}</strong>
-          <small>Reviewed submissions</small>
+          <small>{t("Reviewed submissions")}</small>
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="feature-panel">
         <div className="panel-heading">
-          <div><h3>Incoming files</h3><p>Submitted through the public upload page.</p></div>
+          <div><h3>{t("Incoming files")}</h3><p>{t("Submitted through the public upload page.")}</p></div>
         </div>
 
         {items.length ? (
@@ -93,17 +94,17 @@ function WebReceivedFiles() {
                   <span>{item.sender_name} · {item.sender_email} · {formatSize(item.size_bytes)}</span>
                 </span>
                 <span className="item-status">{item.status}</span>
-                <button type="button" onClick={() => download(item)}>Download</button>
-                <button type="button" onClick={() => review(item, 'approved')}>Approve</button>
-                <button type="button" className="cloud-remove" onClick={() => review(item, 'rejected')}>Reject</button>
+                <button type="button" onClick={() => download(item)}>{t("Download")}</button>
+                <button type="button" onClick={() => review(item, 'approved')}>{t("Approve")}</button>
+                <button type="button" className="cloud-remove" onClick={() => review(item, 'rejected')}>{t("Reject")}</button>
               </div>
             ))}
           </div>
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">⇩</div>
-            <h3>No files received</h3>
-            <p>Files submitted by external users will appear here.</p>
+            <h3>{t("No files received")}</h3>
+            <p>{t("Files submitted by external users will appear here.")}</p>
           </div>
         )}
       </div>

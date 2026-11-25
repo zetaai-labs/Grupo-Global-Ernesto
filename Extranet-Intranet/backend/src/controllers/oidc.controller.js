@@ -104,13 +104,31 @@ export async function oidcCallback(req, res) {
     return backToLogin(res, 'failed')
   }
 
-  // Only a provider-verified email can match an account. Accounts are never created here.
-  if (claims.email_verified !== true || typeof claims.email !== 'string') {
-    await audit(null, 'SSO_LOGIN_REJECTED', { reason: 'email_not_verified' })
-    return backToLogin(res, 'not_allowed')
+  // An account is bound to the provider's permanent subject on its first SSO sign-in.
+  // After that only that subject can open it, whatever email the provider later reports.
+  const issuer = String(claims.iss)
+  const subject = String(claims.sub)
+  let user = (await query(`${USER_FIELDS} WHERE u.oidc_issuer = $1 AND u.oidc_subject = $2 AND u.status = 'active'`, [issuer, subject])).rows[0]
+
+  if (!user) {
+    // First sign-in: only a provider-verified email can match an account. Accounts are never created here.
+    if (claims.email_verified !== true || typeof claims.email !== 'string') {
+      await audit(null, 'SSO_LOGIN_REJECTED', { reason: 'email_not_verified' })
+      return backToLogin(res, 'not_allowed')
+    }
+    user = (await query(`${USER_FIELDS} WHERE LOWER(u.email) = LOWER($1) AND u.status = 'active'`, [claims.email.trim()])).rows[0]
+    if (user && ssoAllowed(user)) {
+      const linked = await query(
+        `UPDATE users SET oidc_issuer = $2, oidc_subject = $3, oidc_linked_at = now() WHERE id = $1 AND oidc_subject IS NULL`,
+        [user.id, issuer, subject],
+      )
+      if (!linked.rowCount) {
+        await audit(user.id, 'SSO_LOGIN_REJECTED', { reason: 'linked_to_another_identity' })
+        return backToLogin(res, 'not_allowed')
+      }
+      await audit(user.id, 'SSO_ACCOUNT_LINKED')
+    }
   }
-  const { rows } = await query(`${USER_FIELDS} WHERE LOWER(u.email) = LOWER($1) AND u.status = 'active'`, [claims.email.trim()])
-  const user = rows[0]
   if (!user || !ssoAllowed(user)) {
     await audit(user?.id || null, 'SSO_LOGIN_REJECTED', { reason: user ? 'mfa_required' : 'no_account' })
     return backToLogin(res, 'not_allowed')

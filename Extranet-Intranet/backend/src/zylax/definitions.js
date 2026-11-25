@@ -75,7 +75,7 @@ export const MODULES = [
   { key: 'attendance', name: 'Attendance & Leave', group: 'Talent & Human Capital', icon: '◷', description: 'Attendance control, punctuality, leave and vacation management.', view: 'clock', entities: [
     entity('attendance', 'Attendance', 'Entry', [
       f('clock_in', 'Clock in', 'datetime', { computed: true }), f('clock_out', 'Clock out', 'datetime', { computed: true }),
-      f('hours', 'Hours', 'number', { computed: true }), f('late', 'Late', 'boolean', { computed: true }),
+      f('hours', 'Hours', 'number', { computed: true }), f('break_minutes', 'Break (minutes)', 'number', { computed: true }), f('late', 'Late', 'boolean', { computed: true }),
     ], { create: [], manage: HR, own: true, immutable: true, autoTitle: true, flow: { OPEN: {}, CLOSED: {} } }),
     entity('leave', 'Leave requests', 'Reason', [
       sel('leave_type', 'Leave type', ['ANNUAL', 'SICK', 'PERSONAL', 'UNPAID'], REQ), f('start_date', 'From', 'date', REQ), f('end_date', 'To', 'date', REQ),
@@ -218,8 +218,8 @@ export const MODULES = [
 
   // ----- 4 Sector suite -----
   { key: 'events', name: 'Events / University Events', group: 'Sector Suite', icon: '✦', description: 'Logistics, capacity control and planning for corporate and academic events.', entities: [
-    entity('events', 'Events', 'Event', [sel('kind', 'Type', ['CORPORATE', 'UNIVERSITY', 'CONFERENCE', 'WORKSHOP'], REQ), f('venue', 'Venue', 'text', REQ), f('start_at', 'Starts', 'datetime', REQ), f('end_at', 'Ends', 'datetime', REQ), f('capacity', 'Capacity', 'integer', REQ), f('budget_eur', 'Budget (EUR)', 'money')], { create: OPS, dates: ['start_at', 'end_at'], flow: work }),
-    entity('registrations', 'Registrations', 'Attendee name', [ref('event', 'Event', 'events', 'events', REQ), f('email', 'Email', 'email', REQ), f('institution', 'Institution')], { manage: OPS, own: true, immutable: true, capacity: { parent: 'event', limit: 'capacity', active: ['CONFIRMED'], waitlist: true }, uniqueWithin: ['event', 'email'], flow: signup }),
+    entity('events', 'Events', 'Event', [sel('kind', 'Type', ['CORPORATE', 'UNIVERSITY', 'CONFERENCE', 'WORKSHOP'], REQ), sel('mode', 'Format', ['IN_PERSON', 'ONLINE', 'HYBRID']), f('venue', 'Venue', 'text', REQ), f('start_at', 'Starts', 'datetime', REQ), f('end_at', 'Ends', 'datetime', REQ), f('capacity', 'Capacity', 'integer', REQ), f('budget_eur', 'Budget (EUR)', 'money')], { create: OPS, dates: ['start_at', 'end_at'], flow: work }),
+    entity('registrations', 'Registrations', 'Attendee name', [ref('event', 'Event', 'events', 'events', REQ), f('email', 'Email', 'email', REQ), f('institution', 'Institution'), sel('attendance', 'Attending', ['IN_PERSON', 'ONLINE'])], { manage: OPS, own: true, immutable: true, capacity: { parent: 'event', limit: 'capacity', active: ['CONFIRMED'], waitlist: true }, uniqueWithin: ['event', 'email'], flow: signup }),
   ] },
   { key: 'education', name: 'Education & Course Planner', group: 'Sector Suite', icon: '🎓', description: 'Institutional management and training programmes.', link: '/intranet/courses', entities: [
     entity('programs', 'Programmes', 'Programme', [f('institution', 'Institution'), f('coordinator', 'Coordinator', 'user'), f('start_date', 'Start', 'date', REQ), f('end_date', 'End', 'date', REQ), f('capacity', 'Places', 'integer', REQ)], { create: ['admin', 'hr', 'manager'], manage: ['admin', 'hr', 'manager'], dates: ['start_date', 'end_date'], flow: work }),

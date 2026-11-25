@@ -1,8 +1,10 @@
 import './Landing.css'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useT, dateLocale } from '../../i18n'
 
 function Landing() {
+  const t = useT()
   const navigate = useNavigate()
 
   const [currentTime, setCurrentTime] = useState(new Date())
@@ -32,14 +34,14 @@ function Landing() {
     hour < 17 ? 'Good afternoon' :
     'Good evening'
 
-  const formattedDate = currentTime.toLocaleDateString('en-GB', {
+  const formattedDate = currentTime.toLocaleDateString(dateLocale(), {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
     year: 'numeric'
   })
 
-  const formattedTime = currentTime.toLocaleTimeString('en-GB', {
+  const formattedTime = currentTime.toLocaleTimeString(dateLocale(), {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
@@ -164,11 +166,11 @@ function Landing() {
       {/* Navbar */}
       <header className="landing-navbar">
         <div className="landing-nav-brand">
-          <div className="landing-logo">GG</div>
+          <div className="landing-logo">{t("GG")}</div>
 
           <div className="landing-brand">
-            <span className="landing-brand-name">GLOBAL GROUP</span>
-            <span className="landing-brand-caption">CONNECTED WORKSPACE</span>
+            <span className="landing-brand-name">{t("GLOBAL GROUP")}</span>
+            <span className="landing-brand-caption">{t("CONNECTED WORKSPACE")}</span>
           </div>
         </div>
 
@@ -178,7 +180,7 @@ function Landing() {
             className="landing-signin"
             onClick={() => navigate('/upload')}
           >
-            Send files
+            {t("Send files")}
           </button>
 
           <button
@@ -186,12 +188,12 @@ function Landing() {
             className="landing-signin"
             onClick={() => navigate('/login')}
           >
-            Sign In
+            {t("Sign In")}
           </button>
 
           <div className="landing-security">
             <span className="security-pulse" />
-            Secure environment
+            {t("Secure environment")}
           </div>
 
           <div className="landing-live-clock">
@@ -211,26 +213,24 @@ function Landing() {
         <div className="landing-hero">
           <div className="landing-eyebrow">
             <span className="eyebrow-line" />
-            YOUR DIGITAL WORKSPACE
+            {t("YOUR DIGITAL WORKSPACE")}
             <span className="eyebrow-line" />
           </div>
 
           <div className="landing-greeting">
-            {greeting} <span>✦</span>
+            {t(greeting)} <span>✦</span>
           </div>
 
           <h1>
-            One workspace.
+            {t("One workspace.")}
             <br />
             <span className="hero-gradient">
-              Connected everywhere.
+              {t("Connected everywhere.")}
             </span>
           </h1>
 
           <p>
-            Everything your organisation needs to work smarter.
-            Access information, collaborate seamlessly and
-            stay connected in one connected environment.
+            {t("Everything your organisation needs to work smarter. Access information, collaborate seamlessly and stay connected in one connected environment.")}
           </p>
 
           {/* Interactive highlights */}
@@ -247,7 +247,7 @@ function Landing() {
                 aria-expanded={activeFeature === index}
               >
                 <span className="highlight-check">✓</span>
-                {feature.title}
+                {t(feature.title)}
               </button>
             ))}
           </div>
@@ -258,12 +258,12 @@ function Landing() {
                 {features[activeFeature].icon}
               </span>
               <div>
-                <strong>{features[activeFeature].title}</strong>
-                <p>{features[activeFeature].description}</p>
+                <strong>{t(features[activeFeature].title)}</strong>
+                <p>{t(features[activeFeature].description)}</p>
               </div>
               <button
                 onClick={() => setActiveFeature(null)}
-                aria-label="Close feature information"
+                aria-label={t("Close feature information")}
               >
                 ×
               </button>
@@ -275,14 +275,14 @@ function Landing() {
         <section className="global-presence">
           <div className="global-presence-heading">
             <div>
-              <span className="section-eyebrow">OUR GLOBAL REACH</span>
-              <h2>Connected Across Borders</h2>
-              <p>Building connections across countries and regions.</p>
+              <span className="section-eyebrow">{t("OUR GLOBAL REACH")}</span>
+              <h2>{t("Connected Across Borders")}</h2>
+              <p>{t("Building connections across countries and regions.")}</p>
             </div>
 
             <div className="global-presence-indicator">
               <span className="global-indicator-dot" />
-              GLOBAL NETWORK
+              {t("GLOBAL NETWORK")}
             </div>
           </div>
 
@@ -312,8 +312,8 @@ function Landing() {
                   {region.flag}
                 </span>
 
-                <span className="region-name">{region.name}</span>
-                <span className="region-label">{region.label}</span>
+                <span className="region-name">{t(region.name)}</span>
+                <span className="region-label">{t(region.label)}</span>
                 <span className="region-card-arrow">↗</span>
                 <span className="region-card-glow" />
               </button>
@@ -327,12 +327,12 @@ function Landing() {
               </div>
 
               <div className="region-detail-content">
-                <span>GLOBAL CONNECTION</span>
+                <span>{t("GLOBAL CONNECTION")}</span>
                 <strong>
-                  {globalRegions.find(region => region.id === activeRegion)?.name}
+                  {t(globalRegions.find(region => region.id === activeRegion)?.name || '')}
                 </strong>
                 <p>
-                  {globalRegions.find(region => region.id === activeRegion)?.description}
+                  {t(globalRegions.find(region => region.id === activeRegion)?.description || '')}
                 </p>
               </div>
 
@@ -340,7 +340,7 @@ function Landing() {
                 type="button"
                 className="region-detail-close"
                 onClick={() => setActiveRegion(null)}
-                aria-label="Close region information"
+                aria-label={t("Close region information")}
               >
                 ×
               </button>
@@ -353,14 +353,14 @@ function Landing() {
 
           <div className="workspace-section-heading">
             <div>
-              <span className="section-eyebrow">GET STARTED</span>
-              <h2>Choose your workspace</h2>
-              <p>Select the environment you want to access.</p>
+              <span className="section-eyebrow">{t("GET STARTED")}</span>
+              <h2>{t("Choose your workspace")}</h2>
+              <p>{t("Select the environment you want to access.")}</p>
             </div>
 
             <div className="workspace-count">
               <span className="count-dot" />
-              02 WORKSPACES AVAILABLE
+              {t("02 WORKSPACES AVAILABLE")}
             </div>
           </div>
 
@@ -385,23 +385,22 @@ function Landing() {
                 </div>
 
                 <span className="workspace-card-tag purple-tag">
-                  INTERNAL ACCESS
+                  {t("INTERNAL ACCESS")}
                 </span>
               </div>
 
               <div className="workspace-details">
-                <h3>Intranet</h3>
+                <h3>{t("Intranet")}</h3>
                 <p>
-                  Your central hub for internal operations,
-                  corporate documents and team collaboration.
+                  {t("Your central hub for internal operations, corporate documents and team collaboration.")}
                 </p>
               </div>
 
               <div className="workspace-card-bottom">
                 <span className="workspace-enter purple-text">
                   {selectedWorkspace === 'intranet'
-                    ? `Opening... ${progress}%`
-                    : 'Enter internal workspace'}
+                    ? t('Opening… {progress}%', { progress })
+                    : t("Enter internal workspace")}
                 </span>
 
                 <span className="workspace-arrow">↗</span>
@@ -433,23 +432,22 @@ function Landing() {
                 </div>
 
                 <span className="workspace-card-tag green-tag">
-                  EXTERNAL ACCESS
+                  {t("EXTERNAL ACCESS")}
                 </span>
               </div>
 
               <div className="workspace-details">
-                <h3>Extranet</h3>
+                <h3>{t("Extranet")}</h3>
                 <p>
-                  A collaboration space for external partners,
-                  clients and authorised collaborators.
+                  {t("A collaboration space for external partners, clients and authorised collaborators.")}
                 </p>
               </div>
 
               <div className="workspace-card-bottom">
                 <span className="workspace-enter green-text">
                   {selectedWorkspace === 'extranet'
-                    ? `Opening... ${progress}%`
-                    : 'Enter partner workspace'}
+                    ? t('Opening… {progress}%', { progress })
+                    : t("Enter partner workspace")}
                 </span>
 
                 <span className="workspace-arrow">↗</span>
@@ -472,8 +470,8 @@ function Landing() {
           <div className="information-item">
             <span className="information-icon">⌘</span>
             <div>
-              <strong>One connected platform</strong>
-              <span>Everything in one place</span>
+              <strong>{t("One connected platform")}</strong>
+              <span>{t("Everything in one place")}</span>
             </div>
           </div>
 
@@ -482,8 +480,8 @@ function Landing() {
           <div className="information-item">
             <span className="information-icon">◈</span>
             <div>
-              <strong>Controlled access</strong>
-              <span>Designed for secure collaboration</span>
+              <strong>{t("Controlled access")}</strong>
+              <span>{t("Designed for secure collaboration")}</span>
             </div>
           </div>
 
@@ -492,8 +490,8 @@ function Landing() {
           <div className="information-item">
             <span className="information-icon">⇄</span>
             <div>
-              <strong>Seamless collaboration</strong>
-              <span>Internal and external teams</span>
+              <strong>{t("Seamless collaboration")}</strong>
+              <span>{t("Internal and external teams")}</span>
             </div>
           </div>
         </div>
@@ -502,12 +500,12 @@ function Landing() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <span>© {currentTime.getFullYear()} Global Group</span>
+        <span>© {currentTime.getFullYear()}{" "}{t("Global Group")}</span>
         <span className="footer-separator">·</span>
-        <span>Connected Workspace</span>
+        <span>{t("Connected Workspace")}</span>
 
         <span className="footer-right">
-          Designed for connected work.
+          {t("Designed for connected work.")}
         </span>
       </footer>
 

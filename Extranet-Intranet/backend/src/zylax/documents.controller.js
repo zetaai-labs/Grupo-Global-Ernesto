@@ -2,7 +2,7 @@ import { z } from 'zod'
 import { query } from '../config/database.js'
 import { COMMERCIAL_MANAGE_ROLES } from '../config/roles.js'
 import { writeAudit } from '../services/audit.js'
-import { buildDocumentPdf, pdfLanguage } from '../services/document.service.js'
+import { buildDocumentPdf, pdfLanguage, walkInName } from '../services/document.service.js'
 import { sendMail, smtpConfigured } from '../services/email.service.js'
 import { orgPredicate } from '../services/scope.js'
 import { httpError } from './rules.js'
@@ -74,7 +74,7 @@ async function quotePdf(quote, lang) {
 
 async function invoicePdf(invoice, lang) {
   const lines = (await query('SELECT sku, name, qty, unit_price_eur, discount_pct, tax_rate, net_eur, tax_eur FROM zx_invoice_lines WHERE invoice_id = $1 ORDER BY name', [invoice.invoice_id])).rows
-  const walkIn = invoice.customer_name || (pdfLanguage(lang) === 'es' ? 'Cliente de mostrador' : 'Walk-in customer')
+  const walkIn = invoice.customer_name || walkInName(lang)
   const buyer = invoice.buyer_snapshot || { name: invoice.legal_name || walkIn, tax_id: invoice.tax_id, country: invoice.country, address: invoice.billing_address }
   return buildDocumentPdf({
     kind: invoice.kind === 'CORRECTIVE' ? 'CORRECTIVE' : 'INVOICE', number: invoice.invoice_number, status: invoice.status, date: invoice.created_at, payment_method: invoice.payment_method,
@@ -139,6 +139,8 @@ async function customerEmails(orgId) {
 const SUBJECTS = {
   es: { QUOTE: (n) => `Presupuesto ${n}`, INVOICE: (n) => `Factura ${n}`, CORRECTIVE: (n) => `Factura rectificativa ${n}`, body: (n) => `Adjuntamos el documento ${n}.\n\nUn saludo,\nGrupo Global` },
   en: { QUOTE: (n) => `Quote ${n}`, INVOICE: (n) => `Invoice ${n}`, CORRECTIVE: (n) => `Corrective invoice ${n}`, body: (n) => `Please find attached document ${n}.\n\nKind regards,\nGrupo Global` },
+  ru: { QUOTE: (n) => `Коммерческое предложение ${n}`, INVOICE: (n) => `Счёт ${n}`, CORRECTIVE: (n) => `Корректировочный счёт ${n}`, body: (n) => `Во вложении документ ${n}.\n\nС уважением,\nGrupo Global` },
+  ar: { QUOTE: (n) => `عرض سعر ${n}`, INVOICE: (n) => `فاتورة ${n}`, CORRECTIVE: (n) => `فاتورة تصحيحية ${n}`, body: (n) => `مرفق المستند ${n}.\n\nمع أطيب التحيات،\nGrupo Global` },
 }
 
 async function deliver(kind, number, recipients, pdf, lang) {

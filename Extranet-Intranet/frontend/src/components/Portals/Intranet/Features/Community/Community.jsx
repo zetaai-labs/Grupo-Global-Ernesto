@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
+import MyVideoBio from '../../../Shared/video/MyVideoBio'
+import VideoBioPlayer from '../../../Shared/video/VideoBioPlayer'
+import TranslateText from '../../../Shared/translate/TranslateText'
+import { TARGETS, setTranslateTarget, translateTarget } from '../../../Shared/translate/translate'
 import api from '../../../../../api/client'
 import { getSharedSocket } from '../../../../../api/socket'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './Community.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
+import MatchSuggestions from '../../../Shared/MatchSuggestions'
 
 const CORRIDORS = ['GLOBAL', 'SPAIN_EU', 'INDIA', 'UAE_DUBAI', 'LATAM', 'USA_CAN', 'MOROCCO']
 const initials = (name) => String(name || '?').split(' ').filter(Boolean).slice(0, 2).map((part) => part[0].toUpperCase()).join('')
@@ -18,17 +24,26 @@ function Community() {
   const [filters, setFilters] = useState({ q: '', corridor: '', org: '' })
   const [draft, setDraft] = useState({ body: '', committee_id: '' })
   const [feedCommittee, setFeedCommittee] = useState('')
-  const [bio, setBio] = useState('')
+  const [watching, setWatching] = useState(null)
   const [notice, setNotice] = useState('')
+  const [feedQuery, setFeedQuery] = useState('')
+  const [searchText, setSearchText] = useState('')
+  const [target, setTarget] = useState(translateTarget)
+
+  // Search waits until typing stops for a moment.
+  useEffect(() => {
+    const timer = setTimeout(() => setFeedQuery(searchText.trim()), 350)
+    return () => clearTimeout(timer)
+  }, [searchText])
 
   const loadFeed = useCallback(async () => {
     try {
-      const response = await api.get('/community/feed', { params: { committee: feedCommittee || undefined } })
+      const response = await api.get('/community/feed', { params: { committee: feedCommittee || undefined, q: feedQuery || undefined } })
       setPosts(response.data?.data || [])
     } catch (error) {
       setNotice(error.response?.data?.message || 'Could not load the feed.')
     }
-  }, [feedCommittee])
+  }, [feedCommittee, feedQuery])
 
   const loadDirectory = useCallback(async () => {
     try {
@@ -57,12 +72,12 @@ function Community() {
     const socket = getSharedSocket()
     if (!socket) return undefined
     const onPost = (post) => {
-      if (feedCommittee && post.committee_id !== feedCommittee) return
+      if ((feedCommittee && post.committee_id !== feedCommittee) || feedQuery) return
       setPosts((current) => (current.some((item) => item.post_id === post.post_id) ? current : [{ ...post, can_delete: false }, ...current]))
     }
     socket.on('community:post', onPost)
     return () => socket.off('community:post', onPost)
-  }, [feedCommittee])
+  }, [feedCommittee, feedQuery])
 
   const publish = async (event) => {
     event.preventDefault()
@@ -95,12 +110,10 @@ function Community() {
     }
   }
 
-  const saveBio = async (event) => {
-    event.preventDefault()
+  const saveBio = async (value) => {
     try {
-      const response = await api.patch('/community/me/video-bio', { video_bio_url: bio.trim() || null })
+      const response = await api.patch('/community/me/video-bio', { video_bio_url: value.trim() || null })
       setNotice(response.data?.message)
-      setBio('')
       await loadDirectory()
     } catch (error) {
       setNotice(error.response?.data?.message || 'Could not save the link.')
@@ -119,7 +132,7 @@ function Community() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice com-notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
+      {notice && <div className="cloud-notice com-notice" role="status"><span>{translateServer(notice)}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
 
       <div className="com-tabs" role="tablist">
         {[['feed', t('Activity feed')], ['directory', `${t('Directory')} (${people.length})`], ['committees', `${t('Committees')} (${committees.length})`]].map(([key, label]) => (
@@ -140,10 +153,18 @@ function Community() {
             </div>
           </form>
 
-          <select className="com-filter" value={feedCommittee} onChange={(e) => setFeedCommittee(e.target.value)} aria-label={t('Filter feed')}>
-            <option value="">{t('All activity')}</option>
-            {committees.map((committee) => <option key={committee.committee_id} value={committee.committee_id}>{committee.name}</option>)}
-          </select>
+          <div className="com-feed-tools">
+            <select className="com-filter" value={feedCommittee} onChange={(e) => setFeedCommittee(e.target.value)} aria-label={t('Filter feed')}>
+              <option value="">{t('All activity')}</option>
+              {committees.map((committee) => <option key={committee.committee_id} value={committee.committee_id}>{committee.name}</option>)}
+            </select>
+            <input type="search" className="com-feed-search" value={searchText} onChange={(e) => setSearchText(e.target.value)} placeholder={t('Search posts in any language')} aria-label={t('Search posts in any language')} />
+            <label className="tr-target">{t('Translate to')}
+              <select value={target} onChange={(e) => { setTarget(e.target.value); setTranslateTarget(e.target.value) }}>
+                {TARGETS.map((item) => <option key={item.code} value={item.code} lang={item.code}>{item.label}</option>)}
+              </select>
+            </label>
+          </div>
 
           {posts.map((post) => (
             <article key={post.post_id} className="feature-panel com-post">
@@ -151,10 +172,10 @@ function Community() {
               <div>
                 <header>
                   <strong>{post.author || t('Deleted user')}</strong>
-                  <small>{post.organization ? `${post.organization} · ` : ''}{new Date(post.created_at).toLocaleString()}</small>
+                  <small>{post.organization ? `${post.organization} · ` : ''}{new Date(post.created_at).toLocaleString(dateLocale())}</small>
                   {post.committee && <em>{post.committee}</em>}
                 </header>
-                <p>{post.body}</p>
+                <TranslateText key={`${post.post_id}-${target}`} text={post.body} sourceLang={post.lang} />
               </div>
               {post.can_delete && <button type="button" onClick={() => removePost(post)} aria-label={t('Delete')}>✕</button>}
             </article>
@@ -163,6 +184,7 @@ function Community() {
         </div>
       )}
 
+      {tab === 'directory' && <MatchSuggestions url="/community/suggestions" />}
       {tab === 'directory' && (
         <>
           <div className="com-toolbar">
@@ -183,20 +205,17 @@ function Community() {
                 <div>
                   <strong>{person.name}</strong>
                   <span>{t(person.role_label)}</span>
-                  <small>{person.organization || '—'} · {person.corridor || 'GLOBAL'}</small>
+                  <small>{person.organization || '—'} · {person.corridor || t("GLOBAL")}</small>
                   <small>{person.email}</small>
                   {person.committees.length > 0 && <small>{person.committees.join(', ')}</small>}
-                  {person.video_bio_url && <a href={person.video_bio_url} target="_blank" rel="noopener noreferrer">▶ {t('Video bio')}</a>}
+                  {person.has_video
+                    ? <button type="button" className="com-video-btn" onClick={() => setWatching(person)}>▶ {t('Video bio')}</button>
+                    : person.video_bio_url && <a href={person.video_bio_url} target="_blank" rel="noopener noreferrer">▶ {t('Video bio')}</a>}
                 </div>
               </article>
             ))}
           </div>
-          <form className="feature-panel com-bio" onSubmit={saveBio}>
-            <label>{t('Your video presentation link (https)')}
-              <input type="url" value={bio} onChange={(e) => setBio(e.target.value)} placeholder="https://…" />
-            </label>
-            <button type="submit">{t('Save')}</button>
-          </form>
+          <MyVideoBio onChange={loadDirectory} onLinkSave={saveBio} />
         </>
       )}
 
@@ -214,6 +233,7 @@ function Community() {
           ))}
         </div>
       )}
+      {watching && <VideoBioPlayer userId={watching.id} name={watching.name} onClose={() => setWatching(null)} />}
     </section>
   )
 }

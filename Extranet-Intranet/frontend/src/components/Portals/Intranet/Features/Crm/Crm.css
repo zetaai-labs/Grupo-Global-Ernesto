@@ -36,9 +36,9 @@
 .crm-note textarea {
   min-width: 0;
   padding: 9px 11px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   font: inherit;
   font-size: 12px;
 }
@@ -53,7 +53,7 @@
   padding: 7px 12px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   font: inherit;
   font-size: 11px;
   cursor: pointer;
@@ -99,11 +99,11 @@
   background: var(--background);
 }
 
-.crm-col-lead { border-top-color: #94a3b8; }
-.crm-col-proposal { border-top-color: #6366f1; }
-.crm-col-due_diligence { border-top-color: #f59e0b; }
-.crm-col-active_contract { border-top-color: #16a34a; }
-.crm-col-archived { border-top-color: #cbd5e1; }
+.crm-col-lead { border-top-color: var(--tc-bd-94a3b8, #94a3b8); }
+.crm-col-proposal { border-top-color: var(--tc-bd-6366f1, #6366f1); }
+.crm-col-due_diligence { border-top-color: var(--tc-bd-f59e0b, #f59e0b); }
+.crm-col-active_contract { border-top-color: var(--tc-bd-16a34a, #16a34a); }
+.crm-col-archived { border-top-color: var(--tc-bd-cbd5e1, #cbd5e1); }
 
 .crm-column header {
   display: grid;
@@ -143,7 +143,7 @@
 }
 
 .crm-card-open > span {
-  color: #5d6072;
+  color: var(--tc-fg-5d6072, #5d6072);
   font-size: 11px;
 }
 
@@ -173,10 +173,10 @@
   font-weight: 700;
 }
 
-.crm-conf-public { background: #e0f2fe; color: #075985; }
+.crm-conf-public { background: var(--tc-bg-e0f2fe, #e0f2fe); color: var(--tc-fg-075985, #075985); }
 .crm-conf-internal { background: var(--purple-soft); color: var(--purple); }
-.crm-conf-restricted { background: #fff4e5; color: #a35b00; }
-.crm-conf-highly_confidential { background: #fff1f2; color: #be123c; }
+.crm-conf-restricted { background: var(--tc-bg-fff4e5, #fff4e5); color: var(--tc-fg-a35b00, #a35b00); }
+.crm-conf-highly_confidential { background: var(--tc-bg-fff1f2, #fff1f2); color: var(--tc-fg-be123c, #be123c); }
 
 .crm-move {
   display: flex;
@@ -190,7 +190,7 @@
   height: 24px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   cursor: pointer;
 }
 
@@ -272,7 +272,7 @@
 
 .crm-activity-stage_change { border-left-color: var(--purple); }
 .crm-activity-note { border-left-color: var(--green); }
-.crm-activity-system { border-left-color: #94a3b8; }
+.crm-activity-system { border-left-color: var(--tc-bd-94a3b8, #94a3b8); }
 
 .crm-activity-meta {
   color: var(--muted);

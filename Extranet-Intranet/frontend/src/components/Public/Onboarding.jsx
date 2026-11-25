@@ -3,8 +3,10 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
 import { useT } from '../../i18n'
 import LanguageSwitch from '../../i18n/LanguageSwitch'
+import OnboardingPeople from './OnboardingPeople'
 import './ReceivedFileUpload.css'
 import './Onboarding.css'
+import { translateServer } from '../../i18n/serverMessages'
 
 const CORRIDORS = [
   ['SPAIN_EU', 'Spain / European Union'],
@@ -27,10 +29,14 @@ const DOCUMENTS = [
   ['DIRECTOR_ID', 'Director identity document', true],
   ['OPERATING_LICENSE', 'Operating licence', false],
 ]
+const SECTORS = [
+  ['FINTECH', 'Fintech'], ['REAL_ESTATE', 'Real estate'], ['HEALTHCARE', 'Healthcare'],
+  ['CYBERSECURITY', 'Cybersecurity'], ['CROSS_BORDER_TRADE', 'Cross-border trade'],
+]
 const STAGES = ['Pre-registration', 'Legal documents', 'Automatic validation', 'AML / PEP screening', 'Approval & credentials']
 const EMPTY = {
   legal_name: '', tax_id: '', pic_code: '', country: 'ESP', region_corridor: 'SPAIN_EU', org_type: 'CLIENT',
-  contact_name: '', contact_email: '', contact_phone: '',
+  contact_name: '', contact_email: '', contact_phone: '', sectors: [],
 }
 
 /** Public KYC/KYB onboarding (Schema Document §2.4): steps 1–3 for applicants, no account required. */
@@ -142,8 +148,8 @@ function Onboarding() {
           })}
         </ol>
 
-        {error && <div className="cloud-notice" role="alert">{error}</div>}
-        {notice && <div className="public-upload-success" role="status">{notice}</div>}
+        {error && <div className="cloud-notice" role="alert">{translateServer(error)}</div>}
+        {notice && <div className="public-upload-success" role="status">{translateServer(notice)}</div>}
 
         {!token && (
           <form onSubmit={register} className="onboarding-form">
@@ -172,6 +178,19 @@ function Onboarding() {
                 </select>
               </label>
             </div>
+            <fieldset className="onboarding-sectors">
+              <legend>{t('Sectors you work in (optional)')}</legend>
+              {SECTORS.map(([code, label]) => (
+                <label key={code}>
+                  <input
+                    type="checkbox"
+                    checked={form.sectors.includes(code)}
+                    onChange={(event) => setForm((current) => ({ ...current, sectors: event.target.checked ? [...current.sectors, code] : current.sectors.filter((item) => item !== code) }))}
+                  />
+                  {t(label)}
+                </label>
+              ))}
+            </fieldset>
             <h2>{t('Primary contact')}</h2>
             <div className="onboarding-grid">
               <label>{t('Full name')}
@@ -215,6 +234,8 @@ function Onboarding() {
                 </li>
               ))}
             </ul>
+
+            <OnboardingPeople token={token} people={status.people || []} canEdit={canEdit} onChange={loadStatus} onError={setError} />
 
             <h2>{t('3. Submit for verification')}</h2>
             {status.validation && (

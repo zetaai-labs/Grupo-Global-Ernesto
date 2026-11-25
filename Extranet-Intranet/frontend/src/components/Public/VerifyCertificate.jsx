@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
-import { useT } from '../../i18n'
+import { useT, dateLocale } from '../../i18n'
 import LanguageSwitch from '../../i18n/LanguageSwitch'
 import './ReceivedFileUpload.css'
 import './Onboarding.css'
+import { translateServer } from '../../i18n/serverMessages'
 
 /** Public page: checks a certificate's SHA-256 code against the platform's records. */
 function VerifyCertificate() {
@@ -44,7 +45,7 @@ function VerifyCertificate() {
         <h1>{t('Verify a certificate')}</h1>
         <p>{t('Check that a Global Group training certificate is genuine.')}</p>
 
-        {error && <div className="cloud-notice" role="alert">{error}</div>}
+        {error && <div className="cloud-notice" role="alert">{translateServer(error)}</div>}
 
         <form onSubmit={(event) => { event.preventDefault(); verify(code) }}>
           <label>{t('Certificate code (SHA-256)')}
@@ -59,7 +60,7 @@ function VerifyCertificate() {
             <span>{t('Holder')}: {result.holder}</span>
             <span>{t('Course')}: {result.course}</span>
             <span>{t('Score')}: {result.score}%</span>
-            <span>{t('Completed')}: {new Date(result.completed_at).toLocaleDateString()}</span>
+            <span>{t('Completed')}: {new Date(result.completed_at).toLocaleDateString(dateLocale())}</span>
           </div>
         )}
         {result && !result.valid && (

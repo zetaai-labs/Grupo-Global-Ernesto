@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './MetaLinks.css'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 function MetaLinks() {
   const t = useT()
@@ -79,52 +80,52 @@ function MetaLinks() {
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Active links</span><span className="stat-icon">↗</span></div>
+          <div className="stat-top"><span>{t("Active links")}</span><span className="stat-icon">↗</span></div>
           <strong>{links.filter((link) => !link.expired).length}</strong>
-          <small>Currently available</small>
+          <small>{t("Currently available")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Expired links</span><span className="stat-icon">◷</span></div>
+          <div className="stat-top"><span>{t("Expired links")}</span><span className="stat-icon">◷</span></div>
           <strong>{links.filter((link) => link.expired).length}</strong>
-          <small>No longer active</small>
+          <small>{t("No longer active")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Total downloads</span><span className="stat-icon">⇩</span></div>
+          <div className="stat-top"><span>{t("Total downloads")}</span><span className="stat-icon">⇩</span></div>
           <strong>{links.reduce((sum, link) => sum + link.downloads_count, 0)}</strong>
-          <small>Across all links</small>
+          <small>{t("Across all links")}</small>
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>Create a MetaLink</h3>
-            <p>Share a file without giving account access.</p>
+            <h3>{t("Create a MetaLink")}</h3>
+            <p>{t("Share a file without giving account access.")}</p>
           </div>
         </div>
 
         <form className="metalink-form" onSubmit={create}>
-          <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder="Link label" required />
+          <input value={label} onChange={(event) => setLabel(event.target.value)} placeholder={t("Link label")} required />
           <select value={fileId} onChange={(event) => setFileId(event.target.value)} required>
-            {!files.length && <option value="">No files available</option>}
+            {!files.length && <option value="">{t("No files available")}</option>}
             {files.map((file) => (
               <option key={file.id} value={file.id}>{file.name}</option>
             ))}
           </select>
-          <input type="number" min="1" value={days} onChange={(event) => setDays(event.target.value)} aria-label="Days until expiry" />
-          <input type="number" min="1" value={maxDownloads} onChange={(event) => setMaxDownloads(event.target.value)} aria-label="Maximum downloads" />
-          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Optional password" aria-label="Optional link password" />
-          <button type="submit" className="primary-action">＋ Create MetaLink</button>
+          <input type="number" min="1" value={days} onChange={(event) => setDays(event.target.value)} aria-label={t("Days until expiry")} />
+          <input type="number" min="1" value={maxDownloads} onChange={(event) => setMaxDownloads(event.target.value)} aria-label={t("Maximum downloads")} />
+          <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={t("Optional password")} aria-label={t("Optional link password")} />
+          <button type="submit" className="primary-action">{t("＋ Create MetaLink")}</button>
         </form>
       </div>
 
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>Generated links</h3>
-            <p>Copy, monitor or revoke secure links.</p>
+            <h3>{t("Generated links")}</h3>
+            <p>{t("Copy, monitor or revoke secure links.")}</p>
           </div>
         </div>
 
@@ -135,12 +136,12 @@ function MetaLinks() {
                 <span className="list-item-icon">↗</span>
                 <span className="list-item-copy">
                   <strong>{link.label}</strong>
-                  <span>{link.file_name} · {link.downloads_count}/{link.max_downloads} downloads · expires {new Date(link.expires_at).toLocaleDateString()}{link.has_password ? ' · password protected' : ''}</span>
+                  <span>{link.file_name} · {link.downloads_count}/{link.max_downloads}{" "}{t("downloads · expires")}{" "}{new Date(link.expires_at).toLocaleDateString(dateLocale())}{link.has_password ? t(" · password protected") : ''}</span>
                 </span>
                 <span className={`item-status ${link.expired ? '' : 'status-active'}`}>
-                  {link.expired ? 'Expired' : 'Active'}
+                  {link.expired ? t("Expired") : t("Active")}
                 </span>
-                <button type="button" onClick={() => copy(link)}>Copy link</button>
+                <button type="button" onClick={() => copy(link)}>{t("Copy link")}</button>
                 <button type="button" className="cloud-remove" onClick={() => remove(link)}>✕</button>
               </div>
             ))}
@@ -148,8 +149,8 @@ function MetaLinks() {
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">↗</div>
-            <h3>No MetaLinks yet</h3>
-            <p>Your generated MetaLinks will appear here.</p>
+            <h3>{t("No MetaLinks yet")}</h3>
+            <p>{t("Your generated MetaLinks will appear here.")}</p>
           </div>
         )}
       </div>

@@ -71,13 +71,13 @@
   height: 20px;
   border: 2px solid var(--border);
   border-radius: 50%;
-  color: #fff;
+  color: var(--tc-fg-ffffff, #ffffff);
   font-size: 11px;
 }
 
 .pu-done .pu-dot { border-color: var(--green); background: var(--green); }
-.pu-in_progress .pu-dot { border-color: #f59e0b; }
-.pu-blocked .pu-dot { border-color: #e11d48; }
+.pu-in_progress .pu-dot { border-color: var(--tc-bd-f59e0b, #f59e0b); }
+.pu-blocked .pu-dot { border-color: var(--tc-bd-e11d48, #e11d48); }
 
 .pu-copy {
   display: grid;

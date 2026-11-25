@@ -8,8 +8,8 @@
   grid-template-columns: 1.2fr 1.4fr 1fr 1.3fr;
   gap: 12px;
   padding: 11px 12px;
-  border-bottom: 1px solid #e2e8f0;
-  color: #475569;
+  border-bottom: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
+  color: var(--tc-fg-475569, #475569);
 }
 
 .audit-row:last-child {
@@ -17,15 +17,15 @@
 }
 
 .audit-head {
-  background: #f8fafc;
-  color: #64748b;
+  background: var(--tc-bg-f8fafc, #f8fafc);
+  color: var(--tc-fg-64748b, #64748b);
   font-weight: 700;
   font-size: 11px;
   letter-spacing: 0.04em;
 }
 
 .audit-row strong {
-  color: #4338ca;
+  color: var(--tc-fg-4338ca, #4338ca);
 }
 
 @media (max-width: 760px) {

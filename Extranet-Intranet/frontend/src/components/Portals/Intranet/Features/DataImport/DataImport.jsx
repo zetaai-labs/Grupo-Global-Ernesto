@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './DataImport.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const REVIEW_FILTERS = ['', 'VALID', 'WARNING', 'INVALID', 'DUPLICATE']
 const message = (error, fallback) => error.response?.data?.message || fallback
@@ -144,7 +145,7 @@ function DataImport() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice" role="status">{notice}</div>}
+      {notice && <div className="cloud-notice" role="status">{translateServer(notice)}</div>}
 
       {canImport && (
         <div className="feature-panel">
@@ -167,7 +168,7 @@ function DataImport() {
               <h4>{active.file_name}</h4>
               <div className="import-counts">
                 {[['Rows', active.total_rows], ['Valid', active.valid_rows], ['Warnings', active.warning_rows], ['Invalid', active.invalid_rows], ['Duplicates', active.duplicate_rows]].map(([label, value]) => (
-                  <div key={label}><span>{t(label)}</span><strong>{Number(value).toLocaleString()}</strong></div>
+                  <div key={label}><span>{t(label)}</span><strong>{Number(value).toLocaleString(dateLocale())}</strong></div>
                 ))}
               </div>
               {active.unmapped_columns?.length > 0 && (
@@ -183,7 +184,7 @@ function DataImport() {
                 <span className="import-spacer" />
                 <button type="button" onClick={() => finish('cancel')}>{t('Cancel import')}</button>
                 <button type="button" className="primary-action" disabled={!(active.valid_rows + active.warning_rows)} onClick={() => finish('confirm')}>
-                  {t('Import')} {(active.valid_rows + active.warning_rows).toLocaleString()} {t('rows')}
+                  {t('Import')} {(active.valid_rows + active.warning_rows).toLocaleString(dateLocale())} {t('rows')}
                 </button>
               </div>
               <div className="import-table-wrap">
@@ -210,7 +211,7 @@ function DataImport() {
               {batches.slice(0, 8).map((batch) => (
                 <button type="button" key={batch.batch_id} disabled={batch.status !== 'READY'} onClick={() => { setActive(batch); setFilter(''); setRowPage(1) }}>
                   <span>{batch.file_name}</span>
-                  <em>{t(batch.status)} · {Number(batch.status === 'IMPORTED' ? batch.imported_rows : batch.total_rows).toLocaleString()} {t('rows')}</em>
+                  <em>{t(batch.status)} · {Number(batch.status === 'IMPORTED' ? batch.imported_rows : batch.total_rows).toLocaleString(dateLocale())} {t('rows')}</em>
                 </button>
               ))}
             </div>
@@ -222,7 +223,7 @@ function DataImport() {
         <div className="panel-heading">
           <div>
             <h3>{t('Directory')}</h3>
-            <p>{directory.total.toLocaleString()} {t('records')}</p>
+            <p>{directory.total.toLocaleString(dateLocale())} {t('records')}</p>
           </div>
         </div>
         <form className="import-search" onSubmit={applySearch}>

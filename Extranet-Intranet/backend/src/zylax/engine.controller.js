@@ -373,7 +373,8 @@ export async function lookups(req, res) {
   return res.json({ data: { users: users.rows, orgs: orgs.rows, products: products.rows } })
 }
 
-export async function listRecords(req, res) {
+/** Records the user may see in one module entity, with the same filters as the list. limit 0 = only the SQL. */
+export async function scopedRecords(req, limit = 500) {
   const { module, def } = resolve(req)
   const params = [module.key, def.key]
   const filters = ['r.module = $1', 'r.entity = $2', visibility(req.user, def, params)]
@@ -385,7 +386,24 @@ export async function listRecords(req, res) {
     params.push(`%${String(req.query.q).slice(0, 100)}%`)
     filters.push(`(r.title ILIKE $${params.length} OR r.ref_no ILIKE $${params.length})`)
   }
-  const { rows } = await query(`SELECT r.* FROM zx_records r WHERE ${filters.join(' AND ')} ORDER BY r.created_at DESC LIMIT 500`, params)
+  const where = filters.join(' AND ')
+  if (!limit) return { module, def, where, params }
+  const { rows } = await query(`SELECT r.* FROM zx_records r WHERE ${where} ORDER BY r.created_at DESC LIMIT ${Number(limit)}`, params)
+  return { module, def, rows, where, params }
+}
+
+export async function presentRows(user, def, rows) {
+  const labels = await labelsFor(def, rows)
+  return rows.map((row) => present(user, def, row, labels))
+}
+
+/** Fields the user may see as columns (no confidential ones for people who cannot read them). */
+export function visibleFields(user, def) {
+  return def.fields.filter(publicField(user, def)).filter((field) => !field.secret || canManage(user, def))
+}
+
+export async function listRecords(req, res) {
+  const { def, rows } = await scopedRecords(req, 500)
   const labels = await labelsFor(def, rows)
   const data = rows.map((row) => present(req.user, def, row, labels))
   const counts = {}
@@ -410,7 +428,8 @@ async function loadRow(db, req, def, moduleKey, forUpdate = false) {
   return rows[0]
 }
 
-export async function getRecord(req, res) {
+/** One record exactly as this user may see it (fields, labels, timeline, files). */
+export async function visibleRecord(req) {
   const { module, def } = resolve(req)
   const row = await loadRow({ query }, req, def, module.key)
   const external = isExternal(req.user.role)
@@ -429,7 +448,12 @@ export async function getRecord(req, res) {
     ),
   ])
   const eventsOut = external ? events.rows.map(({ author: _author, ...event }) => event) : events.rows
-  return res.json({ data: { ...present(req.user, def, row, labels), events: eventsOut, files: files.rows } })
+  return { module, def, record: { ...present(req.user, def, row, labels), events: eventsOut, files: files.rows } }
+}
+
+export async function getRecord(req, res) {
+  const { record } = await visibleRecord(req)
+  return res.json({ data: record })
 }
 
 export async function createRecord(req, res) {

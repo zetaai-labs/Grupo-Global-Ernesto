@@ -3,7 +3,7 @@
   align-items: center;
   gap: 12px;
   padding: 12px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
 }
 
 .shared-link-row:last-child {
@@ -12,10 +12,10 @@
 
 .shared-link-row button {
   padding: 7px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
-  background: #fff;
-  color: #4338ca;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-4338ca, #4338ca);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;

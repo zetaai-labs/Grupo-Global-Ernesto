@@ -1,0 +1,23 @@
+// Russian dictionary. The English text is the key; missing keys fall back to English.
+import ru1 from './ru.1'
+import ru2 from './ru.2'
+import ru3 from './ru.3'
+import ru4 from './ru.4'
+import ru5 from './ru.5'
+import ru6 from './ru.6'
+import { landingRu } from './landing'
+import { coursePackagesRu } from './courses.packages'
+import { orgPeopleRu } from './org.people'
+import { zylaxDepthRu } from './zylax.depth'
+import { eventsHybridRu } from './events.hybrid'
+import { aiRu } from './ai'
+import { pwaRu } from './pwa'
+import { aiEngineRu } from './ai.engine'
+import { clockRu } from './clock'
+import { videoRu } from './video'
+import { monitoringRu } from './monitoring'
+import { attendanceRu } from './attendance'
+import { translateRu } from './translate'
+import { workspaceRu } from './workspace'
+
+export default { ...ru1, ...ru2, ...ru3, ...ru4, ...ru5, ...ru6, ...landingRu, ...coursePackagesRu, ...orgPeopleRu, ...zylaxDepthRu, ...eventsHybridRu, ...aiRu, ...pwaRu, ...aiEngineRu, ...clockRu, ...videoRu, ...monitoringRu, ...attendanceRu, ...translateRu, ...workspaceRu }

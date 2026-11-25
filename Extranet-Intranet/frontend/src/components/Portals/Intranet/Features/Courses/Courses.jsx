@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
+import CoursePlayer from './CoursePlayer'
 import api from '../../../../../api/client'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './Courses.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const TYPE_LABELS = { EVENT: 'Event', COMPLIANCE_COURSE: 'Compliance course', TECHNICAL_WORKSHOP: 'Technical workshop' }
 const TIER_LABELS = { ALL_EMPLOYEES: 'All employees', DELEGATES_ONLY: 'Delegates only', EXECUTIVES: 'Executives' }
 const STATUS_LABELS = { ENROLLED: 'Enrolled', FAILED: 'Not passed yet', COMPLETED: 'Completed' }
+const PACKAGE_LABELS = { SCORM_12: 'SCORM 1.2', SCORM_2004: 'SCORM 2004', XAPI: 'xAPI (Tin Can)' }
+const PROGRESS_LABELS = { 'not attempted': 'Not started', incomplete: 'In progress', unknown: 'In progress', browsed: 'Viewed', completed: 'Completed', passed: 'Passed', failed: 'Not passed yet' }
+const minutes = (seconds) => Math.max(0, Math.round((seconds || 0) / 60))
 const EMPTY_QUESTION = { question: '', options: ['', ''], answer: 0 }
 const EMPTY = { module_type: 'COMPLIANCE_COURSE', title: '', description: '', access_tier: 'ALL_EMPLOYEES', pass_mark: 70, starts_at: '', lessonTitle: '', lessonBody: '', quiz: [] }
 
@@ -20,6 +25,8 @@ function Courses() {
   const [showCreate, setShowCreate] = useState(false)
   const [form, setForm] = useState(EMPTY)
   const [notice, setNotice] = useState('')
+  const [playing, setPlaying] = useState(false)
+  const [uploadPct, setUploadPct] = useState(null)
 
   const load = useCallback(async () => {
     try {
@@ -66,6 +73,44 @@ function Courses() {
       setNotice(error.response?.data?.message || 'Could not submit your answers.')
     }
     return undefined
+  }
+
+  const uploadPackage = async (file) => {
+    if (!file) return
+    const data = new FormData()
+    data.append('file', file)
+    setUploadPct(0)
+    try {
+      const response = await api.post(`/courses/${course.item_id}/package`, data, {
+        timeout: 15 * 60 * 1000,
+        onUploadProgress: (event) => event.total && setUploadPct(Math.round((event.loaded / event.total) * 100)),
+      })
+      setNotice(response.data?.message)
+      await open(course.item_id)
+      await load()
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'Could not upload the course package.')
+    } finally {
+      setUploadPct(null)
+    }
+  }
+
+  const removePackage = async () => {
+    if (!window.confirm(t('Remove this package? Learner progress inside it is deleted; certificates already issued stay valid.'))) return
+    try {
+      const response = await api.delete(`/courses/${course.item_id}/package`)
+      setNotice(response.data?.message)
+      await open(course.item_id)
+      await load()
+    } catch (error) {
+      setNotice(error.response?.data?.message || 'Could not remove the course package.')
+    }
+  }
+
+  const closePlayer = async () => {
+    setPlaying(false)
+    await open(course.item_id)
+    await load()
   }
 
   const updateQuestion = (index, patch) => setForm((current) => ({
@@ -115,7 +160,7 @@ function Courses() {
         <div className="stat-card"><div className="stat-top"><span>{t('Completed')}</span><span className="stat-icon">✓</span></div><strong>{completed}</strong><small>{t('Certificates earned')}</small></div>
       </div>
 
-      {notice && <div className="cloud-notice crs-notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
+      {notice && <div className="cloud-notice crs-notice" role="status"><span>{translateServer(notice)}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
 
       {showCreate && (
         <form className="feature-panel crs-create" onSubmit={create}>
@@ -163,7 +208,7 @@ function Courses() {
             <button type="button" key={item.item_id} className={`crs-card ${course?.item_id === item.item_id ? 'selected' : ''}`} onClick={() => open(item.item_id)}>
               <span className={`crs-type crs-type-${item.module_type.toLowerCase()}`}>{t(TYPE_LABELS[item.module_type])}</span>
               <strong>{item.title}</strong>
-              <small>{t(TIER_LABELS[item.access_tier])}{item.starts_at ? ` · ${new Date(item.starts_at).toLocaleDateString()}` : ''}{item.questions ? ` · ${item.questions} ${t('questions')}` : ''}</small>
+              <small>{t(TIER_LABELS[item.access_tier])}{item.starts_at ? ` · ${new Date(item.starts_at).toLocaleDateString(dateLocale())}` : ''}{item.questions ? ` · ${item.questions} ${t('questions')}` : ''}</small>
               {item.status && <span className={`crs-status crs-status-${item.status.toLowerCase()}`}>{t(STATUS_LABELS[item.status])}{item.best_score !== null ? ` · ${item.best_score}%` : ''}</span>}
             </button>
           ))}
@@ -175,6 +220,39 @@ function Courses() {
             <header><h2>{course.title}</h2><button type="button" onClick={() => setCourse(null)} aria-label={t('Close')}>✕</button></header>
             {course.description && <p>{course.description}</p>}
             {!course.enrollment && <button type="button" className="primary-action crs-enrol" onClick={enroll}>{course.module_type === 'EVENT' ? t('Register') : t('Enrol')}</button>}
+
+            {course.package && (
+              <section className="crs-package">
+                <div>
+                  <span className="crs-type">{t('Interactive course')} · {PACKAGE_LABELS[course.package.standard]}</span>
+                  <strong>{course.package.title || course.title}</strong>
+                  <small>
+                    {t(PROGRESS_LABELS[course.package.lesson_status] || 'Not started')}
+                    {course.package.score !== null && course.package.score !== undefined ? ` · ${course.package.score}%` : ''}
+                    {course.package.total_seconds ? ` · ${t('{count} min spent', { count: minutes(course.package.total_seconds) })}` : ''}
+                  </small>
+                </div>
+                <button type="button" className="primary-action" onClick={() => setPlaying(true)}>
+                  {course.package.launches ? t('Resume course') : t('Start course')}
+                </button>
+              </section>
+            )}
+
+            {course.can_author && (
+              <section className="crs-package-admin">
+                <strong>{t('Course package')}</strong>
+                <small>
+                  {course.package
+                    ? `${PACKAGE_LABELS[course.package.standard]} · ${course.package.original_name || ''} · ${course.package.file_count} ${t('files')}`
+                    : t('SCORM 1.2, SCORM 2004 or xAPI .zip, up to 300 MB.')}
+                </small>
+                <label className="crs-upload">
+                  <input type="file" accept=".zip,application/zip" disabled={uploadPct !== null} onChange={(e) => { uploadPackage(e.target.files?.[0]); e.target.value = '' }} />
+                  <span>{uploadPct !== null ? t('Uploading package… {percent}%', { percent: uploadPct }) : course.package ? t('Replace package') : t('Upload package')}</span>
+                </label>
+                {course.package && <button type="button" onClick={removePackage}>{t('Remove package')}</button>}
+              </section>
+            )}
 
             {course.lessons.map((lesson, index) => (
               <section key={index} className="crs-lesson"><h3>{lesson.title}</h3><p>{lesson.body}</p></section>
@@ -209,6 +287,7 @@ function Courses() {
           </article>
         )}
       </div>
+      {playing && course?.package && <CoursePlayer course={course} onClose={closePlayer} />}
     </section>
   )
 }

@@ -9,7 +9,7 @@
 .linked-form select,
 .linked-form input {
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 10px;
   font: inherit;
   font-size: 12px;
@@ -17,7 +17,7 @@
 
 .linked-row {
   padding: 12px 10px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
 }
 
 .linked-row:last-child {
@@ -26,10 +26,10 @@
 
 .linked-row button {
   padding: 7px 12px;
-  border: 1px solid #fecdd3;
+  border: 1px solid var(--tc-bd-fecdd3, #fecdd3);
   border-radius: 8px;
-  background: #fff;
-  color: #be123c;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-be123c, #be123c);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;

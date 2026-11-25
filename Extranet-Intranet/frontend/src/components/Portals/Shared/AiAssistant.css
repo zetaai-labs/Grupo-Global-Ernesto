@@ -1,0 +1,86 @@
+.ai-box {
+  display: grid;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.ai-button {
+  justify-self: start;
+  padding: 7px 12px;
+  border: 1px solid var(--tc-bd-c7d2fe, #c7d2fe);
+  border-radius: 8px;
+  background: var(--tc-bg-eef2ff, #eef2ff);
+  color: var(--tc-fg-3730a3, #3730a3);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ai-button:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.ai-error {
+  margin: 0;
+  color: var(--tc-fg-b91c1c, #b91c1c);
+  font-size: 12px;
+}
+
+.ai-result {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--tc-bd-c7d2fe, #c7d2fe);
+  border-radius: 10px;
+  background: var(--tc-bg-f8fafc, #f8fafc);
+  font-size: 13px;
+}
+
+.ai-result p,
+.ai-result ul {
+  margin: 0;
+}
+
+.ai-result ul {
+  padding-inline-start: 18px;
+}
+
+.ai-result small {
+  color: var(--tc-fg-64748b, #64748b);
+  font-size: 11px;
+}
+
+.ai-email pre {
+  margin: 4px 0;
+  padding: 10px;
+  border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
+  border-radius: 8px;
+  background: var(--tc-bg-ffffff, #fff);
+  font: inherit;
+  white-space: pre-wrap;
+}
+
+.ai-email-subject {
+  font-weight: 600;
+}
+
+.ai-email button {
+  padding: 5px 10px;
+  border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
+  border-radius: 6px;
+  background: var(--tc-bg-ffffff, #fff);
+  color: var(--tc-fg-334155, #334155);
+  cursor: pointer;
+}
+
+.ai-search {
+  display: flex;
+  flex: 1 1 260px;
+  gap: 6px;
+}
+
+.ai-search input {
+  flex: 1;
+  min-width: 0;
+}

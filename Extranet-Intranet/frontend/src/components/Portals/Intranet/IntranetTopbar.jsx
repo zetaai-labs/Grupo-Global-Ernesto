@@ -1,13 +1,18 @@
 
-import { useLocation, useNavigate } from 'react-router-dom'
-import { getUser, clearSession } from '../../../api/auth'
-import { closeSharedSocket } from '../../../api/socket'
+import { useLocation } from 'react-router-dom'
+import { PORTAL_ROLES, getUser } from '../../../api/auth'
 import NotificationBell from '../Shared/NotificationBell'
 import LanguageSwitch from '../../../i18n/LanguageSwitch'
+import ThemeSwitch from '../../../theme/ThemeSwitch'
+import InstallAppButton from '../../../pwa/InstallAppButton'
+import ClockButton from '../Shared/clock/ClockButton'
+import ProfileMenu from '../Shared/profile/ProfileMenu'
+import QuickSearch from '../Shared/workspace/QuickSearch'
 import { useT } from '../../../i18n'
 
 const pageNames = {
   overview: 'Overview',
+  workspace: 'All features',
   'cloud-folders': 'Cloud Folders',
   'linked-folder': 'Linked Folder',
   metalinks: 'MetaLinks',
@@ -33,6 +38,8 @@ const pageNames = {
   'video-conferencing': 'Video Conferencing',
   'audit-log': 'Audit Log',
   integrations: 'Integrations',
+  billing: 'Billing',
+  accounts: 'Company accounts',
   security: 'Security',
   privacy: 'Privacy (GDPR)'
 }
@@ -40,24 +47,10 @@ const pageNames = {
 function IntranetTopbar() {
   const t = useT()
   const location = useLocation()
-  const navigate = useNavigate()
 
   const currentPage = location.pathname.split('/').filter(Boolean).pop()
   const title = pageNames[currentPage] || 'Overview'
   const user = getUser()
-  const initials = String(user?.name || '?')
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0].toUpperCase())
-    .join('')
-
-  const signOut = () => {
-    clearSession()
-    closeSharedSocket()
-    navigate('/login')
-  }
-
   return (
     <header className="portal-topbar">
       <div className="topbar-breadcrumb">
@@ -67,32 +60,17 @@ function IntranetTopbar() {
       </div>
 
       <div className="topbar-actions">
-        <div className="topbar-search">
-          <span>⌕</span>
-          <input type="search" placeholder={t('Search workspace...')} />
-          <kbd>⌘ K</kbd>
-        </div>
+        <QuickSearch portal="intranet" placeholder={t('Search workspace...')} />
 
+        {PORTAL_ROLES.intranet.includes(user?.role) && <ClockButton />}
+        <InstallAppButton />
+        <ThemeSwitch />
         <LanguageSwitch />
         <NotificationBell />
 
         <div className="topbar-divider" />
 
-        <button
-          className="topbar-profile"
-          onClick={() => navigate('/intranet/user-management')}
-        >
-          <div className="profile-avatar">{initials}</div>
-          <div className="profile-copy">
-            <strong>{user?.name || t('Guest')}</strong>
-            <span>{user?.role ? t(user.role) : t('No role assigned')}</span>
-          </div>
-          <span className="profile-chevron">⌄</span>
-        </button>
-
-        <button className="topbar-icon-btn" onClick={signOut} title={t('Sign out')}>
-          ⎋
-        </button>
+        <ProfileMenu portal="intranet" />
       </div>
     </header>
   )

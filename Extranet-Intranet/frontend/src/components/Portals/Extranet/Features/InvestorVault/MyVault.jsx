@@ -3,6 +3,7 @@ import api from '../../../../../api/client'
 import { downloadFromApi } from '../../../../../utils/download'
 import { useT } from '../../../../../i18n'
 import '../../../Intranet/Features/InvestorVault/InvestorVault.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const SECTOR_LABELS = { FINTECH: 'Fintech', REAL_ESTATE: 'Real estate', HEALTHCARE: 'Healthcare', CYBERSECURITY: 'Cybersecurity', CROSS_BORDER_TRADE: 'Cross-border trade' }
 
@@ -48,7 +49,7 @@ function MyVault() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice" role="status">{notice}</div>}
+      {notice && <div className="cloud-notice" role="status">{translateServer(notice)}</div>}
 
       {!me && <div className="feature-panel feature-empty-state"><div className="empty-icon">🔒</div><h3>{t('Your vault is being prepared')}</h3><p>{t('Grupo Global will set up your investor record after verification.')}</p></div>}
 

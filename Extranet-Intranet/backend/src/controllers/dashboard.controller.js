@@ -59,7 +59,7 @@ async function presidentialConsole() {
     console: 'PRESIDENTIAL',
     title: 'Presidential Master Console',
     cards: [
-      { label: 'Verified organisations', value: orgs.verified, note: `${orgs.pending} pending KYC`, link: '/intranet/organizations' },
+      { label: 'Verified organisations', value: orgs.verified, note: '{count} pending KYC', noteValues: { count: orgs.pending }, link: '/intranet/organizations' },
       { label: 'Open pipeline', value: crm.open_value, format: 'eur', note: 'Lead → due diligence', link: '/intranet/crm' },
       { label: 'Active contracts', value: crm.active_value, format: 'eur', note: 'CRM value', link: '/intranet/crm' },
       { label: 'Active projects', value: projects.active, note: 'Across corridors', link: '/intranet/projects' },
@@ -126,7 +126,7 @@ async function hrConsole() {
     cards: [
       { label: 'Staff', value: people.total, note: 'Active employees', link: '/intranet/user-management' },
       { label: 'Code of Ethics signed', value: `${compliant}/${signed.rowCount}`, note: 'All accounts', link: '/intranet/ethics', alert: compliant < signed.rowCount },
-      { label: 'Active sanctions', value: sanctions.active, note: `${sanctions.suspended} suspended`, link: '/intranet/ethics' },
+      { label: 'Active sanctions', value: sanctions.active, note: '{count} suspended', noteValues: { count: sanctions.suspended }, link: '/intranet/ethics' },
       { label: 'Course completions', value: courses.total, note: 'Certificates issued', link: '/intranet/courses' },
       { label: 'Pending KYC', value: kyc.total, note: 'Awaiting Compliance', link: '/intranet/organizations' },
     ],
@@ -148,10 +148,10 @@ async function financeConsole() {
     console: 'FINANCE',
     title: 'Finance Control Panel',
     cards: [
-      { label: 'Programme budget', value: projects.budget, format: 'eur', note: `${projects.total} projects`, link: '/intranet/projects' },
+      { label: 'Programme budget', value: projects.budget, format: 'eur', note: '{count} projects', noteValues: { count: projects.total }, link: '/intranet/projects' },
       { label: 'Budget in execution', value: phases.execution, format: 'eur', note: 'Active delivery', link: '/intranet/projects' },
       { label: 'Budget planned', value: phases.planned, format: 'eur', note: 'Initiation and planning', link: '/intranet/projects' },
-      { label: 'Active contracts', value: crm.active_value, format: 'eur', note: `${crm.active_count} contracts`, link: '/intranet/crm' },
+      { label: 'Active contracts', value: crm.active_value, format: 'eur', note: '{count} contracts', noteValues: { count: crm.active_count }, link: '/intranet/crm' },
       { label: 'Open pipeline', value: crm.open_value, format: 'eur', note: 'Lead → due diligence', link: '/intranet/crm' },
     ],
   }

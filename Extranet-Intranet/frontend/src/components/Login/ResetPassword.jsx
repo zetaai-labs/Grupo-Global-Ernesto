@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
 import './Login.css'
+import { translateServer } from '../../i18n/serverMessages'
 
 function ResetPassword() {
   const t = useT()
@@ -63,8 +64,8 @@ function ResetPassword() {
               : t('Enter your email and we will send you a reset link.')}
           </p>
 
-          {error && <div className="login-error">{error}</div>}
-          {notice && <div className="login-notice">{notice}</div>}
+          {error && <div className="login-error">{translateServer(error)}</div>}
+          {notice && <div className="login-notice">{translateServer(notice)}</div>}
 
           {!notice && !token && (
             <form onSubmit={requestLink} className="login-form">

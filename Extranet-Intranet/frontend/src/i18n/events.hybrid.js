@@ -1,0 +1,50 @@
+// Hybrid events, B2B meetings and chat encryption. English key -> [es, ar, ru].
+const TEXTS = {
+  'Hybrid event': ['Evento híbrido', 'فعالية هجينة', 'Гибридное мероприятие'],
+  'Online event': ['Evento en línea', 'فعالية عبر الإنترنت', 'Онлайн-мероприятие'],
+  'In-person event': ['Evento presencial', 'فعالية حضورية', 'Очное мероприятие'],
+  'Join online': ['Unirse en línea', 'الانضمام عبر الإنترنت', 'Подключиться онлайн'],
+  'B2B meetings': ['Reuniones B2B', 'اجتماعات B2B', 'B2B-встречи'],
+  'Register for this event to book B2B meetings with other participants.': ['Inscríbete en este evento para reservar reuniones B2B con otros participantes.', 'سجّل في هذه الفعالية لحجز اجتماعات B2B مع المشاركين الآخرين.', 'Зарегистрируйтесь, чтобы назначать B2B-встречи с другими участниками.'],
+  'Choose a participant…': ['Elige un participante…', 'اختر مشاركًا…', 'Выберите участника…'],
+  Participant: ['Participante', 'المشارك', 'Участник'],
+  Format: ['Formato', 'الصيغة', 'Формат'],
+  'In person': ['Presencial', 'حضوريًا', 'Очно'],
+  Online: ['En línea', 'عبر الإنترنت', 'Онлайн'],
+  'Topic (optional)': ['Tema (opcional)', 'الموضوع (اختياري)', 'Тема (необязательно)'],
+  'Request meeting': ['Solicitar reunión', 'طلب اجتماع', 'Запросить встречу'],
+  'No other confirmed participants yet.': ['Aún no hay otros participantes confirmados.', 'لا يوجد مشاركون مؤكدون آخرون بعد.', 'Других подтверждённых участников пока нет.'],
+  Table: ['Mesa', 'الطاولة', 'Стол'],
+  'Video presentations': ['Videopresentaciones', 'العروض بالفيديو', 'Видеопрезентации'],
+  Requested: ['Solicitada', 'مطلوب', 'Запрошена'],
+  Accepted: ['Aceptada', 'مقبول', 'Принята'],
+  Declined: ['Rechazada', 'مرفوض', 'Отклонена'],
+  Cancelled: ['Cancelada', 'ملغى', 'Отменена'],
+  Attending: ['Asistencia', 'طريقة الحضور', 'Участие'],
+  Hybrid: ['Híbrido', 'هجين', 'Гибридно'],
+  // Server messages.
+  'Meeting request sent.': ['Solicitud de reunión enviada.', 'تم إرسال طلب الاجتماع.', 'Запрос встречи отправлен.'],
+  'Meeting accepted.': ['Reunión aceptada.', 'تم قبول الاجتماع.', 'Встреча принята.'],
+  'Meeting declined.': ['Reunión rechazada.', 'تم رفض الاجتماع.', 'Встреча отклонена.'],
+  'Meeting cancelled.': ['Reunión cancelada.', 'تم إلغاء الاجتماع.', 'Встреча отменена.'],
+  'Meeting not found.': ['Reunión no encontrada.', 'الاجتماع غير موجود.', 'Встреча не найдена.'],
+  'Event not found.': ['Evento no encontrado.', 'الفعالية غير موجودة.', 'Мероприятие не найдено.'],
+  'This event has no online room.': ['Este evento no tiene sala en línea.', 'لا تحتوي هذه الفعالية على غرفة عبر الإنترنت.', 'У этого мероприятия нет онлайн-комнаты.'],
+  'This event is over.': ['Este evento ha terminado.', 'انتهت هذه الفعالية.', 'Мероприятие завершено.'],
+  'Register for this event to join it online.': ['Inscríbete en este evento para unirte en línea.', 'سجّل في هذه الفعالية للانضمام عبر الإنترنت.', 'Зарегистрируйтесь, чтобы подключиться онлайн.'],
+  'Only confirmed participants can use B2B meetings.': ['Solo los participantes confirmados pueden usar las reuniones B2B.', 'لا يمكن استخدام اجتماعات B2B إلا للمشاركين المؤكدين.', 'B2B-встречи доступны только подтверждённым участникам.'],
+  'Choose a person, a time and online or in person.': ['Elige una persona, una hora y si es en línea o presencial.', 'اختر شخصًا ووقتًا وطريقة الحضور.', 'Выберите человека, время и формат.'],
+  'Choose another participant.': ['Elige a otro participante.', 'اختر مشاركًا آخر.', 'Выберите другого участника.'],
+  'This person is not a confirmed participant.': ['Esta persona no es un participante confirmado.', 'هذا الشخص ليس مشاركًا مؤكدًا.', 'Этот человек не подтверждённый участник.'],
+  'This event is online only.': ['Este evento es solo en línea.', 'هذه الفعالية عبر الإنترنت فقط.', 'Это мероприятие только онлайн.'],
+  'This event is in person only.': ['Este evento es solo presencial.', 'هذه الفعالية حضورية فقط.', 'Это мероприятие только очное.'],
+  'Choose a time during the event.': ['Elige una hora dentro del evento.', 'اختر وقتًا خلال الفعالية.', 'Выберите время в рамках мероприятия.'],
+  'One of you already has a meeting at that time.': ['Uno de los dos ya tiene una reunión a esa hora.', 'لدى أحدكما اجتماع بالفعل في ذلك الوقت.', 'У одного из вас уже есть встреча в это время.'],
+  'Uploaded files, confidential fields and chat messages are not protected.': ['Los archivos subidos, los campos confidenciales y los mensajes del chat no están protegidos.', 'الملفات المرفوعة والحقول السرية ورسائل المحادثة غير محمية.', 'Загруженные файлы, конфиденциальные поля и сообщения чата не защищены.'],
+  'New message': ['Nuevo mensaje', 'رسالة جديدة', 'Новое сообщение'],
+}
+
+const pick = (index) => Object.fromEntries(Object.entries(TEXTS).map(([key, values]) => [key, values[index]]))
+export const eventsHybridEs = pick(0)
+export const eventsHybridAr = pick(1)
+export const eventsHybridRu = pick(2)

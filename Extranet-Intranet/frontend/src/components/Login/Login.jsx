@@ -1,11 +1,16 @@
 import { useT } from '../../i18n'
 import LanguageSwitch from '../../i18n/LanguageSwitch'
-import { useEffect, useRef, useState } from 'react'
+import ThemeSwitch from '../../theme/ThemeSwitch'
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react'
 import { startAuthentication } from '@simplewebauthn/browser'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
 import { saveSession, PORTAL_ROLES } from '../../api/auth'
 import './Login.css'
+import { translateServer } from '../../i18n/serverMessages'
+
+// Demo one-click sign-in: only in development or when VITE_DEMO_LOGIN=true (removed from normal production builds).
+const DemoLogins = import.meta.env.DEV || import.meta.env.VITE_DEMO_LOGIN === 'true' ? lazy(() => import('./DemoLogins')) : null
 
 const REGIONS = [
   { label: 'Spain', icon: '📍' },
@@ -172,7 +177,10 @@ function Login() {
       return
     }
 
-    if (payload.token) saveSession(payload.token, payload.user, keepSignedIn)
+    if (payload.token) {
+      saveSession(payload.token, payload.user, keepSignedIn)
+      api.post('/auth/nav-session').catch(() => {})
+    }
 
     // Privileged roles must enable MFA before using the workspace (Technical Spec §3.1).
     if (payload.mfa_setup_required) {
@@ -205,13 +213,12 @@ function Login() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const handleSubmit = async (event) => {
-    event.preventDefault()
+  const signIn = async (emailValue, passwordValue) => {
     setLoading(true)
     setError('')
 
     try {
-      const response = await api.post('/auth/login', { email, password })
+      const response = await api.post('/auth/login', { email: emailValue, password: passwordValue })
       finishLogin(response.data?.data || response.data || {}, remember)
     } catch (err) {
       setError(
@@ -225,6 +232,19 @@ function Login() {
     }
   }
 
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    signIn(email, password)
+  }
+
+  const pickDemo = useCallback((demoEmail, demoPassword) => {
+    setEmail(demoEmail)
+    setPassword(demoPassword)
+    signIn(demoEmail, demoPassword)
+    // signIn only uses state setters and the remember flag, so a stable callback is safe here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const verifyMfa = async (event) => {
     event.preventDefault()
     setLoading(true)
@@ -233,6 +253,7 @@ function Login() {
       const response = await api.post('/auth/mfa/verify', { mfa_token: mfaToken, code: mfaCode })
       const payload = response.data?.data || {}
       saveSession(payload.token, payload.user, remember)
+      api.post('/auth/nav-session').catch(() => {})
       navigate(destinationFor(payload.user?.role, requestedWorkspace), { replace: true })
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid authentication code.')
@@ -250,6 +271,7 @@ function Login() {
       const response = await api.post('/auth/mfa/webauthn/login/verify', { mfa_token: mfaToken, response: assertion })
       const payload = response.data?.data || {}
       saveSession(payload.token, payload.user, remember)
+      api.post('/auth/nav-session').catch(() => {})
       navigate(destinationFor(payload.user?.role, requestedWorkspace), { replace: true })
     } catch (err) {
       setError(t(err.response?.data?.message || 'The security key was not used or could not be verified.'))
@@ -260,6 +282,7 @@ function Login() {
 
   return (
     <main className="login-page">
+      <ThemeSwitch className="theme-switch--login" />
       <LanguageSwitch className="language-switch--login" />
       {/* Brand panel */}
       <section className="login-brand">
@@ -313,7 +336,7 @@ function Login() {
           <h2>{t('Welcome to Global Group')}</h2>
           <p className="login-subtitle">{t('Sign in to access your workspace.')}</p>
 
-          {error && <div className="login-error">{error}</div>}
+          {error && <div className="login-error">{translateServer(error)}</div>}
 
           {mfaToken ? (
             <form onSubmit={verifyMfa} className="login-form">
@@ -407,6 +430,12 @@ function Login() {
               </a>
             )}
           </form>
+          )}
+
+          {DemoLogins && !mfaToken && (
+            <Suspense fallback={null}>
+              <DemoLogins onPick={pickDemo} disabled={loading} requested={searchParams.get('as')} />
+            </Suspense>
           )}
 
           <div className="login-help-divider">

@@ -3,12 +3,14 @@ import { io } from 'socket.io-client'
 import api from '../../../api/client'
 import { getToken, getUser } from '../../../api/auth'
 import './ChatWorkspace.css'
-import { useT } from '../../../i18n'
+import TranslateText from './translate/TranslateText'
+import { useT, dateLocale } from '../../../i18n'
+import { translateServer } from '../../../i18n/serverMessages'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000')
 
 function timeLabel(value) {
-  return new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  return new Date(value).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })
 }
 
 function ChatWorkspace({ portal = 'intranet' }) {
@@ -104,17 +106,17 @@ function ChatWorkspace({ portal = 'intranet' }) {
       <header className="communication-header">
         <div>
           <span className="communication-eyebrow">{t('COMMUNICATION')}</span>
-          <h1>{portal === 'intranet' ? 'Team Chat' : 'Partner Chat'}</h1>
-          <p>Stay connected with {portal === 'intranet' ? 'colleagues and teams' : 'external partners'}.</p>
+          <h1>{portal === 'intranet' ? t("Team Chat") : t("Partner Chat")}</h1>
+          <p>{t("Stay connected with")}{" "}{portal === 'intranet' ? t("colleagues and teams") : t("external partners")}.</p>
         </div>
-        <span className="communication-status">● {portal === 'intranet' ? 'Internal workspace' : 'Partner workspace'}</span>
+        <span className="communication-status">● {portal === 'intranet' ? t("Internal workspace") : t("Partner workspace")}</span>
       </header>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="chat-container">
         <aside className="chat-sidebar">
-          <h3>Conversations</h3>
+          <h3>{t("Conversations")}</h3>
           {conversations.map((conversation) => (
             <button
               key={conversation.id}
@@ -124,11 +126,11 @@ function ChatWorkspace({ portal = 'intranet' }) {
               <div className="chat-avatar">{conversation.name.charAt(0)}</div>
               <div className="chat-contact-info">
                 <strong>{conversation.name}</strong>
-                <span>{conversation.last_message || 'No messages yet'}</span>
+                <span>{conversation.last_message || t("No messages yet")}</span>
               </div>
             </button>
           ))}
-          {!conversations.length && <p className="chat-empty">No conversations available.</p>}
+          {!conversations.length && <p className="chat-empty">{t("No conversations available.")}</p>}
         </aside>
 
         <section className="chat-conversation">
@@ -136,7 +138,7 @@ function ChatWorkspace({ portal = 'intranet' }) {
             <>
               <div className="chat-conversation-header">
                 <div className="chat-avatar">{active.name.charAt(0)}</div>
-                <div><strong>{active.name}</strong><span>Conversation</span></div>
+                <div><strong>{active.name}</strong><span>{t("Conversation")}</span></div>
               </div>
 
               <div className="chat-messages">
@@ -146,16 +148,16 @@ function ChatWorkspace({ portal = 'intranet' }) {
                     className={`chat-message ${String(item.user_id) === String(user?.id) ? 'sent' : 'received'}`}
                   >
                     <span className="chat-sender">{item.sender_name}</span>
-                    <p>{item.body}</p>
+                    {String(item.user_id) === String(user?.id) ? <p>{item.body}</p> : <TranslateText text={item.body} />}
                     <small>{timeLabel(item.created_at)}</small>
                   </div>
                 ))}
-                {!messages.length && <p className="chat-empty">Start the conversation.</p>}
+                {!messages.length && <p className="chat-empty">{t("Start the conversation.")}</p>}
               </div>
 
               <form className="chat-input-area" onSubmit={send}>
-                <input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Write a message…" />
-                <button type="submit">Send ↗</button>
+                <input value={message} onChange={(event) => setMessage(event.target.value)} placeholder={t("Write a message…")} />
+                <button type="submit">{t("Send ↗")}</button>
               </form>
             </>
           )}

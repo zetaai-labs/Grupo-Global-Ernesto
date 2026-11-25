@@ -51,7 +51,7 @@ const SELECT = `
   LEFT JOIN users m ON m.id = c.assigned_manager
 `
 
-async function findVisible(user, relId) {
+export async function findVisible(user, relId) {
   const vis = visibility(user, 'c', 2)
   const { rows } = await query(`${SELECT} WHERE c.rel_id = $1 AND ${vis.sql}`, [relId, ...vis.params])
   return rows[0]

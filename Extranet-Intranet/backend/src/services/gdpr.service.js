@@ -2,6 +2,8 @@ import { query, withTransaction } from '../config/database.js'
 import { removeStoredFiles } from './storage.service.js'
 import { eraseZylaxData, exportZylaxData } from '../zylax/privacy.js'
 import { eraseDirectoryContacts, exportDirectoryContacts } from '../imports/import.service.js'
+import { openMessage } from './chatCrypto.service.js'
+import { providers as videoProviders } from '../integrations/video/streamUpload.js'
 
 function httpError(status, message) {
   return Object.assign(new Error(message), { status })
@@ -13,7 +15,7 @@ function httpError(status, message) {
  */
 export async function exportUserData(userId) {
   const profile = await query(
-    `SELECT u.id, u.name, u.email, u.status, u.mfa_enabled, u.processing_opposed, u.created_at, r.name AS role, rg.code AS region
+    `SELECT u.id, u.name, u.email, u.status, u.mfa_enabled, u.processing_opposed, u.created_at, (u.avatar_file IS NOT NULL) AS has_profile_photo, r.name AS role, rg.code AS region
      FROM users u JOIN roles r ON r.id = u.role_id LEFT JOIN regions rg ON rg.id = u.region_id
      WHERE u.id = $1`,
     [userId],
@@ -47,6 +49,21 @@ export async function exportUserData(userId) {
       `SELECT f.name AS folder, es.created_at FROM external_shares es JOIN folders f ON f.id = es.folder_id
        WHERE es.user_id = $1`, [userId]],
     security_keys: ['SELECT name, last_used_at, created_at FROM webauthn_credentials WHERE user_id = $1 ORDER BY created_at', [userId]],
+    courses: [
+      `SELECT c.title, c.module_type, e.status, e.attempts, e.best_score, e.completed_at, e.certificate_hash, e.created_at
+       FROM course_enrollments e JOIN community_events_courses c ON c.item_id = e.item_id WHERE e.user_id = $1 ORDER BY e.created_at`, [userId]],
+    vehicle_positions: ['SELECT lat, lng, accuracy_m, speed_kmh, recorded_at FROM zx_vehicle_positions WHERE user_id = $1 ORDER BY recorded_at', [userId]],
+    organisation_people: [
+      `SELECT o.legal_name AS organisation, p.full_name, p.person_role, p.ownership_pct, p.nationality, p.birth_year, p.created_at
+       FROM org_people p JOIN users u ON u.org_id = p.org_id JOIN organizations o ON o.org_id = p.org_id
+       WHERE u.id = $1 AND p.erased_at IS NULL ORDER BY p.created_at`, [userId]],
+    course_progress: [
+      `SELECT c.title, p.standard, a.lesson_status, a.score, a.total_seconds, a.launches, a.completed_at, a.cmi, a.updated_at,
+              (SELECT COUNT(*)::int FROM xapi_statements x WHERE x.attempt_id = a.attempt_id) AS xapi_statements
+       FROM course_attempts a JOIN course_packages p ON p.package_id = a.package_id
+       JOIN community_events_courses c ON c.item_id = p.item_id WHERE a.user_id = $1 ORDER BY a.created_at`, [userId]],
+    alert_devices: ['SELECT device, last_sent_at, created_at FROM push_subscriptions WHERE user_id = $1 ORDER BY created_at', [userId]],
+    video_bio: ['SELECT provider, status, language, duration_seconds, transcript, created_at, updated_at FROM video_bios WHERE user_id = $1', [userId]],
     privacy_requests: ['SELECT request_type, field, requested_value, details, status, response, created_at FROM gdpr_requests WHERE user_id = $1 ORDER BY created_at', [userId]],
     activity_log: ['SELECT action, entity, entity_id, created_at FROM audit_logs WHERE user_id = $1 ORDER BY created_at DESC LIMIT 5000', [userId]],
   }
@@ -55,6 +72,7 @@ export async function exportUserData(userId) {
   for (const [name, [sql, params]] of Object.entries(sections)) {
     data[name] = (await query(sql, params)).rows
   }
+  data.chat_messages = data.chat_messages.map((row) => ({ ...row, body: openMessage(row.body) }))
   data.zylax = await exportZylaxData(Number(userId), email)
   data.business_directory_contacts = await exportDirectoryContacts(email)
   return data
@@ -84,15 +102,17 @@ export async function eraseUser(userId, actorId) {
   }
 
   const label = 'Deleted user'
+  const videoBios = (await query('SELECT * FROM video_bios WHERE user_id = $1', [userId])).rows
+  const photo = (await query('SELECT avatar_file FROM users WHERE id = $1', [userId])).rows[0]?.avatar_file
   const storedFiles = await withTransaction(async (client) => {
     await client.query(
       `UPDATE users SET name = $2, email = $3, password_hash = '!erased', status = 'erased',
-              mfa_secret = NULL, mfa_enabled = false
+              mfa_secret = NULL, mfa_enabled = false, video_bio_url = NULL, avatar_file = NULL, avatar_updated_at = NULL
        WHERE id = $1`,
       [userId, label, `erased-user-${userId}@erased.invalid`],
     )
     for (const table of ['emails', 'notifications', 'password_resets', 'linked_folders', 'event_attendees',
-      'conversation_members', 'external_shares', 'webauthn_credentials', 'webauthn_challenges']) {
+      'conversation_members', 'external_shares', 'webauthn_credentials', 'webauthn_challenges', 'course_attempts', 'zx_vehicle_positions', 'video_bios', 'push_subscriptions']) {
       await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId])
     }
     await client.query('DELETE FROM folder_permissions WHERE user_id = $1', [userId])
@@ -115,7 +135,8 @@ export async function eraseUser(userId, actorId) {
     return zylaxFiles
   })
   // Stored files cannot be rolled back, so they are removed only after the transaction commits.
-  await removeStoredFiles(storedFiles)
+  await removeStoredFiles(photo ? [...storedFiles, photo] : storedFiles)
+  for (const bio of videoBios) await videoProviders[bio.provider]?.remove(bio).catch(() => {})
 }
 
 /** Retention: read notifications older than `days` are removed. */

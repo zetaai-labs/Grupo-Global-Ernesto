@@ -1,0 +1,7 @@
+.tr-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.tr-link { border: 0; padding: 0; background: transparent; color: var(--purple, #6d28d9); font-size: 12px; font-weight: 600; cursor: pointer; }
+.tr-link:disabled { opacity: 0.6; cursor: progress; }
+.tr-note { color: var(--muted); font-size: 11px; }
+.tr-error { color: var(--tc-fg-be123c, #be123c); font-size: 12px; }
+.tr-target { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.tr-target select { min-height: 32px; }

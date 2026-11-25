@@ -5,6 +5,9 @@ import {
   publicStatus,
   publicUploadDocument,
   publicSubmit,
+  publicAddPerson,
+  publicRemovePerson,
+  erasePerson,
   listOrganizations,
   getOrganization,
   createOrganization,
@@ -12,6 +15,9 @@ import {
   downloadOrganizationDocument,
   validateOrganization,
   recordScreening,
+  runAutomaticScreening,
+  addPerson,
+  removePerson,
   decideOrganization,
   setOrganizationStatus,
   myOrganization,
@@ -34,6 +40,8 @@ publicOnboardingRoutes.use(onboardingLimiter)
 publicOnboardingRoutes.post('/', publicRegister)
 publicOnboardingRoutes.get('/:token', publicStatus)
 publicOnboardingRoutes.post('/:token/documents', upload.single('file'), persistUpload, publicUploadDocument)
+publicOnboardingRoutes.post('/:token/people', publicAddPerson)
+publicOnboardingRoutes.delete('/:token/people/:personId', publicRemovePerson)
 publicOnboardingRoutes.post('/:token/submit', publicSubmit)
 
 // Authenticated routes (mounted behind authenticate).
@@ -51,6 +59,10 @@ router.post('/:id/documents', compliance, upload.single('file'), persistUpload, 
 router.get('/:id/documents/:docId/download', compliance, downloadOrganizationDocument)
 router.post('/:id/validate', compliance, validateOrganization)
 router.post('/:id/screening', compliance, recordScreening)
+router.post('/:id/screening/auto', compliance, runAutomaticScreening)
+router.post('/:id/people', compliance, addPerson)
+router.delete('/:id/people/:personId', compliance, removePerson)
+router.post('/:id/people/:personId/erase', compliance, erasePerson)
 router.post('/:id/decision', compliance, decideOrganization)
 router.patch('/:id/status', requireRole('admin'), setOrganizationStatus)
 

@@ -1,0 +1,103 @@
+.match-box {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px solid var(--tc-bd-c7d2fe, #c7d2fe);
+  border-radius: 12px;
+  background: var(--tc-bg-f8fafc, #f8fafc);
+}
+
+.match-box h4 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.match-box ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.match-box li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
+  border-radius: 10px;
+  background: var(--tc-bg-ffffff, #fff);
+}
+
+.match-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.match-main small,
+.match-note {
+  color: var(--tc-fg-64748b, #64748b);
+  font-size: 12px;
+}
+
+.match-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.match-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--tc-bg-eef2ff, #eef2ff);
+  color: var(--tc-fg-3730a3, #3730a3);
+  font-size: 11px;
+}
+
+.match-complement { background: var(--tc-bg-ecfdf5, #ecfdf5); color: var(--tc-fg-065f46, #065f46); }
+.match-corridor { background: var(--tc-bg-fff7ed, #fff7ed); color: var(--tc-fg-9a3412, #9a3412); }
+
+.match-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.match-score {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--tc-fg-3730a3, #3730a3);
+}
+
+.match-side button {
+  padding: 6px 10px;
+  border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
+  border-radius: 8px;
+  background: var(--tc-bg-ffffff, #fff);
+  color: var(--tc-fg-334155, #334155);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.risk-pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.risk-HIGH { background: var(--tc-bg-fef2f2, #fef2f2); color: var(--tc-fg-b91c1c, #b91c1c); }
+.risk-MEDIUM { background: var(--tc-bg-fffbeb, #fffbeb); color: var(--tc-fg-92400e, #92400e); }
+.risk-LOW { background: var(--tc-bg-ecfdf5, #ecfdf5); color: var(--tc-fg-065f46, #065f46); }
+
+.risk-reasons {
+  margin: 0;
+  padding-inline-start: 16px;
+  font-size: 12px;
+}

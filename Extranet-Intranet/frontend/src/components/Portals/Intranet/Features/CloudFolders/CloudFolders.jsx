@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './CloudFolders.css'
 import { useT } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
+import { AiSummaryButton } from '../../../Shared/AiAssistant'
 
 function formatSize(bytes) {
   if (!bytes) return '0 KB'
@@ -115,39 +117,39 @@ function CloudFolders() {
           <input
             value={newFolder}
             onChange={(event) => setNewFolder(event.target.value)}
-            placeholder="New folder name"
-            aria-label="New folder name"
+            placeholder={t("New folder name")}
+            aria-label={t("New folder name")}
           />
-          <button className="primary-action" type="submit">＋ New folder</button>
+          <button className="primary-action" type="submit">{t("＋ New folder")}</button>
         </form>
       </div>
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Total folders</span><span className="stat-icon">▤</span></div>
+          <div className="stat-top"><span>{t("Total folders")}</span><span className="stat-icon">▤</span></div>
           <strong>{folders.length}</strong>
-          <small>Across your workspace</small>
+          <small>{t("Across your workspace")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Files</span><span className="stat-icon">▧</span></div>
+          <div className="stat-top"><span>{t("Files")}</span><span className="stat-icon">▧</span></div>
           <strong>{files.length}</strong>
-          <small>Available documents</small>
+          <small>{t("Available documents")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Shared folders</span><span className="stat-icon">⇄</span></div>
+          <div className="stat-top"><span>{t("Shared folders")}</span><span className="stat-icon">⇄</span></div>
           <strong>{folders.filter((folder) => folder.is_shared).length}</strong>
-          <small>Collaborative access</small>
+          <small>{t("Collaborative access")}</small>
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="cloud-layout">
         <div className="feature-panel cloud-folder-panel">
           <div className="panel-heading">
             <div>
-              <h3>Folders</h3>
-              <p>Select a folder to see its documents.</p>
+              <h3>{t("Folders")}</h3>
+              <p>{t("Select a folder to see its documents.")}</p>
             </div>
           </div>
           {folders.length > 0 ? (
@@ -162,7 +164,7 @@ function CloudFolders() {
                   <span className="list-item-icon">▤</span>
                   <span className="list-item-copy">
                     <strong>{folder.name}</strong>
-                    <span>{folder.file_count} files{folder.is_shared ? ' · shared' : ''}</span>
+                    <span>{folder.file_count}{" "}{t("files")}{folder.is_shared ? t(" · shared") : ''}</span>
                   </span>
                   <span className="list-item-arrow">↗</span>
                 </button>
@@ -171,8 +173,8 @@ function CloudFolders() {
           ) : (
             <div className="feature-empty-state">
               <div className="empty-icon">▤</div>
-              <h3>No folders yet</h3>
-              <p>Create your first folder to start storing documents.</p>
+              <h3>{t("No folders yet")}</h3>
+              <p>{t("Create your first folder to start storing documents.")}</p>
             </div>
           )}
         </div>
@@ -180,8 +182,8 @@ function CloudFolders() {
         <div className="feature-panel cloud-file-panel">
           <div className="panel-heading">
             <div>
-              <h3>Documents</h3>
-              <p>Upload, download and manage files in the selected folder.</p>
+              <h3>{t("Documents")}</h3>
+              <p>{t("Upload, download and manage files in the selected folder.")}</p>
             </div>
           </div>
 
@@ -189,7 +191,7 @@ function CloudFolders() {
             <select
               value={selectedFolder}
               onChange={(event) => setSelectedFolder(event.target.value)}
-              aria-label="Destination folder"
+              aria-label={t("Destination folder")}
             >
               {folders.map((folder) => (
                 <option key={folder.id} value={folder.id}>{folder.name}</option>
@@ -198,13 +200,13 @@ function CloudFolders() {
             <input
               type="file"
               onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
-              aria-label="File to upload"
+              aria-label={t("File to upload")}
             />
-            <button type="submit" className="secondary-action">Upload file</button>
+            <button type="submit" className="secondary-action">{t("Upload file")}</button>
           </form>
 
           {loading ? (
-            <p className="cloud-empty">Loading documents…</p>
+            <p className="cloud-empty">{t("Loading documents…")}</p>
           ) : visibleFiles.length ? (
             <div className="feature-list">
               {visibleFiles.map((file) => (
@@ -213,8 +215,9 @@ function CloudFolders() {
                   <span className="list-item-copy">
                     <strong>{file.name}</strong>
                     <span>{formatSize(file.size_bytes)} · {file.mime_type}</span>
+                    {/\.(pdf|txt|csv|md|json)$/i.test(file.name) && <AiSummaryButton key={`ai-${file.id}`} path={`/files/${file.id}/summary`} label="Summarise document" />}
                   </span>
-                  <button type="button" onClick={() => download(file)}>Download</button>
+                  <button type="button" onClick={() => download(file)}>{t("Download")}</button>
                   <button type="button" className="cloud-remove" onClick={() => removeFile(file)}>✕</button>
                 </div>
               ))}
@@ -222,8 +225,8 @@ function CloudFolders() {
           ) : (
             <div className="feature-empty-state">
               <div className="empty-icon">▧</div>
-              <h3>No files in this folder</h3>
-              <p>Upload a document using the control above.</p>
+              <h3>{t("No files in this folder")}</h3>
+              <p>{t("Upload a document using the control above.")}</p>
             </div>
           )}
         </div>

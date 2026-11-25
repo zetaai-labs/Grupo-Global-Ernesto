@@ -1,0 +1,29 @@
+.theme-switch {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
+  border-radius: 10px;
+  background: var(--tc-bg-ffffff, #fff);
+  color: var(--tc-fg-334155, #334155);
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.theme-switch:hover,
+.theme-switch:focus-visible {
+  border-color: var(--tc-bd-cbd5e1, #cbd5e1);
+}
+
+.theme-switch--login {
+  position: absolute;
+  top: 18px;
+  right: 200px;
+  z-index: 5;
+}
+
+[dir='rtl'] .theme-switch--login {
+  right: auto;
+  left: 200px;
+}

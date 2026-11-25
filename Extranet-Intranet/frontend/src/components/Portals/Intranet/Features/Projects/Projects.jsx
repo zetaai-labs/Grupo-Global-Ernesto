@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './Projects.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const CORRIDOR_LABELS = {
   SPAIN_EU_INDIA: 'Spain – EU – India',
@@ -126,7 +127,7 @@ function Projects() {
       </div>
 
       {notice && (
-        <div className="cloud-notice prj-notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>
+        <div className="cloud-notice prj-notice" role="status"><span>{translateServer(notice)}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>
       )}
 
       {showCreate && (
@@ -203,7 +204,7 @@ function Projects() {
               <ul className="prj-milestones">
                 {selected.milestones.map((item) => (
                   <li key={item.milestone_id}>
-                    <span><strong>{item.title}</strong><small>{item.due_date ? new Date(item.due_date).toLocaleDateString() : t('No date')}{item.shared_with_partners ? ` · ${t('shared with partners')}` : ''}</small></span>
+                    <span><strong>{item.title}</strong><small>{item.due_date ? new Date(item.due_date).toLocaleDateString(dateLocale()) : t('No date')}{item.shared_with_partners ? ` · ${t('shared with partners')}` : ''}</small></span>
                     <select value={item.status} disabled={!selected.can_update} aria-label={t('Status')}
                       onChange={(e) => call(() => api.patch(`/projects/${selected.project_id}/milestones/${item.milestone_id}`, { status: e.target.value }), t('Milestone updated.'))}>
                       {Object.entries(STATUS_LABELS).map(([code, label]) => <option key={code} value={code}>{t(label)}</option>)}

@@ -14,7 +14,7 @@
   gap: 8px;
   padding: 8px 12px;
   background: rgba(15, 23, 42, 0.94);
-  color: #e2e8f0;
+  color: var(--tc-fg-e2e8f0, #e2e8f0);
   font-size: 12px;
 }
 
@@ -27,7 +27,7 @@
   border: 0;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
+  color: var(--tc-fg-e2e8f0, #e2e8f0);
   font: inherit;
   text-decoration: none;
   cursor: pointer;
@@ -48,8 +48,8 @@
   min-width: 220px;
   padding: 14px;
   border-radius: 12px;
-  background: #fff;
-  color: #0b1f3a;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-0b1f3a, #0b1f3a);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
 }
 
@@ -57,8 +57,8 @@
 .toolbar-popover a {
   padding: 8px;
   border-radius: 8px;
-  background: #eef3fa;
-  color: #0a2f6b;
+  background: var(--tc-bg-eef3fa, #eef3fa);
+  color: var(--tc-fg-0a2f6b, #0a2f6b);
 }
 
 .sync-dot {
@@ -66,11 +66,11 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #22c55e;
+  background: var(--tc-bg-22c55e, #22c55e);
 }
 
-.sync-dot--connecting { background: #f59e0b; }
-.sync-dot--offline { background: #ef4444; }
+.sync-dot--connecting { background: var(--tc-bg-f59e0b, #f59e0b); }
+.sync-dot--offline { background: var(--tc-bg-ef4444, #ef4444); }
 
 /* Keep the end of the menu and page clear of the fixed toolbar. */
 .portal-shell .portal-sidebar {

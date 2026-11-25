@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
 import './Calendar.css'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const EMPTY_FORM = { title: '', starts_at: '', ends_at: '', description: '', online: true, attendee_ids: [] }
 const EXTERNAL = ['partner', 'client', 'supplier']
@@ -19,10 +20,10 @@ function dayLabel(value) {
   const tomorrow = new Date(Date.now() + 86400000)
   if (date.toDateString() === today.toDateString()) return 'Today'
   if (date.toDateString() === tomorrow.toDateString()) return 'Tomorrow'
-  return date.toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })
+  return date.toLocaleDateString(dateLocale(), { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-const timeOf = (value) => new Date(value).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+const timeOf = (value) => new Date(value).toLocaleTimeString(dateLocale(), { hour: '2-digit', minute: '2-digit' })
 
 function Calendar() {
   const t = useT()
@@ -83,7 +84,7 @@ function Calendar() {
         online: form.online,
         attendee_ids: form.attendee_ids,
       })
-      setNotice(form.attendee_ids.length ? `Event created — ${form.attendee_ids.length} invitation(s) sent.` : 'Event created.')
+      setNotice(form.attendee_ids.length ? t('Event created — {count} invitation(s) sent.', { count: form.attendee_ids.length }) : 'Event created.')
       setForm(EMPTY_FORM)
       await load()
     } catch (error) {
@@ -102,7 +103,7 @@ function Calendar() {
   }
 
   const cancel = async (event) => {
-    if (!window.confirm(`Cancel “${event.title}”? Attendees will be notified.`)) return
+    if (!window.confirm(t('Cancel “{title}”? Attendees will be notified.', { title: event.title }))) return
     try {
       await api.delete(`/content/calendar/events/${event.id}`)
       setSelectedId(null)
@@ -126,26 +127,26 @@ function Calendar() {
         </div>
       </div>
 
-      {notice && <div className="cloud-notice" role="status">{notice}</div>}
+      {notice && <div className="cloud-notice" role="status">{translateServer(notice)}</div>}
 
       <div className="calendar-layout">
         <div className="feature-panel">
-          <div className="panel-heading"><div><h3>New event</h3><p>Invitees are notified and reminded 15 minutes before it starts.</p></div></div>
+          <div className="panel-heading"><div><h3>{t("New event")}</h3><p>{t("Invitees are notified and reminded 15 minutes before it starts.")}</p></div></div>
           <form className="calendar-form" onSubmit={create}>
-            <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder="Event title" required />
-            <label className="calendar-field">Starts
+            <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} placeholder={t("Event title")} required />
+            <label className="calendar-field">{t("Starts")}
               <input type="datetime-local" value={form.starts_at} onChange={(event) => setForm({ ...form, starts_at: event.target.value })} required />
             </label>
-            <label className="calendar-field">Ends
+            <label className="calendar-field">{t("Ends")}
               <input type="datetime-local" value={form.ends_at} onChange={(event) => setForm({ ...form, ends_at: event.target.value })} />
             </label>
             <label className="calendar-check">
               <input type="checkbox" checked={form.online} onChange={(event) => setForm({ ...form, online: event.target.checked })} />
-              Online meeting (creates a private video room)
+              {t("Online meeting (creates a private video room)")}
             </label>
 
             <fieldset className="calendar-invitees">
-              <legend>Invite ({form.attendee_ids.length} selected)</legend>
+              <legend>{t("Invite (")}{form.attendee_ids.length}{" "}{t("selected)")}</legend>
               {[['Colleagues', staff], ['Partners, clients & suppliers', external]].map(([label, group]) => group.length > 0 && (
                 <div key={label}>
                   <small>{label}</small>
@@ -166,18 +167,18 @@ function Calendar() {
               ))}
             </fieldset>
 
-            <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Agenda / description" rows="3" />
-            <button type="submit" className="primary-action">＋ Create event</button>
+            <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder={t("Agenda / description")} rows="3" />
+            <button type="submit" className="primary-action">{t("＋ Create event")}</button>
           </form>
         </div>
 
         <aside className="feature-panel calendar-side">
-          <div className="panel-heading"><div><h3>Event details</h3><p>Select an event to see attendees.</p></div></div>
+          <div className="panel-heading"><div><h3>{t("Event details")}</h3><p>{t("Select an event to see attendees.")}</p></div></div>
           {selected ? (
             <div className="calendar-detail">
               <h4>{selected.title}</h4>
-              <p><strong>When:</strong> {new Date(selected.starts_at).toLocaleString()}{selected.ends_at && ` – ${timeOf(selected.ends_at)}`}</p>
-              <p><strong>Organiser:</strong> {selected.owner}</p>
+              <p><strong>{t("When:")}</strong> {new Date(selected.starts_at).toLocaleString(dateLocale())}{selected.ends_at && ` – ${timeOf(selected.ends_at)}`}</p>
+              <p><strong>{t("Organiser:")}</strong> {selected.owner}</p>
               {selected.description && <p>{selected.description}</p>}
 
               {selected.attendees.length > 0 && (
@@ -194,28 +195,28 @@ function Calendar() {
               <div className="calendar-actions">
                 {selected.video_room && (
                   <button type="button" className="primary-action" onClick={() => navigate(`/intranet/video-conferencing?room=${selected.video_room}`)}>
-                    📹 Join meeting
+                    {t("📹 Join meeting")}
                   </button>
                 )}
                 {selected.my_response && selected.my_response !== 'accepted' && (
-                  <button type="button" onClick={() => respond(selected, 'accepted')}>Accept</button>
+                  <button type="button" onClick={() => respond(selected, 'accepted')}>{t("Accept")}</button>
                 )}
                 {selected.my_response && selected.my_response !== 'declined' && (
-                  <button type="button" onClick={() => respond(selected, 'declined')}>Decline</button>
+                  <button type="button" onClick={() => respond(selected, 'declined')}>{t("Decline")}</button>
                 )}
                 {(selected.created_by === user?.id || user?.role === 'admin') && (
-                  <button type="button" className="calendar-cancel" onClick={() => cancel(selected)}>Cancel event</button>
+                  <button type="button" className="calendar-cancel" onClick={() => cancel(selected)}>{t("Cancel event")}</button>
                 )}
               </div>
             </div>
           ) : (
-            <p className="cloud-empty">No event selected.</p>
+            <p className="cloud-empty">{t("No event selected.")}</p>
           )}
         </aside>
       </div>
 
       <div className="feature-panel">
-        <div className="panel-heading"><div><h3>Agenda</h3><p>{events.length} upcoming event(s).</p></div></div>
+        <div className="panel-heading"><div><h3>{t("Agenda")}</h3><p>{events.length}{" "}{t("upcoming event(s).")}</p></div></div>
         {grouped.length ? (
           <div className="calendar-agenda">
             {grouped.map(([key, dayEvents]) => (
@@ -246,8 +247,8 @@ function Calendar() {
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">◷</div>
-            <h3>No upcoming events</h3>
-            <p>Create an event to get started.</p>
+            <h3>{t("No upcoming events")}</h3>
+            <p>{t("Create an event to get started.")}</p>
           </div>
         )}
       </div>

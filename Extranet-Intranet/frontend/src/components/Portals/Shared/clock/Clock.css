@@ -1,0 +1,195 @@
+/* Attendance clock: top-bar pill and Overview card. Colours follow the light/dark theme tokens. */
+.clock-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--tc-bg-ffffff, #ffffff);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.clock-pill-main {
+  height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--green, #16a34a);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clock-pill-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px 0 8px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.clock-pill-time i,
+.clock-state i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green, #16a34a);
+}
+
+.clock-in .clock-pill-time i,
+.clock-in .clock-state i {
+  animation: clock-pulse 1.6s ease-in-out infinite;
+}
+
+.clock-break .clock-pill-time i,
+.clock-break .clock-state i {
+  background: var(--tc-fg-a35b00, #b45309);
+}
+
+.clock-pill-icon {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text);
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.clock-pill-stop {
+  color: var(--tc-fg-be123c, #be123c);
+}
+
+.clock-pill button:disabled,
+.clock-card button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+@keyframes clock-pulse {
+  50% { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clock-in .clock-pill-time i,
+  .clock-in .clock-state i { animation: none; }
+}
+
+/* ---- Card ---- */
+.clock-card {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.3fr) minmax(200px, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 20px;
+  padding: 18px 22px;
+  border: 1px solid var(--border);
+  border-inline-start: 4px solid var(--muted);
+  border-radius: 14px;
+  background: var(--tc-bg-ffffff, #ffffff);
+}
+
+.clock-card.clock-in { border-inline-start-color: var(--green, #16a34a); }
+.clock-card.clock-break { border-inline-start-color: var(--tc-fg-a35b00, #b45309); }
+
+.clock-card-main {
+  display: grid;
+  gap: 4px;
+}
+
+.clock-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.clock-out .clock-state i { background: var(--muted); }
+
+.clock-timer {
+  font-size: 34px;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.clock-card small {
+  color: var(--muted);
+}
+
+.clock-card .clock-warning {
+  color: var(--tc-fg-be123c, #be123c);
+  font-weight: 600;
+}
+
+.clock-card-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+
+.clock-card-totals div {
+  display: grid;
+  gap: 2px;
+}
+
+.clock-card-totals span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.clock-card-totals b {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.clock-card-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.clock-btn {
+  min-width: 132px;
+  min-height: 46px;
+  padding: 0 18px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.clock-btn-in { background: var(--green, #16a34a); color: #ffffff; }
+.clock-btn-break { background: var(--tc-bg-fff4e5, #fff4e5); color: var(--tc-fg-a35b00, #a35b00); border-color: currentColor; }
+.clock-btn-out { background: var(--tc-bg-fff1f2, #fff1f2); color: var(--tc-fg-be123c, #be123c); border-color: currentColor; }
+
+.clock-message {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+  .clock-card {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .clock-card-actions .clock-btn {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .clock-pill-time { padding: 0 4px; }
+}

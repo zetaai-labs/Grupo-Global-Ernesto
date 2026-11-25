@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getToken, clearSession } from './auth'
+import { translate } from '../i18n'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -16,6 +17,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Server errors carry a reference that support can find in the logs (X-Request-Id).
+    const data = error.response?.data
+    if (error.response?.status === 500 && data && typeof data === 'object' && data.request_id) {
+      data.message = `${translate('Something went wrong on the server.')} ${translate('Reference: {ref}', { ref: data.request_id })}`
+    }
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       clearSession()
       if (!window.location.pathname.startsWith('/login')) {

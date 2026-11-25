@@ -4,7 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
 import { saveSession } from '../../api/auth'
 import './ResetPassword.css'
-import { useT } from '../../i18n'
+import ChangePassword from './ChangePassword'
+import { useT, dateLocale } from '../../i18n'
 
 function MfaSettings() {
   const t = useT()
@@ -124,7 +125,7 @@ function MfaSettings() {
               <span>
                 <strong>{key.name}</strong>
                 <br />
-                <small>{key.last_used_at ? `${t('Last used')}: ${new Date(key.last_used_at).toLocaleString()}` : t('Not used yet')}</small>
+                <small>{key.last_used_at ? `${t('Last used')}: ${new Date(key.last_used_at).toLocaleString(dateLocale())}` : t('Not used yet')}</small>
               </span>
               <button type="button" className="secondary-action" onClick={() => removeKey(key)}>{t('Remove')}</button>
             </div>
@@ -161,6 +162,8 @@ function MfaSettings() {
           )}
         </div>
       </div>
+
+      {!setupRequired && <ChangePassword />}
     </section>
   )
 }

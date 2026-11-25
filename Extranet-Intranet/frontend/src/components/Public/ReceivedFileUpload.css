@@ -3,14 +3,14 @@
   display: grid;
   place-items: center;
   padding: 32px 18px;
-  background: #eef3fa;
+  background: var(--tc-bg-eef3fa, #eef3fa);
 }
 
 .public-upload-card {
   width: 100%;
   max-width: 520px;
   padding: 36px;
-  background: #fff;
+  background: var(--tc-bg-ffffff, #ffffff);
   border-radius: 22px;
   box-shadow: 0 20px 60px rgba(15, 45, 95, 0.1);
 }
@@ -22,7 +22,7 @@
 
 .public-upload-card > p {
   margin: 0 0 24px;
-  color: #64748b;
+  color: var(--tc-fg-64748b, #64748b);
   font-size: 13px;
 }
 
@@ -36,13 +36,13 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 700;
-  color: #0b1f3a;
+  color: var(--tc-fg-0b1f3a, #0b1f3a);
 }
 
 .public-upload-card input,
 .public-upload-card textarea {
   padding: 11px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 10px;
   font: inherit;
   font-size: 13px;
@@ -54,7 +54,7 @@
   margin-bottom: 18px;
   padding: 12px;
   border-radius: 10px;
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--tc-bg-dcfce7, #dcfce7);
+  color: var(--tc-fg-15803d, #15803d);
   font-size: 12px;
 }

@@ -106,6 +106,14 @@ export async function runAutoValidation(orgId) {
   const warnings = []
   if (vies.status === 'INVALID') warnings.push('VIES: this VAT number is not active for intra-EU trade. Compliance must review it.')
   if (vies.status === 'UNAVAILABLE') warnings.push('VIES could not be reached. Run the validation again before approving.')
+  const people = await query(
+    `SELECT COUNT(*) FILTER (WHERE person_role IN ('DIRECTOR', 'REPRESENTATIVE'))::int AS managers,
+            COUNT(*) FILTER (WHERE person_role = 'BENEFICIAL_OWNER')::int AS owners
+     FROM org_people WHERE org_id = $1 AND erased_at IS NULL`,
+    [orgId],
+  )
+  if (!people.rows[0].managers) warnings.push('No director or legal representative declared.')
+  if (!people.rows[0].owners && org.org_type !== 'BUSINESS_UNIT') warnings.push('No beneficial owner declared (owners of more than 25%).')
 
   const passed = issues.length === 0
   const details = {

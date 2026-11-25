@@ -4,6 +4,7 @@ import { query, withTransaction } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { notify } from '../services/notification.service.js'
 import { EXTERNAL_ROLES } from '../config/roles.js'
+import { canJoinEventRoom } from '../zylax/eventsHybrid.controller.js'
 
 
 const eventSchema = z
@@ -198,6 +199,7 @@ export async function sendEventReminders(minutesBefore = 15) {
 export async function canJoinRoom(user, room) {
   if (room === 'intranet-meeting') return !EXTERNAL_ROLES.includes(user.role)
   if (room === 'extranet-meeting') return true
+  if (room.startsWith('ev-') || room.startsWith('b2b-')) return canJoinEventRoom(user, room)
   const { rowCount } = await query(
     `SELECT 1 FROM calendar_events e
      WHERE e.video_room = $1

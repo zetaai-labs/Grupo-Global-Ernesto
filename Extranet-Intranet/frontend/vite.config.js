@@ -9,6 +9,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  build: {
+    // hls.js (video bios) and livekit-client (large meetings) are ~550 kB but load only when used.
+    chunkSizeWarningLimit: 600,
+  },
   server: {
     proxy: {
       '/api': {

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './Crm.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
+import { AiSummaryButton } from '../../../Shared/AiAssistant'
 
 const STAGE_LABELS = {
   LEAD: 'Lead',
@@ -143,7 +145,7 @@ function Crm() {
 
       {notice && (
         <div className="cloud-notice crm-notice" role="status">
-          <span>{notice}</span>
+          <span>{translateServer(notice)}</span>
           <button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button>
         </div>
       )}
@@ -228,6 +230,8 @@ function Crm() {
             <button type="button" onClick={() => setSelected(null)} aria-label={t('Close')}>✕</button>
           </header>
 
+          <AiSummaryButton key={`ai-${selected.rel_id}`} path={`/crm/${selected.rel_id}/next-step`} label="Suggest next step" />
+
           <div className="crm-fields">
             <label>{t('Stage')}
               <select value={selected.pipeline_stage} disabled={!selected.can_edit} onChange={(e) => update({ pipeline_stage: e.target.value })}>
@@ -263,7 +267,7 @@ function Crm() {
           <ol className="crm-timeline">
             {selected.activities.map((activity) => (
               <li key={activity.activity_id} className={`crm-activity crm-activity-${activity.kind.toLowerCase()}`}>
-                <span className="crm-activity-meta">{activity.author || t('System')} · {new Date(activity.created_at).toLocaleString()}</span>
+                <span className="crm-activity-meta">{activity.author || t('System')} · {new Date(activity.created_at).toLocaleString(dateLocale())}</span>
                 <p>{activity.body}</p>
               </li>
             ))}

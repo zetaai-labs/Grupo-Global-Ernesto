@@ -114,3 +114,32 @@ export async function restoreBackup(id, userId = null) {
     [userId, 'BACKUP_RESTORED', 'backups', id],
   )
 }
+
+/**
+ * Retention: removes local backups older than BACKUP_RETENTION_DAYS (default 30; 0 keeps everything).
+ * The newest `keepAtLeast` backups of each type are always kept, and only paths inside the backups folder
+ * are ever deleted. Off-site copies (BACKUP_TO_S3) follow the bucket's own lifecycle rules.
+ */
+export async function pruneOldBackups({ days = Number(process.env.BACKUP_RETENTION_DAYS ?? 30), keepAtLeast = 7, dir = backupDir } = {}) {
+  if (!(days > 0)) return { removed: 0, freed_bytes: 0 }
+  const root = path.resolve(dir)
+  const { rows } = await query(
+    `SELECT id, path, size_bytes FROM (
+       SELECT id, path, size_bytes, created_at, row_number() OVER (PARTITION BY type ORDER BY created_at DESC) AS rank
+       FROM backups WHERE left(path, length($3)) = $3
+     ) ranked
+     WHERE rank > $1 AND created_at < now() - make_interval(days => $2)`,
+    [keepAtLeast, days, root + path.sep],
+  )
+  let removed = 0
+  let freed = 0
+  for (const backup of rows) {
+    const target = path.resolve(String(backup.path || ''))
+    if (!target.startsWith(root + path.sep)) continue
+    fs.rmSync(target, { recursive: true, force: true })
+    await query('DELETE FROM backups WHERE id = $1', [backup.id])
+    removed += 1
+    freed += Number(backup.size_bytes) || 0
+  }
+  return { removed, freed_bytes: freed }
+}

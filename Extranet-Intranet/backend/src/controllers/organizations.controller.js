@@ -6,6 +6,8 @@ import { notify, notifyRoles } from '../services/notification.service.js'
 import { sendMail, smtpConfigured } from '../services/email.service.js'
 import { sendStoredFile } from '../services/storage.service.js'
 import { COMPLIANCE_ROLES, CORRIDORS } from '../config/roles.js'
+import { amlConfigured, screenParties } from '../integrations/aml/openSanctions.js'
+import { SECTORS } from './vault.controller.js'
 import {
   REQUIRED_DOCUMENTS,
   SCREENING_CHECKS,
@@ -35,6 +37,7 @@ const registrationSchema = z.object({
   contact_name: z.string().trim().min(2).max(255),
   contact_email: z.string().trim().email().max(255),
   contact_phone: z.string().trim().max(64).optional().nullable(),
+  sectors: z.array(z.enum(SECTORS)).max(5).default([]),
 })
 
 function fail(res, status, message) {
@@ -67,9 +70,9 @@ export async function publicRegister(req, res) {
   const { token, hash } = newAccessToken()
   const org = await withTransaction(async (client) => {
     const { rows } = await client.query(
-      `INSERT INTO organizations (legal_name, tax_id, pic_code, country, region_corridor, org_type, onboarding_stage)
-       VALUES ($1, $2, $3, $4, $5, $6, 2) RETURNING org_id, legal_name`,
-      [data.legal_name, data.tax_id, data.pic_code || null, data.country, data.region_corridor, data.org_type],
+      `INSERT INTO organizations (legal_name, tax_id, pic_code, country, region_corridor, org_type, onboarding_stage, sectors)
+       VALUES ($1, $2, $3, $4, $5, $6, 2, $7) RETURNING org_id, legal_name`,
+      [data.legal_name, data.tax_id, data.pic_code || null, data.country, data.region_corridor, data.org_type, data.sectors],
     )
     await client.query(
       `INSERT INTO kyc_applications (org_id, access_token_hash, contact_name, contact_email, contact_phone)
@@ -118,6 +121,10 @@ export async function publicStatus(req, res) {
       submitted_at: app.submitted_at,
       required_documents: REQUIRED_DOCUMENTS,
       documents: docs.rows,
+      people: (await query(
+        `SELECT person_id, full_name, person_role, ownership_pct, nationality, birth_year, added_by_applicant
+         FROM org_people WHERE org_id = $1 AND erased_at IS NULL ORDER BY created_at`, [app.org_id],
+      )).rows,
       validation: auto.rows[0] ? { result: auto.rows[0].result, issues: auto.rows[0].details.issues || [] } : null,
     },
   })
@@ -141,6 +148,29 @@ export async function publicUploadDocument(req, res) {
   )
   await writeAudit(null, 'KYC_DOCUMENT_UPLOADED', 'organizations', app.org_id, { doc_type: docType })
   return res.status(201).json({ data: rows[0] })
+}
+
+/** Step 2 — the applicant declares directors, legal representatives and beneficial owners. */
+export async function publicAddPerson(req, res) {
+  const app = await applicationByToken(req.params.token)
+  if (!app) return fail(res, 404, 'Application not found.')
+  if (app.verification_status !== 'PENDING' || app.onboarding_stage > 3) return fail(res, 409, 'This application can no longer be changed.')
+  const result = await insertPerson(app.org_id, req.body, { applicant: true })
+  if (result.error) return fail(res, 400, result.error)
+  await writeAudit(null, 'KYC_PERSON_DECLARED', 'organizations', app.org_id, { role: result.row.person_role })
+  return res.status(201).json({ data: result.row, message: 'Person added.' })
+}
+
+export async function publicRemovePerson(req, res) {
+  const app = await applicationByToken(req.params.token)
+  if (!app) return fail(res, 404, 'Application not found.')
+  if (app.verification_status !== 'PENDING' || app.onboarding_stage > 3) return fail(res, 409, 'This application can no longer be changed.')
+  if (!uuid.safeParse(req.params.personId).success) return fail(res, 400, 'Invalid person.')
+  // Applicants may remove only people they declared themselves.
+  const { rowCount } = await query('DELETE FROM org_people WHERE person_id = $1 AND org_id = $2 AND added_by_applicant', [req.params.personId, app.org_id])
+  if (!rowCount) return fail(res, 404, 'Person not found.')
+  await writeAudit(null, 'KYC_PERSON_WITHDRAWN', 'organizations', app.org_id)
+  return res.json({ message: 'Person removed.' })
 }
 
 /** Submits the application: runs step 3 automatic validation and alerts the Compliance Office. */
@@ -244,6 +274,11 @@ export async function getOrganization(req, res) {
       ndas: ndas.rows,
       members: members.rows,
       required_documents: REQUIRED_DOCUMENTS,
+      automatic_screening: amlConfigured(),
+      people: (await query(
+        `SELECT person_id, full_name, person_role, ownership_pct, nationality, birth_year, last_screening, screened_at, added_by_applicant, erased_at
+         FROM org_people WHERE org_id = $1 ORDER BY person_role, full_name`, [req.params.id],
+      )).rows,
     },
   })
 }
@@ -354,6 +389,124 @@ export async function recordScreening(req, res) {
     data: { clear, stage: clear ? 5 : 4 },
     message: clear ? 'Screening clear — ready for final approval.' : 'Screening has hits — review before deciding.',
   })
+}
+
+/** Step 4, automatic: screens the company against sanctions, PEP and risk lists. Compliance can still override with notes. */
+export async function runAutomaticScreening(req, res) {
+  if (!uuid.safeParse(req.params.id).success) return fail(res, 400, 'Invalid organisation id.')
+  const { rows } = await query('SELECT legal_name, tax_id, country, onboarding_stage, verification_status FROM organizations WHERE org_id = $1', [req.params.id])
+  const org = rows[0]
+  if (!org) return fail(res, 404, 'Organisation not found.')
+  if (org.onboarding_stage < 4) return fail(res, 409, 'Automatic validation must pass before screening.')
+  if (org.verification_status !== 'PENDING') return fail(res, 409, 'This organisation has already been decided.')
+
+  const people = (await query('SELECT person_id, full_name, nationality, birth_year FROM org_people WHERE org_id = $1 AND erased_at IS NULL ORDER BY created_at', [req.params.id])).rows
+  let outcome
+  try {
+    outcome = await screenParties(org, people)
+  } catch (error) {
+    return fail(res, error.status || 503, error.message)
+  }
+  const checkedAt = new Date().toISOString()
+  await withTransaction(async (client) => {
+    for (const type of SCREENING_CHECKS) {
+      await client.query(
+        'INSERT INTO kyc_checks (org_id, check_type, result, details, performed_by) VALUES ($1, $2, $3, $4, $5)',
+        [req.params.id, type, outcome[type], JSON.stringify({
+          method: 'automatic', provider: 'opensanctions', threshold: outcome.threshold, checked_at: checkedAt,
+          matches: outcome.matches.filter((match) => match.categories.includes(type)),
+        }), req.user.sub],
+      )
+    }
+    for (const person of outcome.people) {
+      const result = Object.fromEntries([...SCREENING_CHECKS.map((type) => [type, person[type]]), ['matches', person.matches], ['checked_at', checkedAt]])
+      await client.query('UPDATE org_people SET last_screening = $2, screened_at = now() WHERE person_id = $1', [person.person_id, JSON.stringify(result)])
+    }
+    if (SCREENING_CHECKS.every((type) => outcome[type] === 'CLEAR')) {
+      await client.query('UPDATE organizations SET onboarding_stage = 5 WHERE org_id = $1', [req.params.id])
+    }
+  })
+  const results = Object.fromEntries(SCREENING_CHECKS.map((type) => [type, outcome[type]]))
+  await writeAudit(req.user.sub, 'KYC_SCREENING_AUTOMATIC', 'organizations', req.params.id, results)
+  const clear = Object.values(results).every((value) => value === 'CLEAR')
+  return res.json({
+    data: { clear, results, matches: outcome.matches.length, people_screened: people.length },
+    message: clear ? 'Screening clear — ready for final approval.' : 'Screening has hits — review before deciding.',
+  })
+}
+
+// ----- Directors, representatives and beneficial owners -----
+
+const personSchema = z.object({
+  full_name: z.string().trim().min(3).max(200),
+  person_role: z.enum(['DIRECTOR', 'REPRESENTATIVE', 'BENEFICIAL_OWNER']),
+  ownership_pct: z.coerce.number().min(0).max(100).nullable().optional(),
+  nationality: z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/, 'Use a 3-letter country code such as ESP.').nullable().optional(),
+  birth_year: z.coerce.number().int().min(1900).max(new Date().getUTCFullYear()).nullable().optional(),
+})
+
+async function pendingOrganization(id) {
+  if (!uuid.safeParse(id).success) throw Object.assign(new Error('Invalid organisation id.'), { status: 400 })
+  const { rows } = await query('SELECT verification_status FROM organizations WHERE org_id = $1', [id])
+  if (!rows[0]) throw Object.assign(new Error('Organisation not found.'), { status: 404 })
+  return rows[0]
+}
+
+/** Validates and stores one person; returns { error } or { row }. Ownership may not exceed 100% in total. */
+async function insertPerson(orgId, body, { userId = null, applicant = false } = {}) {
+  const parsed = personSchema.safeParse(body || {})
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message || 'Invalid person.' }
+  const d = parsed.data
+  if (d.person_role === 'BENEFICIAL_OWNER' && d.ownership_pct == null) return { error: 'Give the ownership percentage of a beneficial owner.' }
+  const count = await query('SELECT COUNT(*)::int AS n, COALESCE(sum(ownership_pct), 0) AS total FROM org_people WHERE org_id = $1 AND erased_at IS NULL', [orgId])
+  if (count.rows[0].n >= 30) return { error: 'You can declare up to 30 people.' }
+  if (Number(count.rows[0].total) + Number(d.ownership_pct || 0) > 100) return { error: 'Ownership cannot add up to more than 100%.' }
+  const { rows } = await query(
+    `INSERT INTO org_people (org_id, full_name, person_role, ownership_pct, nationality, birth_year, created_by, added_by_applicant)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING person_id, full_name, person_role, ownership_pct, nationality, birth_year, added_by_applicant`,
+    [orgId, d.full_name, d.person_role, d.ownership_pct ?? null, d.nationality ?? null, d.birth_year ?? null, userId, applicant],
+  )
+  return { row: rows[0] }
+}
+
+export async function addPerson(req, res) {
+  await pendingOrganization(req.params.id)
+  const result = await insertPerson(req.params.id, req.body, { userId: req.user.sub })
+  if (result.error) return fail(res, 400, result.error)
+  await writeAudit(req.user.sub, 'KYC_PERSON_ADDED', 'organizations', req.params.id, { role: result.row.person_role })
+  return res.status(201).json({ data: result.row, message: 'Person added. Run screening again to include them.' })
+}
+
+/**
+ * GDPR erasure of a declared person once the KYC file no longer needs their identity
+ * (for example after the AML retention period, or a valid erasure request).
+ * The row stays, anonymised, so the file still shows that someone held that role.
+ */
+export async function erasePerson(req, res) {
+  await pendingOrganization(req.params.id)
+  if (!uuid.safeParse(req.params.personId).success) return fail(res, 400, 'Invalid person.')
+  const reason = String(req.body?.reason || '').trim()
+  if (reason.length < 10) return fail(res, 400, 'Give a reason (at least 10 characters).')
+  const { rowCount } = await query(
+    `UPDATE org_people SET full_name = 'Erased person', nationality = NULL, birth_year = NULL, last_screening = NULL, screened_at = NULL, erased_at = now()
+     WHERE person_id = $1 AND org_id = $2 AND erased_at IS NULL`,
+    [req.params.personId, req.params.id],
+  )
+  if (!rowCount) return fail(res, 404, 'Person not found.')
+  await writeAudit(req.user.sub, 'KYC_PERSON_ERASED', 'organizations', req.params.id, { person_id: req.params.personId, reason: reason.slice(0, 500) })
+  return res.json({ message: 'Personal data erased.' })
+}
+
+/** People can be removed only while the organisation is still pending, so decided files stay complete. */
+export async function removePerson(req, res) {
+  const org = await pendingOrganization(req.params.id)
+  if (org.verification_status !== 'PENDING') return fail(res, 409, 'This organisation has already been decided.')
+  if (!uuid.safeParse(req.params.personId).success) return fail(res, 400, 'Invalid person.')
+  const { rowCount } = await query('DELETE FROM org_people WHERE person_id = $1 AND org_id = $2', [req.params.personId, req.params.id])
+  if (!rowCount) return fail(res, 404, 'Person not found.')
+  await writeAudit(req.user.sub, 'KYC_PERSON_REMOVED', 'organizations', req.params.id)
+  return res.json({ message: 'Person removed.' })
 }
 
 const decisionSchema = z.object({

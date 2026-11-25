@@ -2,8 +2,11 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../api/client'
 import './ResetPassword.css'
+import { useT } from '../../i18n'
+import { translateServer } from '../../i18n/serverMessages'
 
 function ResetPassword() {
+  const t = useT()
   const [step, setStep] = useState('request')
   const [email, setEmail] = useState('')
   const [token, setToken] = useState('')
@@ -41,32 +44,32 @@ function ResetPassword() {
   return (
     <main className="reset-page">
       <div className="reset-card">
-        <h1>Reset password</h1>
-        {error && <div className="cloud-notice">{error}</div>}
-        {notice && <div className="public-upload-success">{notice}</div>}
+        <h1>{t("Reset password")}</h1>
+        {error && <div className="cloud-notice">{translateServer(error)}</div>}
+        {notice && <div className="public-upload-success">{translateServer(notice)}</div>}
 
         {step === 'request' && (
           <form onSubmit={request}>
-            <label>Email address
+            <label>{t("Email address")}
               <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
             </label>
-            <button type="submit" className="primary-action">Request reset token</button>
+            <button type="submit" className="primary-action">{t("Request reset token")}</button>
           </form>
         )}
 
         {step === 'confirm' && (
           <form onSubmit={confirm}>
-            <label>Reset token
+            <label>{t("Reset token")}
               <input value={token} onChange={(event) => setToken(event.target.value)} required />
             </label>
-            <label>New password
+            <label>{t("New password")}
               <input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} required />
             </label>
-            <button type="submit" className="primary-action">Set new password</button>
+            <button type="submit" className="primary-action">{t("Set new password")}</button>
           </form>
         )}
 
-        {step === 'done' && <Link to="/login">Return to sign in</Link>}
+        {step === 'done' && <Link to="/login">{t("Return to sign in")}</Link>}
       </div>
     </main>
   )

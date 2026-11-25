@@ -68,7 +68,7 @@ describe('VIES VAT check', () => {
     try {
       const { details } = await runAutoValidation(orgId)
       assert.equal(details.vies.status, 'INVALID')
-      assert.equal(details.warnings.length, 1)
+      assert.equal(details.warnings.filter((warning) => warning.startsWith('VIES')).length, 1)
       assert.equal(details.issues.some((issue) => issue.includes('VIES')), false)
     } finally {
       await query('DELETE FROM organizations WHERE org_id = $1', [orgId])

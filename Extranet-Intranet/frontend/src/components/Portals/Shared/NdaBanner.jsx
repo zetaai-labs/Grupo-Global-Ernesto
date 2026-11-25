@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import api from '../../../api/client'
 import { useT } from '../../../i18n'
 import './NdaBanner.css'
+import { translateServer } from '../../../i18n/serverMessages'
 
 /**
  * Shows the organisation's confidentiality agreement until it is accepted
@@ -50,7 +51,7 @@ function NdaBanner() {
           {t('{org} has been verified. Before working with shared information, accept the Grupo Global confidentiality agreement on behalf of your organisation.', { org: org.legal_name })}
         </p>
         <small className="nda-hash">{nda.nda_version} · SHA-256 {nda.document_hash}</small>
-        {error && <small className="nda-error">{error}</small>}
+        {error && <small className="nda-error">{translateServer(error)}</small>}
       </div>
       <button type="button" onClick={accept} disabled={busy}>
         {busy ? t('Recording…') : t('I accept the NDA')}

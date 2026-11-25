@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './RecycleBin.css'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 function RecycleBin() {
   const t = useT()
@@ -55,34 +56,34 @@ function RecycleBin() {
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Deleted items</span><span className="stat-icon">▧</span></div>
+          <div className="stat-top"><span>{t("Deleted items")}</span><span className="stat-icon">▧</span></div>
           <strong>{items.length}</strong>
-          <small>Items in recycle bin</small>
+          <small>{t("Items in recycle bin")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Folders</span><span className="stat-icon">▤</span></div>
+          <div className="stat-top"><span>{t("Folders")}</span><span className="stat-icon">▤</span></div>
           <strong>{items.filter((item) => item.type === 'folder').length}</strong>
-          <small>Recoverable folders</small>
+          <small>{t("Recoverable folders")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Files</span><span className="stat-icon">▧</span></div>
+          <div className="stat-top"><span>{t("Files")}</span><span className="stat-icon">▧</span></div>
           <strong>{items.filter((item) => item.type === 'file').length}</strong>
-          <small>Recoverable documents</small>
+          <small>{t("Recoverable documents")}</small>
         </div>
       </div>
 
-      {notice && <div className="cloud-notice">{notice}</div>}
+      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>Deleted items</h3>
-            <p>Restore or permanently remove items.</p>
+            <h3>{t("Deleted items")}</h3>
+            <p>{t("Restore or permanently remove items.")}</p>
           </div>
         </div>
 
         {loading ? (
-          <p className="cloud-empty">Loading…</p>
+          <p className="cloud-empty">{t("Loading…")}</p>
         ) : items.length ? (
           <div className="feature-list">
             {items.map((item) => (
@@ -90,18 +91,18 @@ function RecycleBin() {
                 <span className="list-item-icon">{item.type === 'folder' ? '▤' : '▧'}</span>
                 <span className="list-item-copy">
                   <strong>{item.name}</strong>
-                  <span>{item.type} · deleted {new Date(item.deleted_at).toLocaleString()}</span>
+                  <span>{item.type}{" "}{t("· deleted")}{" "}{new Date(item.deleted_at).toLocaleString(dateLocale())}</span>
                 </span>
-                <button type="button" onClick={() => restore(item)}>Restore</button>
-                <button type="button" className="cloud-remove" onClick={() => purge(item)}>Delete forever</button>
+                <button type="button" onClick={() => restore(item)}>{t("Restore")}</button>
+                <button type="button" className="cloud-remove" onClick={() => purge(item)}>{t("Delete forever")}</button>
               </div>
             ))}
           </div>
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">▧</div>
-            <h3>Nothing to recover</h3>
-            <p>There are currently no deleted items to display.</p>
+            <h3>{t("Nothing to recover")}</h3>
+            <p>{t("There are currently no deleted items to display.")}</p>
           </div>
         )}
       </div>

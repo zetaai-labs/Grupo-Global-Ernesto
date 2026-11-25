@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import request from 'supertest'
 import { app, loginAs } from './helpers.js'
 import { query } from '../src/config/database.js'
-import { buildDocumentPdf, vatBreakdown } from '../src/services/document.service.js'
+import { buildDocumentPdf, vatBreakdown, pdfLanguage, clean, hasArabic } from '../src/services/document.service.js'
 import { smtpConfigured } from '../src/services/email.service.js'
 
 const auth = (s) => ({ Authorization: `Bearer ${s.token}` })
@@ -44,6 +44,22 @@ describe('PDF quotes and invoices', () => {
     const pdf = await buildDocumentPdf({ kind: 'INVOICE', number: 'INV-T', status: 'REFUNDED', date: new Date(), seller: { name: 'Grupo Global', tax_id: 'G1' }, buyer: { name: 'Cliente 日本' }, lines, net_eur: 700, tax_eur: 147, total_eur: 847, notes: 'Observación', lang: 'es' })
     assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
     assert.ok((pdf.toString('latin1').match(/\/Type \/Page\b/g) || []).length >= 2)
+  })
+
+  it('builds Russian and Arabic documents with embedded Cyrillic and Arabic fonts', async () => {
+    assert.equal(pdfLanguage('ar'), 'ar')
+    assert.equal(pdfLanguage('ru'), 'ru')
+    assert.equal(pdfLanguage('xx'), 'es')
+    assert.equal(clean('Москва 日本'), 'Москва ??')
+    assert.equal(hasArabic('فاتورة 12'), true)
+    const lines = [{ sku: 'A-1', name: 'Ноутбук / حاسوب محمول', qty: 2, unit_price_eur: 100, discount_pct: 0, tax_rate: 21, net_eur: 200, tax_eur: 42 }]
+    for (const lang of ['ru', 'ar']) {
+      const pdf = await buildDocumentPdf({ kind: 'INVOICE', number: 'INV-L', status: 'DRAFT', date: new Date(), seller: { name: 'Grupo Global' }, buyer: { name: 'ООО Ромашка — شركة' }, lines, net_eur: 200, tax_eur: 42, total_eur: 242, notes: lang === 'ar' ? 'ملاحظة' : 'Примечание', lang })
+      const raw = pdf.toString('latin1')
+      assert.equal(pdf.subarray(0, 5).toString(), '%PDF-')
+      assert.match(raw, /NotoSans/, `${lang}: Latin/Cyrillic font embedded`)
+      assert.match(raw, /NotoSansArabic/, `${lang}: Arabic font embedded`)
+    }
   })
 
   it('lets each party download only its own documents', async () => {

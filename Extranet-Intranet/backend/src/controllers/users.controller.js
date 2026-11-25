@@ -3,6 +3,7 @@ import { query } from '../config/database.js'
 import { writeAudit } from '../services/audit.js'
 import { exportUserData, eraseUser } from '../services/gdpr.service.js'
 import { HR_MANAGED_ROLES } from '../config/roles.js'
+import { suspendLinkedAccounts } from './provisioning.controller.js'
 
 const USER_LIST_QUERY = `
   SELECT u.id, u.uuid, u.name, u.email, u.status, r.name AS role, r.code AS role_code, rg.code AS region,
@@ -114,7 +115,7 @@ export async function updateUserStatus(req, res) {
     }
   }
 
-  const { rowCount } = await query("UPDATE users SET status = $1 WHERE id = $2 AND status NOT IN ('erased', 'expelled')", [
+  const { rowCount } = await query("UPDATE users SET status = $1, session_version = session_version + 1 WHERE id = $2 AND status NOT IN ('erased', 'expelled')", [
     status,
     req.params.id,
   ])
@@ -124,6 +125,8 @@ export async function updateUserStatus(req, res) {
     'INSERT INTO audit_logs (user_id, action, entity, entity_id, details) VALUES ($1, $2, $3, $4, $5)',
     [req.user.sub, 'USER_STATUS_CHANGED', 'users', req.params.id, JSON.stringify({ status })],
   )
+  // Leavers lose their Google / Microsoft sign-in too, when PROVISIONING_AUTO_SUSPEND=true.
+  if (status === 'suspended') await suspendLinkedAccounts(Number(req.params.id), req.user.sub)
 
   return res.json({ message: 'User status updated.' })
 }
@@ -158,4 +161,17 @@ export async function exportMyData(req, res) {
   await writeAudit(req.user.sub, 'OWN_DATA_EXPORTED', 'users', req.user.sub)
   res.setHeader('Content-Disposition', 'attachment; filename="my-global-group-data.json"')
   return res.json(data)
+}
+
+/** Removes a user's single sign-on link, for example after the provider account was replaced. */
+export async function unlinkSso(req, res) {
+  const id = Number(req.params.id)
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ message: 'Invalid user id.' })
+  const { rowCount } = await query(
+    'UPDATE users SET oidc_issuer = NULL, oidc_subject = NULL, oidc_linked_at = NULL WHERE id = $1 AND oidc_subject IS NOT NULL',
+    [id],
+  )
+  if (!rowCount) return res.status(404).json({ message: 'This user has no single sign-on link.' })
+  await writeAudit(req.user.sub, 'SSO_ACCOUNT_UNLINKED', 'users', String(id))
+  return res.json({ message: 'Single sign-on link removed.' })
 }

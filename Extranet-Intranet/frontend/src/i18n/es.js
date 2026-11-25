@@ -3,6 +3,28 @@
 import esZylax from './es.zylax'
 import esServer from './es.server'
 import esIntegrations from './es.integrations'
+import esBilling from './es.billing'
+import esAccounts from './es.accounts'
+import esExtra1 from './es.extra.1'
+import esExtra2 from './es.extra.2'
+import esExtra3 from './es.extra.3'
+import esExtra4 from './es.extra.4'
+import esExtra5 from './es.extra.5'
+import esExtra6 from './es.extra.6'
+import { landingEs } from './landing'
+import { coursePackagesEs } from './courses.packages'
+import { orgPeopleEs } from './org.people'
+import { zylaxDepthEs } from './zylax.depth'
+import { eventsHybridEs } from './events.hybrid'
+import { aiEs } from './ai'
+import { pwaEs } from './pwa'
+import { aiEngineEs } from './ai.engine'
+import { clockEs } from './clock'
+import { videoEs } from './video'
+import { monitoringEs } from './monitoring'
+import { attendanceEs } from './attendance'
+import { translateEs } from './translate'
+import { workspaceEs } from './workspace'
 
 const es = {
   // ---- Login & password reset ----
@@ -252,4 +274,4 @@ const es = {
   'Your records will appear here.': 'Tus registros aparecerán aquí.',
 }
 
-export default { ...esIntegrations, ...esServer, ...esZylax, ...es }
+export default { ...esExtra1, ...esExtra2, ...esExtra3, ...esExtra4, ...esExtra5, ...esExtra6, ...landingEs, ...coursePackagesEs, ...orgPeopleEs, ...zylaxDepthEs, ...eventsHybridEs, ...aiEs, ...pwaEs, ...aiEngineEs, ...clockEs, ...videoEs, ...monitoringEs, ...attendanceEs, ...translateEs, ...workspaceEs, ...esAccounts, ...esBilling, ...esIntegrations, ...esServer, ...esZylax, ...es }

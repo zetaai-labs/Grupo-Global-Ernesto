@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import './AuditLog.css'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 
 function AuditLog() {
   const t = useT()
@@ -66,19 +66,19 @@ function AuditLog() {
 
       <div className="feature-stats">
         <div className="stat-card">
-          <div className="stat-top"><span>Total events</span><span className="stat-icon">◷</span></div>
+          <div className="stat-top"><span>{t("Total events")}</span><span className="stat-icon">◷</span></div>
           <strong>{entries.length}</strong>
-          <small>Most recent 100 events</small>
+          <small>{t("Most recent 100 events")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Logins</span><span className="stat-icon">✓</span></div>
+          <div className="stat-top"><span>{t("Logins")}</span><span className="stat-icon">✓</span></div>
           <strong>{entries.filter((entry) => entry.action.startsWith('LOGIN')).length}</strong>
-          <small>Successful and failed</small>
+          <small>{t("Successful and failed")}</small>
         </div>
         <div className="stat-card">
-          <div className="stat-top"><span>Document events</span><span className="stat-icon">▤</span></div>
+          <div className="stat-top"><span>{t("Document events")}</span><span className="stat-icon">▤</span></div>
           <strong>{entries.filter((entry) => ['FILE', 'FOLDER', 'ITEM'].some((p) => entry.action.startsWith(p))).length}</strong>
-          <small>Files and folders</small>
+          <small>{t("Files and folders")}</small>
         </div>
       </div>
 
@@ -101,10 +101,10 @@ function AuditLog() {
           <div className="cloud-notice" role={integrity.valid ? 'status' : 'alert'}>
             <strong>{integrity.valid ? t('Verified: no tampering detected.') : t('Integrity check failed.')}</strong>{' '}
             {integrity.valid
-              ? `${integrity.entries.toLocaleString()} ${t('entries checked')}.`
+              ? `${integrity.entries.toLocaleString(dateLocale())} ${t('entries checked')}.`
               : `${integrity.issue.type}${integrity.issue.seq ? ` · ${t('entry')} ${integrity.issue.seq}` : ''}`}{' '}
             {integrity.immutable_storage.configured
-              ? `${t('Immutable copy up to entry')} ${integrity.anchored_to_seq.toLocaleString()} (${integrity.immutable_storage.mode}).`
+              ? `${t('Immutable copy up to entry')} ${integrity.anchored_to_seq.toLocaleString(dateLocale())} (${integrity.immutable_storage.mode}).`
               : t('Immutable storage is not configured yet.')}
           </div>
         )}
@@ -113,32 +113,32 @@ function AuditLog() {
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>Recent activity</h3>
-            <p>Newest events appear first.</p>
+            <h3>{t("Recent activity")}</h3>
+            <p>{t("Newest events appear first.")}</p>
           </div>
         </div>
 
         {loading ? (
-          <p className="cloud-empty">Loading…</p>
+          <p className="cloud-empty">{t("Loading…")}</p>
         ) : entries.length ? (
           <div className="audit-table">
             <div className="audit-row audit-head">
-              <span>Action</span><span>User</span><span>Entity</span><span>When</span>
+              <span>{t("Action")}</span><span>{t("User")}</span><span>{t("Entity")}</span><span>{t("When")}</span>
             </div>
             {entries.map((entry) => (
               <div className="audit-row" key={entry.id}>
                 <span><strong>{entry.action}</strong></span>
                 <span>{entry.user_name || `${entry.user_email || 'System'}`}</span>
                 <span>{entry.entity}{entry.entity_id ? ` #${entry.entity_id}` : ''}</span>
-                <span>{new Date(entry.created_at).toLocaleString()}</span>
+                <span>{new Date(entry.created_at).toLocaleString(dateLocale())}</span>
               </div>
             ))}
           </div>
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">◷</div>
-            <h3>No activity recorded</h3>
-            <p>Actions will appear here as users work in the platform.</p>
+            <h3>{t("No activity recorded")}</h3>
+            <p>{t("Actions will appear here as users work in the platform.")}</p>
           </div>
         )}
       </div>

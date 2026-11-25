@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#5542bf" />
+    <title>Global Group — offline</title>
+    <style>
+      :root { color-scheme: light dark; --bg: #f8fafc; --card: #ffffff; --text: #0f172a; --muted: #64748b; --line: #e2e8f0; }
+      @media (prefers-color-scheme: dark) { :root { --bg: #0f172a; --card: #1a1f2b; --text: #e2e8f0; --muted: #94a3b8; --line: #333c47; } }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 16px; background: var(--bg); color: var(--text); font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+      main { max-width: 440px; padding: 28px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); text-align: center; }
+      img { width: 72px; height: 72px; }
+      h1 { margin: 12px 0 4px; font-size: 20px; }
+      p { margin: 6px 0; color: var(--muted); line-height: 1.5; }
+      p[dir="rtl"] { font-family: Tahoma, 'Noto Sans Arabic', Arial, sans-serif; }
+      button { margin-top: 16px; padding: 10px 18px; border: 0; border-radius: 10px; background: #5542bf; color: #fff; font-size: 15px; cursor: pointer; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icon.svg" alt="" />
+      <h1>You are offline</h1>
+      <p>Check your connection. Your work is safe on the server.</p>
+      <p lang="es">Sin conexión. Comprueba tu conexión; tus datos están seguros en el servidor.</p>
+      <p lang="ar" dir="rtl">أنت غير متصل. تحقق من الاتصال؛ بياناتك محفوظة بأمان على الخادم.</p>
+      <p lang="ru">Нет подключения. Проверьте соединение — ваши данные в безопасности на сервере.</p>
+      <button type="button" onclick="location.reload()">Retry · Reintentar · إعادة المحاولة · Повторить</button>
+    </main>
+  </body>
+</html>

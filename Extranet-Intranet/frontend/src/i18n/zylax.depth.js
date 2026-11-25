@@ -1,0 +1,53 @@
+// ZYLAX reports, exports, fleet GPS, POS card readers and onboarding accounts. English key -> [es, ar, ru].
+const TEXTS = {
+  Report: ['Informe', 'تقرير', 'Отчёт'],
+  'Hide report': ['Ocultar informe', 'إخفاء التقرير', 'Скрыть отчёт'],
+  Excel: ['Excel', 'Excel', 'Excel'],
+  CSV: ['CSV', 'CSV', 'CSV'],
+  'By status': ['Por estado', 'حسب الحالة', 'По статусу'],
+  '{count} records': ['{count} registros', '{count} سجلات', 'Записей: {count}'],
+  'New records per month': ['Registros nuevos por mes', 'السجلات الجديدة شهريًا', 'Новые записи по месяцам'],
+  'Total per month (EUR)': ['Total por mes (EUR)', 'الإجمالي شهريًا (يورو)', 'Итого по месяцам (EUR)'],
+  'Could not export this list.': ['No se pudo exportar esta lista.', 'تعذر تصدير هذه القائمة.', 'Не удалось выгрузить список.'],
+  'Could not load the report.': ['No se pudo cargar el informe.', 'تعذر تحميل التقرير.', 'Не удалось загрузить отчёт.'],
+  'GPS position': ['Posición GPS', 'موقع GPS', 'GPS-позиция'],
+  'Share my location now': ['Compartir mi ubicación ahora', 'مشاركة موقعي الآن', 'Отправить моё местоположение'],
+  'Locating…': ['Localizando…', 'جارٍ تحديد الموقع…', 'Определение…'],
+  'Only sent when you press the button. Kept for 90 days.': ['Solo se envía al pulsar el botón. Se conserva 90 días.', 'لا يُرسل إلا عند الضغط على الزر. يُحفظ 90 يومًا.', 'Отправляется только по нажатию кнопки. Хранится 90 дней.'],
+  'No positions in the last 3 days.': ['Sin posiciones en los últimos 3 días.', 'لا توجد مواقع خلال آخر 3 أيام.', 'Нет позиций за последние 3 дня.'],
+  'Position shared.': ['Posición compartida.', 'تمت مشاركة الموقع.', 'Позиция отправлена.'],
+  'Could not share the position.': ['No se pudo compartir la posición.', 'تعذرت مشاركة الموقع.', 'Не удалось отправить позицию.'],
+  'This device cannot share its location.': ['Este dispositivo no puede compartir su ubicación.', 'لا يستطيع هذا الجهاز مشاركة موقعه.', 'Это устройство не может передать местоположение.'],
+  'Location access was denied or is not available.': ['Se denegó el acceso a la ubicación o no está disponible.', 'تم رفض الوصول إلى الموقع أو أنه غير متاح.', 'Доступ к местоположению запрещён или недоступен.'],
+  'Card reader': ['Datáfono', 'جهاز قراءة البطاقات', 'Платёжный терминал'],
+  'Card (separate machine)': ['Tarjeta (datáfono aparte)', 'بطاقة (جهاز منفصل)', 'Карта (отдельный терминал)'],
+  'Ask the customer to present their card.': ['Pide al cliente que acerque su tarjeta.', 'اطلب من العميل تقديم بطاقته.', 'Попросите клиента приложить карту.'],
+  'Card payment received': ['Pago con tarjeta recibido', 'تم استلام الدفع بالبطاقة', 'Оплата картой получена'],
+  'Cancel card payment': ['Cancelar pago con tarjeta', 'إلغاء الدفع بالبطاقة', 'Отменить оплату картой'],
+  'Card payment cancelled.': ['Pago con tarjeta cancelado.', 'تم إلغاء الدفع بالبطاقة.', 'Оплата картой отменена.'],
+  'The card payment failed or was cancelled. Try again or choose another method.': ['El pago con tarjeta falló o se canceló. Inténtalo de nuevo o elige otro método.', 'فشل الدفع بالبطاقة أو أُلغي. حاول مجددًا أو اختر طريقة أخرى.', 'Оплата картой не прошла или отменена. Повторите или выберите другой способ.'],
+  'No answer from the card reader yet. Check the reader, then look at the invoice list.': ['El datáfono aún no responde. Revísalo y consulta la lista de facturas.', 'لا يوجد رد من جهاز البطاقات بعد. تحقق من الجهاز ثم راجع قائمة الفواتير.', 'Терминал пока не ответил. Проверьте его, затем список счетов.'],
+  'Company accounts': ['Cuentas de empresa', 'حسابات الشركة', 'Корпоративные учётные записи'],
+  'Creates the new employee’s company email account and ticks off the access task.': ['Crea la cuenta de correo corporativa del nuevo empleado y marca la tarea de accesos.', 'يُنشئ حساب البريد المؤسسي للموظف الجديد ويُكمل مهمة الوصول.', 'Создаёт корпоративную почту нового сотрудника и отмечает задачу по доступам.'],
+  'Create {provider} account': ['Crear cuenta de {provider}', 'إنشاء حساب {provider}', 'Создать учётную запись {provider}'],
+  '{provider}: dry run (not connected yet)': ['{provider}: simulación (aún sin conectar)', '{provider}: تشغيل تجريبي (غير متصل بعد)', '{provider}: пробный запуск (ещё не подключено)'],
+  'Working…': ['Procesando…', 'جارٍ التنفيذ…', 'Выполняется…'],
+  // Server messages.
+  'Card terminals are not configured yet.': ['Los datáfonos aún no están configurados.', 'أجهزة البطاقات غير مُعدّة بعد.', 'Платёжные терминалы ещё не настроены.'],
+  'Choose a card reader.': ['Elige un datáfono.', 'اختر جهاز قراءة البطاقات.', 'Выберите терминал.'],
+  'The card reader is offline.': ['El datáfono está desconectado.', 'جهاز البطاقات غير متصل.', 'Терминал не в сети.'],
+  'The card reader is busy with another payment.': ['El datáfono está ocupado con otro pago.', 'جهاز البطاقات مشغول بعملية دفع أخرى.', 'Терминал занят другим платежом.'],
+  'The card reader could not start the payment.': ['El datáfono no pudo iniciar el pago.', 'تعذر على جهاز البطاقات بدء الدفع.', 'Терминал не смог начать оплату.'],
+  'This invoice is already paid.': ['Esta factura ya está pagada.', 'هذه الفاتورة مدفوعة بالفعل.', 'Этот счёт уже оплачен.'],
+  'Vehicle not found.': ['Vehículo no encontrado.', 'المركبة غير موجودة.', 'Транспорт не найден.'],
+  'Invalid position.': ['Posición no válida.', 'الموقع غير صالح.', 'Неверная позиция.'],
+  'Only the driver or a fleet manager can report this vehicle’s position.': ['Solo el conductor o un responsable de flota pueden informar de la posición de este vehículo.', 'لا يمكن الإبلاغ عن موقع هذه المركبة إلا للسائق أو مدير الأسطول.', 'Сообщать позицию этого транспорта могут только водитель или менеджер автопарка.'],
+  'This onboarding plan is closed.': ['Este plan de incorporación está cerrado.', 'خطة التهيئة هذه مغلقة.', 'Этот план адаптации закрыт.'],
+  'This plan has no employee.': ['Este plan no tiene empleado.', 'لا تحتوي هذه الخطة على موظف.', 'В плане не указан сотрудник.'],
+  'Choose Google Workspace or Microsoft 365.': ['Elige Google Workspace o Microsoft 365.', 'اختر Google Workspace أو Microsoft 365.', 'Выберите Google Workspace или Microsoft 365.'],
+}
+
+const pick = (index) => Object.fromEntries(Object.entries(TEXTS).map(([key, values]) => [key, values[index]]))
+export const zylaxDepthEs = pick(0)
+export const zylaxDepthAr = pick(1)
+export const zylaxDepthRu = pick(2)

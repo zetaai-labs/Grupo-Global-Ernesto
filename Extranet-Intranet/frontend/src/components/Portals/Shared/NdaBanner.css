@@ -6,10 +6,10 @@
   gap: 14px;
   margin-bottom: 20px;
   padding: 16px 18px;
-  border: 1px solid #fcd34d;
+  border: 1px solid var(--tc-bd-fcd34d, #fcd34d);
   border-radius: 12px;
-  background: #fffbeb;
-  color: #422006;
+  background: var(--tc-bg-fffbeb, #fffbeb);
+  color: var(--tc-fg-422006, #422006);
 }
 
 .nda-banner > div {
@@ -25,22 +25,22 @@
 }
 
 .nda-hash {
-  color: #92400e;
+  color: var(--tc-fg-92400e, #92400e);
   font-family: 'JetBrains Mono', ui-monospace, Consolas, monospace;
   font-size: 10px;
   word-break: break-all;
 }
 
 .nda-error {
-  color: #be123c;
+  color: var(--tc-fg-be123c, #be123c);
 }
 
 .nda-banner button {
   padding: 9px 14px;
   border: 0;
   border-radius: 8px;
-  background: var(--green, #269b70);
-  color: #fff;
+  background: var(--green, var(--tc-bg-269b70, #269b70));
+  color: var(--tc-fg-ffffff, #ffffff);
   font: inherit;
   font-size: 12px;
   font-weight: 700;

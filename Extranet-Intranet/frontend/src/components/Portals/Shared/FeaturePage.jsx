@@ -35,7 +35,7 @@ function FeaturePage({
                 <span className="stat-icon">{stat.icon}</span>
               </div>
               <strong>{stat.value}</strong>
-              <small>{stat.note}</small>
+              <small>{t(stat.note)}</small>
             </div>
           ))}
         </div>
@@ -44,11 +44,11 @@ function FeaturePage({
       <div className="feature-panel">
         <div className="panel-heading">
           <div>
-            <h3>{title}</h3>
-            <p>Manage and access your {title.toLowerCase()}.</p>
+            <h3>{t(title)}</h3>
+            <p>{t('Manage and access everything in {area}.', { area: t(title) })}</p>
           </div>
 
-          <button className="secondary-action">View all ↗</button>
+          <button className="secondary-action">{t("View all ↗")}</button>
         </div>
 
         {items.length > 0 ? (
@@ -57,11 +57,11 @@ function FeaturePage({
               <div className="feature-list-row" key={item.name}>
                 <div className="list-item-icon">{item.icon || icon}</div>
                 <div className="list-item-copy">
-                  <strong>{item.name}</strong>
-                  <span>{item.description}</span>
+                  <strong>{t(item.name)}</strong>
+                  <span>{t(item.description)}</span>
                 </div>
                 <span className={`item-status ${item.statusType || ''}`}>
-                  {item.status || 'Available'}
+                  {t(item.status || 'Available')}
                 </span>
                 <span className="list-item-arrow">↗</span>
               </div>
@@ -70,8 +70,8 @@ function FeaturePage({
         ) : (
           <div className="feature-empty-state">
             <div className="empty-icon">{icon}</div>
-            <h3>No records available</h3>
-            <p>{emptyMessage}</p>
+            <h3>{t("No records available")}</h3>
+            <p>{t(emptyMessage)}</p>
           </div>
         )}
       </div>

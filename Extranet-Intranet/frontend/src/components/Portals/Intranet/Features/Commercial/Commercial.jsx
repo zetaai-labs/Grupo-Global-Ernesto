@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
-import { getLanguage, useT } from '../../../../../i18n'
+import { getLanguage, useT, dateLocale } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
 import { downloadFromApi } from '../../../../../utils/download'
 import { euro } from './format'
@@ -302,7 +302,7 @@ function Commercial() {
           {detail.notes && <p className="zx-note">{detail.notes}</p>}
           {detail.events && (
             <ol className="zx-timeline">
-              {detail.events.map((event) => <li key={event.event_id}><StatusPill status={event.status} /> <span>{new Date(event.created_at).toLocaleString()} · {event.author || t('System')}</span></li>)}
+              {detail.events.map((event) => <li key={event.event_id}><StatusPill status={event.status} /> <span>{new Date(event.created_at).toLocaleString(dateLocale())} · {event.author || t('System')}</span></li>)}
             </ol>
           )}
           <div className="zx-form-actions">

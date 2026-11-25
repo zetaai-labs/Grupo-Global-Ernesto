@@ -57,7 +57,8 @@ describe('integration status', () => {
     const partial = find(await integrationReport(), 'smtp')
     assert.equal(partial.status, 'PARTIAL')
     assert.deepEqual(partial.settings.filter((item) => !item.present).map((item) => item.name), ['SMTP_USER', 'SMTP_PASS', 'MAIL_FROM'])
-    const stripe = find(await integrationReport(), 'stripe')
-    assert.deepEqual([stripe.status, stripe.built], ['NOT_BUILT', false])
+    // The AI engine is built now: the AI assistant is a normal integration, switched on by its key.
+    const ai = find(await integrationReport(), 'ai')
+    assert.equal(ai.built, true)
   })
 })

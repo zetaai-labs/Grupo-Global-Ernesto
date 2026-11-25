@@ -81,7 +81,7 @@ export async function uploadFile(req, res) {
   return res.status(201).json({ data: rows[0] })
 }
 
-async function findScopedFile(req) {
+export async function findScopedFile(req) {
   const scoped = withRegion(
     req,
     'SELECT name, stored_name, folder_id, mime_type FROM files WHERE id = $1 AND deleted_at IS NULL',

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import api from '../../../../../api/client'
-import { useT } from '../../../../../i18n'
+import { useT, dateLocale } from '../../../../../i18n'
 import './InvestorVault.css'
+import { translateServer } from '../../../../../i18n/serverMessages'
 
 const SECTOR_LABELS = { FINTECH: 'Fintech', REAL_ESTATE: 'Real estate', HEALTHCARE: 'Healthcare', CYBERSECURITY: 'Cybersecurity', CROSS_BORDER_TRADE: 'Cross-border trade' }
 const TICKETS = ['EUR 100K-500K', 'EUR 500K-1M', 'EUR 1M-5M', 'EUR 5M+']
@@ -126,7 +127,7 @@ function InvestorVault() {
         🔒 {t('You are inside the Investor Vault. Views, downloads and changes are recorded in each investor’s access log and the audit trail.')}
       </div>
 
-      {notice && <div className="cloud-notice vault-notice" role="status"><span>{notice}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
+      {notice && <div className="cloud-notice vault-notice" role="status"><span>{translateServer(notice)}</span><button type="button" onClick={() => setNotice('')} aria-label="Dismiss">✕</button></div>}
 
       <div className="vault-tabs" role="tablist">
         {[['investors', `${t('Investors')} (${investors.length})`], ['rooms', `${t('Deal rooms')} (${rooms.length})`]].map(([key, label]) => (
@@ -184,7 +185,7 @@ function InvestorVault() {
             {investors.map((inv) => (
               <button type="button" key={inv.investor_id} className={`vault-row ${selected?.investor_id === inv.investor_id ? 'selected' : ''}`} onClick={() => openInvestor(inv.investor_id)}>
                 <span><strong>{inv.profile?.full_name || t('Encrypted record')}</strong><small>{inv.organization || t('No platform organisation')} · {inv.investment_ticket_range}</small></span>
-                <span className={`vault-pill ${inv.nda_signed ? 'ok' : 'warn'}`}>{inv.nda_signed ? 'NDA ✓' : t('NDA pending')}</span>
+                <span className={`vault-pill ${inv.nda_signed ? 'ok' : 'warn'}`}>{inv.nda_signed ? t("NDA ✓") : t('NDA pending')}</span>
               </button>
             ))}
             {!investors.length && <div className="feature-empty-state"><div className="empty-icon">🔒</div><h3>{t('No investor records')}</h3></div>}
@@ -206,7 +207,7 @@ function InvestorVault() {
               <h3>{t('Access log')}</h3>
               <ol className="vault-log">
                 {selected.access_audit_log.map((entry, index) => (
-                  <li key={`${entry.at}-${index}`}><span className="mono">{new Date(entry.at).toLocaleString()}</span><strong>{entry.action}</strong><small>{entry.role || '—'} · {entry.ip}</small></li>
+                  <li key={`${entry.at}-${index}`}><span className="mono">{new Date(entry.at).toLocaleString(dateLocale())}</span><strong>{entry.action}</strong><small>{entry.role || '—'} · {entry.ip}</small></li>
                 ))}
               </ol>
             </aside>

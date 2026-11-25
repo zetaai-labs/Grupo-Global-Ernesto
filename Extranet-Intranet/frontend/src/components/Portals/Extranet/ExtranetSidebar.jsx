@@ -2,48 +2,9 @@
 import { NavLink } from 'react-router-dom'
 import { getUser } from '../../../api/auth'
 import { useT } from '../../../i18n'
+import { visibleNavigation } from '../Shared/navigation'
+import { openHelp } from '../Shared/help/helpEvents'
 
-const navigation = [
-  {
-    label: 'PARTNER WORKSPACE',
-    items: [
-      { name: 'Overview', path: '/extranet/overview', icon: '⌂' },
-      { name: 'Quotes & Orders', path: '/extranet/orders', icon: '▣', roles: ['client', 'partner'] },
-      { name: 'ZYLAX Extranet', path: '/extranet/zylax', icon: '◆', roles: ['client', 'partner', 'supplier'] }
-    ]
-  },
-  {
-    label: 'CONFIDENTIAL',
-    items: [
-      { name: 'Investor Vault', path: '/extranet/investor-vault', icon: '🔒', roles: ['investor'] }
-    ]
-  },
-  {
-    label: 'DOCUMENTS',
-    items: [
-      { name: 'Shared Documents', path: '/extranet/shared-documents', icon: '▤' },
-      { name: 'My Submissions', path: '/extranet/my-submissions', icon: '⇧' },
-      { name: 'Shared Links', path: '/extranet/shared-links', icon: '↗' }
-    ]
-  },
-  {
-    label: 'INFORMATION',
-    items: [
-      { name: 'Project Updates', path: '/extranet/project-updates', icon: '◷' },
-      { name: 'Resources', path: '/extranet/resources', icon: '▣' },
-      { name: 'Ethics & Compliance', path: '/extranet/ethics', icon: '⚖' },
-      { name: 'Required Training', path: '/extranet/courses', icon: '🎓' },
-      { name: 'Privacy (GDPR)', path: '/extranet/privacy', icon: '⛨' }
-    ]
-  },
-  {
-    label: 'COMMUNICATION',
-    items: [
-      { name: 'Team Chat', path: '/extranet/chat', icon: '💬' },
-      { name: 'Video Meetings', path: '/extranet/video-conferencing', icon: '📹' }
-    ]
-  }
-]
 
 const WORKSPACE_LABELS = {
   partner: 'PARTNER WORKSPACE',
@@ -56,9 +17,7 @@ function ExtranetSidebar() {
   const t = useT()
   const role = String(getUser()?.role || '').toLowerCase()
   const workspaceLabel = WORKSPACE_LABELS[role] || 'EXTERNAL WORKSPACE'
-  const visibleNavigation = navigation
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.roles || item.roles.includes(role)) }))
-    .filter((group) => group.items.length)
+  const navigation = visibleNavigation('extranet', role)
 
   return (
     <aside className="portal-sidebar">
@@ -76,7 +35,7 @@ function ExtranetSidebar() {
       </div>
 
       <nav className="sidebar-navigation">
-        {visibleNavigation.map((group) => (
+        {navigation.map((group) => (
           <div className="nav-group" key={group.label}>
             <p className="nav-group-label">{t(group.label)}</p>
 
@@ -97,13 +56,13 @@ function ExtranetSidebar() {
       </nav>
 
       <div className="sidebar-bottom">
-        <div className="sidebar-help">
+        <button type="button" className="sidebar-help" onClick={openHelp}>
           <div className="help-icon">?</div>
           <div>
             <strong>{t('Support')}</strong>
             <span>{t('Get help with your workspace')}</span>
           </div>
-        </div>
+        </button>
 
         <div className="sidebar-version">
           GLOBAL GROUP · WORKSPACE

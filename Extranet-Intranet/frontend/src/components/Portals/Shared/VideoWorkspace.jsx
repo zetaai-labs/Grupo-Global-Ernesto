@@ -6,6 +6,7 @@ import { getToken } from '../../../api/auth'
 import { SOCKET_URL } from '../../../api/socket'
 import './VideoWorkspace.css'
 import { useT } from '../../../i18n'
+import { translateServer } from '../../../i18n/serverMessages'
 
 // STUN works on open networks; corporate/NAT networks need a TURN relay (VITE_TURN_*).
 const ICE_SERVERS = [
@@ -20,6 +21,7 @@ const ICE_SERVERS = [
 ]
 
 function RemoteTile({ peer }) {
+  const t = useT()
   const videoRef = useRef(null)
   useEffect(() => {
     if (videoRef.current && peer.stream) videoRef.current.srcObject = peer.stream
@@ -27,7 +29,7 @@ function RemoteTile({ peer }) {
   return (
     <div className="video-tile">
       <video ref={videoRef} autoPlay playsInline />
-      {!peer.stream && <div className="video-placeholder">Connecting…</div>}
+      {!peer.stream && <div className="video-placeholder">{t("Connecting…")}</div>}
       <span>{peer.name}</span>
     </div>
   )
@@ -203,7 +205,7 @@ function VideoWorkspace({ portal = 'intranet' }) {
     refresh()
     setMode('sfu')
     setJoined(true)
-    setNotice(lkRoom.remoteParticipants.size ? `Joined — ${lkRoom.remoteParticipants.size} other participant(s) in the room.` : 'Joined — waiting for others to join.')
+    setNotice(lkRoom.remoteParticipants.size ? t('Joined — {count} other participant(s) in the room.', { count: lkRoom.remoteParticipants.size }) : 'Joined — waiting for others to join.')
   }
 
   const join = async () => {
@@ -246,7 +248,7 @@ function VideoWorkspace({ portal = 'intranet' }) {
         return
       }
       setJoined(true)
-      setNotice(reply.peers.length ? `Joined — ${reply.peers.length} other participant(s) in the room.` : 'Joined — waiting for others to join.')
+      setNotice(reply.peers.length ? t('Joined — {count} other participant(s) in the room.', { count: reply.peers.length }) : 'Joined — waiting for others to join.')
       for (const peer of reply.peers) {
         const pc = connectionFor(peer.id, peer.name)
         const offer = await pc.createOffer()
@@ -339,25 +341,25 @@ function VideoWorkspace({ portal = 'intranet' }) {
       <header className="communication-header">
         <div>
           <span className="communication-eyebrow">{t('COMMUNICATION')}</span>
-          <h1>{portal === 'intranet' ? 'Video Conferencing' : 'Video Meetings'}</h1>
-          <p>{joined && mode === 'sfu' ? 'Secure group meeting.' : 'Secure group meetings.'} Schedule one from the Calendar to invite colleagues, clients or suppliers.</p>
+          <h1>{portal === 'intranet' ? t("Video Conferencing") : t("Video Meetings")}</h1>
+          <p>{joined && mode === 'sfu' ? t("Secure group meeting.") : t("Secure group meetings.")}{" "}{t("Schedule one from the Calendar to invite colleagues, clients or suppliers.")}</p>
         </div>
-        <span className="communication-status">{joined ? `● In meeting · ${participantCount}` : '○ Not connected'}</span>
+        <span className="communication-status">{joined ? `● ${t("In meeting")} · ${participantCount}` : t("○ Not connected")}</span>
       </header>
 
-      {notice && <div className="cloud-notice" role="status">{notice}</div>}
+      {notice && <div className="cloud-notice" role="status">{translateServer(notice)}</div>}
 
       <div className="meeting-room">
         <div className="meeting-room-header">
-          <h2>{isScheduled ? 'Scheduled meeting' : portal === 'intranet' ? 'Internal Meeting Room' : 'Partner Meeting Room'}</h2>
-          <span className="meeting-live">Room: {room}</span>
+          <h2>{isScheduled ? t("Scheduled meeting") : portal === 'intranet' ? t("Internal Meeting Room") : t("Partner Meeting Room")}</h2>
+          <span className="meeting-live">{t("Room:")}{" "}{room}</span>
         </div>
 
         <div className={`video-grid video-grid--${Math.min(participantCount || 1, 4)}`}>
           <div className="video-tile">
             <video ref={localRef} autoPlay playsInline muted />
-            {cameraOff && <div className="video-placeholder">Camera off</div>}
-            <span>You{sharing ? ' (sharing screen)' : ''}{muted ? ' · muted' : ''}</span>
+            {cameraOff && <div className="video-placeholder">{t("Camera off")}</div>}
+            <span>{t("You")}{sharing ? t(" (sharing screen)") : ''}{muted ? t(" · muted") : ''}</span>
           </div>
           {peers.map((peer) => <RemoteTile key={peer.id} peer={peer} />)}
         </div>
@@ -365,16 +367,16 @@ function VideoWorkspace({ portal = 'intranet' }) {
         <div className="meeting-controls">
           {!joined ? (
             <>
-              <button type="button" onClick={join}>Join meeting</button>
-              <button type="button" onClick={copyLink}>Copy meeting link</button>
+              <button type="button" onClick={join}>{t("Join meeting")}</button>
+              <button type="button" onClick={copyLink}>{t("Copy meeting link")}</button>
             </>
           ) : (
             <>
-              <button type="button" onClick={toggleMute}>{muted ? 'Unmute' : 'Mute'}</button>
-              <button type="button" onClick={toggleCamera}>{cameraOff ? 'Camera on' : 'Camera off'}</button>
-              <button type="button" onClick={toggleShare}>{sharing ? 'Stop sharing' : 'Share screen'}</button>
-              <button type="button" onClick={copyLink}>Copy link</button>
-              <button type="button" className="end-meeting" onClick={leave}>Leave</button>
+              <button type="button" onClick={toggleMute}>{muted ? t("Unmute") : t("Mute")}</button>
+              <button type="button" onClick={toggleCamera}>{cameraOff ? t("Camera on") : t("Camera off")}</button>
+              <button type="button" onClick={toggleShare}>{sharing ? t("Stop sharing") : t("Share screen")}</button>
+              <button type="button" onClick={copyLink}>{t("Copy link")}</button>
+              <button type="button" className="end-meeting" onClick={leave}>{t("Leave")}</button>
             </>
           )}
         </div>

@@ -32,7 +32,7 @@ export async function authenticate(req, res, next) {
   }
 
   const { rows } = await query(
-    `SELECT u.id, u.uuid, u.name, u.email, u.status, u.org_id, r.name AS role, r.code AS role_code, rg.code AS region,
+    `SELECT u.id, u.uuid, u.name, u.email, u.status, u.org_id, u.session_version, r.name AS role, r.code AS role_code, rg.code AS region,
             o.verification_status AS org_status, o.org_type, o.parent_org_id
      FROM users u
      JOIN roles r ON r.id = u.role_id
@@ -45,6 +45,11 @@ export async function authenticate(req, res, next) {
   const user = rows[0]
   if (!user || user.status !== 'active') {
     return res.status(401).json({ message: 'Account is not active.' })
+  }
+
+  // Sessions issued before a password change, reset, suspension or "sign out everywhere" are no longer valid.
+  if ((claims.sv ?? 0) !== user.session_version) {
+    return res.status(401).json({ message: 'Your session has ended. Please sign in again.' })
   }
 
   // External accounts lose access as soon as their organisation is suspended or rejected.
@@ -62,6 +67,7 @@ export async function authenticate(req, res, next) {
     org_id: user.org_id,
     role_code: user.role_code,
     org_scope: organisationScope(user),
+    session_version: user.session_version,
   }
 
   // Sessions issued for mandatory MFA setup may only reach the MFA and session endpoints.

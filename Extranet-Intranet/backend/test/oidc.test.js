@@ -66,10 +66,12 @@ before(async () => {
   })
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve))
   issuer = `http://127.0.0.1:${server.address().port}`
+  await query(`UPDATE users SET oidc_issuer = NULL, oidc_subject = NULL, oidc_linked_at = NULL WHERE oidc_issuer LIKE 'http://127.0.0.1:%'`)
   Object.assign(process.env, { OIDC_ISSUER: issuer, OIDC_CLIENT_ID: CLIENT, OIDC_CLIENT_SECRET: SECRET, OIDC_REDIRECT_URI: 'http://localhost:5173/api/auth/oidc/callback', OIDC_PROVIDER_NAME: 'Test Provider' })
 })
 
 after(async () => {
+  await query(`UPDATE users SET oidc_issuer = NULL, oidc_subject = NULL, oidc_linked_at = NULL WHERE oidc_issuer LIKE 'http://127.0.0.1:%'`)
   for (const name of NAMES) {
     if (saved[name] === undefined) delete process.env[name]
     else process.env[name] = saved[name]
@@ -146,14 +148,37 @@ describe('OIDC single sign-on', () => {
   })
 
   it('refuses unverified emails and unknown accounts without creating users', async () => {
-    const before = (await query('SELECT count(*)::int AS total FROM users')).rows[0].total
+    // A fresh provider identity: an already linked one signs in by its subject, not its email.
+    provider.claims = { sub: 'unlinked-identity' }
     provider.verified = false
     assert.equal(errorOf(await runFlow()), 'not_allowed')
     provider.verified = 'true'
     assert.equal(errorOf(await runFlow()), 'not_allowed')
-    provider = { email: 'nobody-oidc@example.test', verified: true, claims: {} }
+    provider = { email: 'nobody-oidc@example.test', verified: true, claims: { sub: 'unlinked-identity' } }
     assert.equal(errorOf(await runFlow()), 'not_allowed')
-    assert.equal((await query('SELECT count(*)::int AS total FROM users')).rows[0].total, before)
+    assert.equal((await query(`SELECT count(*)::int AS total FROM users WHERE email = 'nobody-oidc@example.test'`)).rows[0].total, 0)
+  })
+
+  it('binds the account to the provider identity on first sign-in', async () => {
+    await query(`UPDATE users SET oidc_issuer = NULL, oidc_subject = NULL WHERE email = 'employee@gmail.com'`)
+    const first = await runFlow()
+    assert.match(first.headers.location, /sso=1$/)
+    const bound = (await query(`SELECT oidc_issuer, oidc_subject FROM users WHERE email = 'employee@gmail.com'`)).rows[0]
+    assert.deepEqual([bound.oidc_issuer, bound.oidc_subject], [issuer, 'provider-user-1'])
+
+    // Another provider identity claiming the same verified email is refused.
+    provider.claims = { sub: 'someone-else' }
+    assert.equal(errorOf(await runFlow()), 'not_allowed')
+
+    // The bound identity still works after its email changes at the provider.
+    provider.claims = {}
+    provider.email = 'renamed@example.test'
+    assert.match((await runFlow()).headers.location, /sso=1$/)
+
+    const admin = (await request(app).post('/api/auth/login').send({ email: 'admin@gmail.com', password: process.env.SEED_USER_PASSWORD })).body.data
+    const employeeId = (await query(`SELECT id FROM users WHERE email = 'employee@gmail.com'`)).rows[0].id
+    assert.equal((await request(app).delete(`/api/users/${employeeId}/sso-link`).set('Authorization', `Bearer ${admin.token}`)).status, 200)
+    assert.equal((await query(`SELECT oidc_subject FROM users WHERE id = $1`, [employeeId])).rows[0].oidc_subject, null)
   })
 
   it('never lets privileged accounts skip MFA', async () => {

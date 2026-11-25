@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { deleteAvatar, receiveAvatar, saveAvatar } from '../controllers/profile.controller.js'
 import { rateLimit } from 'express-rate-limit'
 import {
   login,
@@ -10,6 +11,8 @@ import {
   mfaVerify,
   requestPasswordReset,
   confirmPasswordReset,
+  changePassword,
+  logoutEverywhere,
 } from '../controllers/auth.controller.js'
 import {
   listKeys,
@@ -47,8 +50,12 @@ router.get('/oidc/callback', loginLimiter, oidcCallback)
 router.post('/oidc/complete', loginLimiter, oidcComplete)
 
 router.get('/me', authenticate, me)
+router.put('/me/avatar', authenticate, receiveAvatar, saveAvatar)
+router.delete('/me/avatar', authenticate, deleteAvatar)
 router.get('/me/export', authenticate, exportMyData)
 router.post('/logout', authenticate, logout)
+router.post('/password', authenticate, loginLimiter, changePassword)
+router.post('/logout-everywhere', authenticate, logoutEverywhere)
 router.post('/mfa/setup', authenticate, mfaSetup)
 router.post('/mfa/enable', authenticate, mfaEnable)
 router.post('/mfa/disable', authenticate, mfaDisable)

@@ -1,0 +1,31 @@
+.ws-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--tc-bg-ffffff, #ffffff);
+}
+.ws-search input { flex: 1; min-height: 48px; border: 0; background: transparent; color: var(--text); font: inherit; font-size: 15px; outline: none; }
+.ws-search kbd { padding: 2px 6px; border: 1px solid var(--border); border-radius: 6px; color: var(--muted); font-size: 11px; }
+.ws-search:focus-within { border-color: var(--purple, #6d28d9); box-shadow: 0 0 0 3px var(--purple-soft, #ede9fe); }
+
+.ws-group { margin-bottom: 22px; }
+.ws-group h2 { margin: 0 0 10px; font-size: 12px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.ws-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.ws-grid-compact { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+
+.ws-tile { position: relative; display: flex; border: 1px solid var(--border); border-radius: 12px; background: var(--tc-bg-ffffff, #ffffff); transition: border-color 0.15s, box-shadow 0.15s; }
+.ws-tile:hover, .ws-tile:focus-within { border-color: var(--purple, #6d28d9); box-shadow: 0 6px 18px rgba(20, 22, 40, 0.08); }
+.ws-tile-link { flex: 1; display: flex; gap: 12px; align-items: flex-start; padding: 14px 40px 14px 14px; color: var(--text); text-decoration: none; }
+[dir="rtl"] .ws-tile-link { padding: 14px 14px 14px 40px; }
+.ws-icon { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--purple-soft, #ede9fe); color: var(--purple, #6d28d9); font-size: 17px; }
+.ws-text { display: grid; gap: 3px; min-width: 0; }
+.ws-text strong { font-size: 14px; }
+.ws-text small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+.ws-star { position: absolute; top: 8px; inset-inline-end: 8px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 16px; cursor: pointer; }
+.ws-star:hover, .ws-star.on { color: var(--tc-fg-a35b00, #d97706); }
+.ws-empty { color: var(--muted); }
+.ws-empty button { border: 0; padding: 0; background: transparent; color: var(--purple, #6d28d9); font-weight: 600; cursor: pointer; }

@@ -2,20 +2,20 @@
 .zx-notice button { border: 0; background: none; cursor: pointer; }
 
 .zx-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 16px 0; border-bottom: 1px solid var(--border); }
-.zx-tabs button { padding: 9px 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: #64748b; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
-.zx-tabs button.active { border-bottom-color: #4f46e5; color: #312e81; }
+.zx-tabs button { padding: 9px 14px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--tc-fg-64748b, #64748b); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.zx-tabs button.active { border-bottom-color: var(--tc-bd-4f46e5, #4f46e5); color: var(--tc-fg-312e81, #312e81); }
 
-.zx-form, .zx-detail, .zx-card { margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; background: #fff; }
+.zx-form, .zx-detail, .zx-card { margin-bottom: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--tc-bg-ffffff, #ffffff); }
 .zx-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; padding: 16px; }
-.zx-form label { display: grid; gap: 4px; color: #64748b; font-size: 11px; }
+.zx-form label { display: grid; gap: 4px; color: var(--tc-fg-64748b, #64748b); font-size: 11px; }
 .zx-form input, .zx-form select, .zx-form textarea, .zx-toolbar input {
-  width: 100%; min-width: 0; box-sizing: border-box; padding: 9px 11px; border: 1px solid #cbd5e1; border-radius: 8px; background: #fff; font: inherit; font-size: 12px;
+  width: 100%; min-width: 0; box-sizing: border-box; padding: 9px 11px; border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1); border-radius: 8px; background: var(--tc-bg-ffffff, #ffffff); font: inherit; font-size: 12px;
 }
 .zx-form textarea, .zx-lines, .zx-form-actions, .zx-wide { grid-column: 1 / -1; }
 .zx-lines { display: grid; gap: 8px; }
 .zx-line { display: grid; grid-template-columns: minmax(0, 1fr) 80px 90px 34px; gap: 8px; }
 .zx-line button, .zx-add, .zx-form-actions button:not(.primary-action), .zx-detail header button {
-  padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; background: #fff; font: inherit; font-size: 11px; cursor: pointer;
+  padding: 7px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--tc-bg-ffffff, #ffffff); font: inherit; font-size: 11px; cursor: pointer;
 }
 .zx-line button { padding: 0; }
 .zx-add { justify-self: start; }
@@ -24,30 +24,30 @@
 .zx-detail { padding: 16px; }
 .zx-detail header { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 .zx-detail h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
-.zx-detail p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+.zx-detail p { margin: 4px 0 0; color: var(--tc-fg-64748b, #64748b); font-size: 12px; }
 .zx-totals { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 16px; margin: 12px 0; font-size: 12px; }
-.zx-note { padding: 9px 11px; border-radius: 8px; background: #f8fafc; }
-.zx-timeline { display: grid; gap: 6px; margin: 10px 0; padding: 0; list-style: none; font-size: 11px; color: #64748b; }
+.zx-note { padding: 9px 11px; border-radius: 8px; background: var(--tc-bg-f8fafc, #f8fafc); }
+.zx-timeline { display: grid; gap: 6px; margin: 10px 0; padding: 0; list-style: none; font-size: 11px; color: var(--tc-fg-64748b, #64748b); }
 
 .zx-toolbar { margin-bottom: 10px; max-width: 320px; }
 .zx-heading { margin: 18px 0 8px; font-size: 14px; }
 .zx-table-wrap { overflow-x: auto; }
 .zx-table-wrap table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.zx-table-wrap th { padding: 10px 12px; border-bottom: 1px solid var(--border); color: #64748b; font-size: 10px; text-align: left; text-transform: uppercase; white-space: nowrap; }
-.zx-table-wrap td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; }
+.zx-table-wrap th { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--tc-fg-64748b, #64748b); font-size: 10px; text-align: left; text-transform: uppercase; white-space: nowrap; }
+.zx-table-wrap td { padding: 10px 12px; border-bottom: 1px solid var(--tc-bd-f1f5f9, #f1f5f9); }
 .zx-click { cursor: pointer; }
-.zx-click:hover { background: #f8fafc; }
+.zx-click:hover { background: var(--tc-bg-f8fafc, #f8fafc); }
 .zx-mono { font-family: ui-monospace, Consolas, monospace; white-space: nowrap; }
-.zx-low { color: #b91c1c; font-weight: 700; }
-.zx-empty { padding: 26px !important; color: #94a3b8; text-align: center; }
-.zx-link { padding: 0; border: 0; background: none; color: #4338ca; font: inherit; cursor: pointer; text-decoration: underline; }
+.zx-low { color: var(--tc-fg-b91c1c, #b91c1c); font-weight: 700; }
+.zx-empty { padding: 26px !important; color: var(--tc-fg-94a3b8, #94a3b8); text-align: center; }
+.zx-link { padding: 0; border: 0; background: none; color: var(--tc-fg-4338ca, #4338ca); font: inherit; cursor: pointer; text-decoration: underline; }
 
-.zx-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: #e2e8f0; color: #334155; font-size: 10px; font-weight: 700; }
-.zx-sent, .zx-processing { background: #dbeafe; color: #1e40af; }
-.zx-accepted, .zx-confirmed, .zx-delivered { background: #dcfce7; color: #166534; }
-.zx-shipped { background: #ede9fe; color: #5b21b6; }
-.zx-rejected, .zx-cancelled { background: #fee2e2; color: #991b1b; }
-.zx-expired { background: #fef3c7; color: #92400e; }
+.zx-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; background: var(--tc-bg-e2e8f0, #e2e8f0); color: var(--tc-fg-334155, #334155); font-size: 10px; font-weight: 700; }
+.zx-sent, .zx-processing { background: var(--tc-bg-dbeafe, #dbeafe); color: var(--tc-fg-1e40af, #1e40af); }
+.zx-accepted, .zx-confirmed, .zx-delivered { background: var(--tc-bg-dcfce7, #dcfce7); color: var(--tc-fg-166534, #166534); }
+.zx-shipped { background: var(--tc-bg-ede9fe, #ede9fe); color: var(--tc-fg-5b21b6, #5b21b6); }
+.zx-rejected, .zx-cancelled { background: var(--tc-bg-fee2e2, #fee2e2); color: var(--tc-fg-991b1b, #991b1b); }
+.zx-expired { background: var(--tc-bg-fef3c7, #fef3c7); color: var(--tc-fg-92400e, #92400e); }
 
 @media (max-width: 640px) {
   .zx-line { grid-template-columns: minmax(0, 1fr) 64px 34px; }

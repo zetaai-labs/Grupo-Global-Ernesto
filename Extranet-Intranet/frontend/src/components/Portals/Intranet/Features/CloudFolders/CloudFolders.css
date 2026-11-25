@@ -10,10 +10,10 @@
 .cloud-upload-form select,
 .cloud-upload-form input[type='file'] {
   padding: 10px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 10px;
-  background: #fff;
-  color: #1e293b;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-1e293b, #1e293b);
   font: inherit;
   font-size: 12px;
   outline: none;
@@ -21,16 +21,16 @@
 
 .cloud-inline-form input:focus,
 .cloud-upload-form select:focus {
-  border-color: #6366f1;
+  border-color: var(--tc-bd-6366f1, #6366f1);
 }
 
 .cloud-notice {
   margin-bottom: 18px;
   padding: 12px 14px;
-  border: 1px solid #fecdd3;
+  border: 1px solid var(--tc-bd-fecdd3, #fecdd3);
   border-radius: 10px;
-  background: #fff1f2;
-  color: #be123c;
+  background: var(--tc-bg-fff1f2, #fff1f2);
+  color: var(--tc-fg-be123c, #be123c);
   font-size: 12px;
 }
 
@@ -48,7 +48,7 @@
   width: 100%;
   padding: 12px 10px;
   border: 0;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--tc-bd-e2e8f0, #e2e8f0);
   background: transparent;
   text-align: left;
   font: inherit;
@@ -57,7 +57,7 @@
 
 .cloud-folder-row:hover,
 .cloud-folder-row.selected {
-  background: #eef2ff;
+  background: var(--tc-bg-eef2ff, #eef2ff);
 }
 
 .cloud-folder-row:last-child,
@@ -67,23 +67,23 @@
 
 .cloud-file-row button {
   padding: 7px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1);
   border-radius: 8px;
-  background: #fff;
-  color: #4338ca;
+  background: var(--tc-bg-ffffff, #ffffff);
+  color: var(--tc-fg-4338ca, #4338ca);
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
 
 .cloud-file-row .cloud-remove {
-  border-color: #fecdd3;
-  color: #be123c;
+  border-color: var(--tc-bd-fecdd3, #fecdd3);
+  color: var(--tc-fg-be123c, #be123c);
 }
 
 .cloud-empty {
   padding: 20px 0;
-  color: #64748b;
+  color: var(--tc-fg-64748b, #64748b);
   font-size: 13px;
 }
 
