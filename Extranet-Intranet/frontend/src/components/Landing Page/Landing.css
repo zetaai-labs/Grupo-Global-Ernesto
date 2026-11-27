@@ -823,6 +823,15 @@
     display: none;
   }
 
+  .landing-nav-right {
+    gap: 6px;
+  }
+
+  .landing-signin {
+    padding: 8px 10px;
+    white-space: nowrap;
+  }
+
   .landing-live-clock span:last-child {
     display: none;
   }
@@ -1234,3 +1243,15 @@
   }
 }
 
+
+/* Phones: keep Send files, Sign In and Register all on screen. */
+@media (max-width: 480px) {
+  .landing-live-clock,
+  .landing-brand-caption {
+    display: none;
+  }
+
+  .landing-navbar {
+    padding: 12px 12px;
+  }
+}

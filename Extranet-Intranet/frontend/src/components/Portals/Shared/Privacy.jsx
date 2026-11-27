@@ -5,6 +5,7 @@ import { downloadFromApi } from '../../../utils/download'
 import { useT, dateLocale } from '../../../i18n'
 import './Privacy.css'
 import { translateServer } from '../../../i18n/serverMessages'
+import ConsentCard from './privacy/ConsentCard'
 
 const TYPE_LABELS = { RECTIFICATION: 'Rectification', CANCELLATION: 'Cancellation (erasure)', OPPOSITION: 'Opposition' }
 const TYPE_HELP = {
@@ -120,6 +121,8 @@ function Privacy() {
           </ul>
         </div>
       </div>
+
+      <ConsentCard />
 
       {isOfficer && (
         <div className="feature-panel">

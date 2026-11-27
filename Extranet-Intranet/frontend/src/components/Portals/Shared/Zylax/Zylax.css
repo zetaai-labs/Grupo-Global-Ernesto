@@ -237,3 +237,4 @@
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
 }
+.zh-private { margin: 0; padding: 8px 10px; border-radius: 8px; background: var(--purple-soft, #ede9fe); font-size: 12px; }

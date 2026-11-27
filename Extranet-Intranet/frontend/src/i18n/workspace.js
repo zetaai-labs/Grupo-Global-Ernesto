@@ -106,6 +106,14 @@ const TEXTS = {
   'Guides and useful documents.': ['Guías y documentos útiles.', 'أدلة ومستندات مفيدة.', 'Руководства и полезные документы.'],
   'Courses you need to complete.': ['Cursos que debes completar.', 'الدورات التي يجب عليك إكمالها.', 'Курсы, которые нужно пройти.'],
   'Conversations with the Global Group team.': ['Conversaciones con el equipo de Global Group.', 'محادثات مع فريق Global Group.', 'Переписка с командой Global Group.'],
+  // Login and landing: company pre-registration (onboarding step 1)
+  'New company?': ['¿Empresa nueva?', 'شركة جديدة؟', 'Новая компания?'],
+  'Customers, partners and suppliers apply here. Our compliance team reviews every request and emails your access.': [
+    'Clientes, socios y proveedores lo solicitan aquí. Nuestro equipo de cumplimiento revisa cada solicitud y te envía el acceso por correo.',
+    'يقدّم العملاء والشركاء والموردون طلباتهم هنا. يراجع فريق الامتثال كل طلب ويرسل إليك بيانات الدخول بالبريد الإلكتروني.',
+    'Клиенты, партнёры и поставщики подают заявку здесь. Наша служба комплаенса проверяет каждую заявку и присылает доступ по электронной почте.',
+  ],
+  'Employees get their account from HR.': ['Los empleados reciben su cuenta de RR. HH.', 'يحصل الموظفون على حساباتهم من الموارد البشرية.', 'Сотрудники получают учётную запись в отделе кадров.'],
 }
 
 const pick = (index) => Object.fromEntries(Object.entries(TEXTS).map(([key, values]) => [key, values[index]]))

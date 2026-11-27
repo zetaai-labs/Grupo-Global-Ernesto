@@ -8,6 +8,7 @@ import InstallAppButton from '../../../pwa/InstallAppButton'
 import { useT } from '../../../i18n'
 import ProfileMenu from '../Shared/profile/ProfileMenu'
 import QuickSearch from '../Shared/workspace/QuickSearch'
+import { visibleScreens } from '../Shared/navigation'
 
 const ROLE_LABELS = {
   partner: 'Partner',
@@ -41,7 +42,9 @@ function ExtranetTopbar() {
   const location = useLocation()
   const user = getUser()
   const currentPage = location.pathname.split('/').filter(Boolean).pop()
-  const title = pageNames[currentPage] || 'Overview'
+  // Names come from the shared menu, so every new screen is named here too; the list above covers the rest.
+  const screen = visibleScreens('extranet', user?.role).find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+  const title = screen?.name || pageNames[currentPage] || 'Overview'
 
   return (
     <header className="portal-topbar">

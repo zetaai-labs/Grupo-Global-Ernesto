@@ -78,7 +78,7 @@ function MyBilling() {
           <tbody>
             {(data?.subscriptions || []).map((row) => (
               <tr key={row.subscription_id}>
-                <td>{row.plan_name}</td><td>{euro(row.amount_eur)} / {t(row.billing_interval === 'YEAR' ? 'year' : 'month')} + {t('VAT')}</td>
+                <td>{t(row.plan_name)}{row.category === 'MEMBERSHIP' ? ` · ${t('Membership')}` : ''}</td><td>{euro(row.amount_eur)} / {t(({ MONTH: 'month', YEAR: 'year', YEARS_2: '2 years', YEARS_3: '3 years' })[row.billing_interval] || 'month')} + {t('VAT')}</td>
                 <td>{row.current_period_start} → {row.current_period_end}{row.cancel_at_period_end ? ` · ${t('ends then')}` : ''}</td>
                 <td><span className={`zx-pill ${tone[row.status] || ''}`}>{t(row.status)}</span></td>
               </tr>

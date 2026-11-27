@@ -1,0 +1,80 @@
+// Public "Ask Grupo Global" assistant and its staff page. English key -> [es, ar, ru, fr].
+const TEXTS = {
+  // Chat widget
+  'What is Grupo Global?': ['¿Qué es Grupo Global?', 'ما هي Grupo Global؟', 'Что такое Grupo Global?', 'Qu’est-ce que Grupo Global ?'],
+  'How does a company join?': ['¿Cómo se une una empresa?', 'كيف تنضم شركة؟', 'Как компании присоединиться?', 'Comment une entreprise peut-elle adhérer ?'],
+  'How much does membership cost?': ['¿Cuánto cuesta la membresía?', 'كم تكلفة العضوية؟', 'Сколько стоит членство?', 'Combien coûte l’adhésion ?'],
+  'How do I pay?': ['¿Cómo pago?', 'كيف أدفع؟', 'Как оплатить?', 'Comment payer ?'],
+  'Ask Grupo Global': ['Pregunta a Grupo Global', 'اسأل Grupo Global', 'Спросите Grupo Global', 'Demandez à Grupo Global'],
+  'Answers from Grupo Global’s approved information': ['Respuestas basadas en información aprobada por Grupo Global', 'إجابات من معلومات Grupo Global المعتمدة', 'Ответы на основе утверждённой информации Grupo Global', 'Réponses fondées sur les informations approuvées de Grupo Global'],
+  'Hello! I can answer questions about Grupo Global, membership and how to join.': ['¡Hola! Puedo responder preguntas sobre Grupo Global, la membresía y cómo unirse.', 'مرحبًا! يمكنني الإجابة عن أسئلة حول Grupo Global والعضوية وكيفية الانضمام.', 'Здравствуйте! Я отвечу на вопросы о Grupo Global, членстве и о том, как присоединиться.', 'Bonjour ! Je réponds à vos questions sur Grupo Global, l’adhésion et la façon de nous rejoindre.'],
+  'I don’t have that information yet. The team can answer you by email.': ['Todavía no tengo esa información. El equipo puede responderte por correo.', 'لا تتوفر لدي هذه المعلومة بعد. يمكن للفريق الرد عليك بالبريد الإلكتروني.', 'У меня пока нет этой информации. Команда может ответить вам по электронной почте.', 'Je n’ai pas encore cette information. L’équipe peut vous répondre par e-mail.'],
+  'The assistant could not answer right now.': ['El asistente no ha podido responder ahora.', 'تعذّر على المساعد الرد الآن.', 'Ассистент сейчас не может ответить.', 'L’assistant n’a pas pu répondre pour le moment.'],
+  'Your message could not be sent.': ['No se ha podido enviar tu mensaje.', 'تعذّر إرسال رسالتك.', 'Не удалось отправить сообщение.', 'Votre message n’a pas pu être envoyé.'],
+  'Shown in English: the full assistant is not switched on yet.': ['Se muestra en inglés: el asistente completo aún no está activado.', 'معروضة بالإنجليزية: لم يتم تفعيل المساعد الكامل بعد.', 'Показано на английском: полная версия ассистента ещё не включена.', 'Affiché en anglais : l’assistant complet n’est pas encore activé.'],
+  'Hello! How can I help you? You can ask about Grupo Global, membership, payments or how to join.': ['¡Hola! ¿En qué puedo ayudarte? Puedes preguntar sobre Grupo Global, la membresía, los pagos o cómo unirte.', 'مرحبًا! كيف يمكنني مساعدتك؟ يمكنك السؤال عن Grupo Global أو العضوية أو المدفوعات أو كيفية الانضمام.', 'Здравствуйте! Чем могу помочь? Спрашивайте о Grupo Global, членстве, оплате или о том, как присоединиться.', 'Bonjour ! Comment puis-je vous aider ? Vous pouvez poser vos questions sur Grupo Global, l’adhésion, les paiements ou la façon de nous rejoindre.'],
+  'You’re welcome! Is there anything else I can help you with?': ['¡De nada! ¿Puedo ayudarte en algo más?', 'على الرحب والسعة! هل هناك شيء آخر يمكنني مساعدتك فيه؟', 'Пожалуйста! Могу ли я помочь чем-то ещё?', 'Avec plaisir ! Puis-je vous aider pour autre chose ?'],
+  'Goodbye! Come back any time if you have more questions.': ['¡Hasta pronto! Vuelve cuando quieras si tienes más preguntas.', 'إلى اللقاء! عد في أي وقت إذا كانت لديك أسئلة أخرى.', 'До свидания! Возвращайтесь, если появятся вопросы.', 'Au revoir ! Revenez quand vous voulez si vous avez d’autres questions.'],
+  'Talk to the team': ['Hablar con el equipo', 'تحدّث مع الفريق', 'Связаться с командой', 'Parler à l’équipe'],
+  'Writing…': ['Escribiendo…', 'جارٍ الكتابة…', 'Печатает…', 'Rédaction…'],
+  'Your name': ['Tu nombre', 'اسمك', 'Ваше имя', 'Votre nom'],
+  'Your email': ['Tu correo electrónico', 'بريدك الإلكتروني', 'Ваш email', 'Votre e-mail'],
+  'Company (optional)': ['Empresa (opcional)', 'الشركة (اختياري)', 'Компания (необязательно)', 'Entreprise (facultatif)'],
+  'Grupo Global may use my name and email to answer this question.': ['Grupo Global puede usar mi nombre y correo para responder a esta pregunta.', 'يجوز لـ Grupo Global استخدام اسمي وبريدي الإلكتروني للرد على هذا السؤال.', 'Grupo Global может использовать моё имя и email, чтобы ответить на этот вопрос.', 'Grupo Global peut utiliser mon nom et mon e-mail pour répondre à cette question.'],
+  'Type your question…': ['Escribe tu pregunta…', 'اكتب سؤالك…', 'Введите ваш вопрос…', 'Saisissez votre question…'],
+  'Your question': ['Tu pregunta', 'سؤالك', 'Ваш вопрос', 'Votre question'],
+  'Automatic answers can be incomplete. Do not share passwords or card numbers.': ['Las respuestas automáticas pueden ser incompletas. No compartas contraseñas ni números de tarjeta.', 'قد تكون الإجابات التلقائية غير مكتملة. لا تشارك كلمات المرور أو أرقام البطاقات.', 'Автоматические ответы могут быть неполными. Не сообщайте пароли и номера карт.', 'Les réponses automatiques peuvent être incomplètes. Ne partagez ni mots de passe ni numéros de carte.'],
+  'Ask us': ['Pregúntanos', 'اسألنا', 'Спросите нас', 'Posez-nous une question'],
+
+  // Staff page
+  'AI assistant knowledge': ['Conocimiento del asistente de IA', 'معرفة مساعد الذكاء الاصطناعي', 'База знаний ИИ-ассистента', 'Connaissances de l’assistant IA'],
+  'What the public assistant answers, unanswered questions and requests to the team.': ['Lo que responde el asistente público, las preguntas sin respuesta y las solicitudes al equipo.', 'ما يجيب عنه المساعد العام، والأسئلة غير المُجاب عنها، وطلبات التواصل مع الفريق.', 'Что отвечает публичный ассистент, вопросы без ответа и обращения к команде.', 'Ce que répond l’assistant public, les questions sans réponse et les demandes à l’équipe.'],
+  'The public assistant answers visitors and members only from these approved facts. Membership prices and the support email are added automatically.': [
+    'El asistente público responde a visitantes y miembros solo con estos datos aprobados. Los precios de la membresía y el correo de soporte se añaden automáticamente.',
+    'يجيب المساعد العام الزوار والأعضاء من هذه المعلومات المعتمدة فقط. تُضاف أسعار العضوية وبريد الدعم تلقائيًا.',
+    'Публичный ассистент отвечает посетителям и участникам только на основе этих утверждённых фактов. Цены на членство и email поддержки добавляются автоматически.',
+    'L’assistant public répond aux visiteurs et aux membres uniquement à partir de ces informations approuvées. Les tarifs d’adhésion et l’e-mail du support sont ajoutés automatiquement.',
+  ],
+  'Add a fact': ['Añadir un dato', 'إضافة معلومة', 'Добавить факт', 'Ajouter une information'],
+  'What it knows': ['Lo que sabe', 'ما يعرفه', 'Что он знает', 'Ce qu’il sait'],
+  'Unanswered questions': ['Preguntas sin respuesta', 'أسئلة بلا إجابة', 'Вопросы без ответа', 'Questions sans réponse'],
+  'Requests to the team': ['Solicitudes al equipo', 'طلبات إلى الفريق', 'Обращения к команде', 'Demandes à l’équipe'],
+  'Questions asked': ['Preguntas recibidas', 'الأسئلة المطروحة', 'Задано вопросов', 'Questions posées'],
+  '{count} in the last 7 days': ['{count} en los últimos 7 días', '{count} خلال آخر 7 أيام', '{count} за последние 7 дней', '{count} ces 7 derniers jours'],
+  Answered: ['Respondidas', 'تمت الإجابة', 'С ответом', 'Répondues'],
+  'Kept {days} days, without names': ['Se guardan {days} días, sin nombres', 'تُحفظ {days} يومًا دون أسماء', 'Хранятся {days} дней, без имён', 'Conservées {days} jours, sans noms'],
+  Mode: ['Modo', 'الوضع', 'Режим', 'Mode'],
+  'AI answers': ['Respuestas con IA', 'إجابات بالذكاء الاصطناعي', 'Ответы ИИ', 'Réponses par IA'],
+  'Fact matching': ['Búsqueda de datos', 'مطابقة المعلومات', 'Подбор фактов', 'Correspondance des informations'],
+  'Claude writes answers from these facts.': ['Claude redacta las respuestas a partir de estos datos.', 'يكتب Claude الإجابات من هذه المعلومات.', 'Claude составляет ответы на основе этих фактов.', 'Claude rédige les réponses à partir de ces informations.'],
+  'Add the AI key to get written answers in every language.': ['Añade la clave de IA para obtener respuestas redactadas en todos los idiomas.', 'أضف مفتاح الذكاء الاصطناعي للحصول على إجابات مكتوبة بكل اللغات.', 'Добавьте ключ ИИ, чтобы получать готовые ответы на всех языках.', 'Ajoutez la clé IA pour obtenir des réponses rédigées dans toutes les langues.'],
+  'For example: Office hours': ['Por ejemplo: Horario de oficina', 'مثال: ساعات العمل', 'Например: часы работы', 'Par exemple : horaires de bureau'],
+  'Fact (what the assistant may say)': ['Dato (lo que el asistente puede decir)', 'المعلومة (ما يمكن للمساعد قوله)', 'Факт (что может сказать ассистент)', 'Information (ce que l’assistant peut dire)'],
+  '{count} of 4000 characters. Write plain, checked facts: the assistant repeats them to the public.': ['{count} de 4000 caracteres. Escribe datos claros y comprobados: el asistente los repite al público.', '{count} من 4000 حرف. اكتب معلومات واضحة ومؤكدة: يكررها المساعد للجمهور.', '{count} из 4000 символов. Пишите простые проверенные факты: ассистент повторяет их публике.', '{count} sur 4000 caractères. Rédigez des informations claires et vérifiées : l’assistant les répète au public.'],
+  'In use': ['En uso', 'قيد الاستخدام', 'Используется', 'Utilisée'],
+  'Not in use': ['Sin usar', 'غير مستخدمة', 'Не используется', 'Non utilisée'],
+  'Updated {date}': ['Actualizado el {date}', 'تم التحديث {date}', 'Обновлено {date}', 'Mis à jour le {date}'],
+  'Delete this fact? The assistant will stop using it.': ['¿Eliminar este dato? El asistente dejará de usarlo.', 'حذف هذه المعلومة؟ سيتوقف المساعد عن استخدامها.', 'Удалить этот факт? Ассистент перестанет его использовать.', 'Supprimer cette information ? L’assistant cessera de l’utiliser.'],
+  Times: ['Veces', 'المرات', 'Раз', 'Fois'],
+  'Last asked': ['Última vez', 'آخر سؤال', 'Последний раз', 'Dernière fois'],
+  'Add the answer': ['Añadir la respuesta', 'إضافة الإجابة', 'Добавить ответ', 'Ajouter la réponse'],
+  'Every question so far had an answer.': ['Hasta ahora, todas las preguntas han tenido respuesta.', 'حتى الآن كانت لكل سؤال إجابة.', 'Пока на все вопросы был ответ.', 'Jusqu’ici, chaque question a eu une réponse.'],
+  'Waiting for reply': ['Esperando respuesta', 'بانتظار الرد', 'Ожидает ответа', 'En attente de réponse'],
+  'Reply to {email}': ['Responder a {email}', 'الرد على {email}', 'Ответить {email}', 'Répondre à {email}'],
+  'Mark as answered': ['Marcar como respondida', 'وضع علامة «تم الرد»', 'Отметить как отвеченное', 'Marquer comme répondue'],
+
+  // Server messages
+  'Write a question of up to 500 characters.': ['Escribe una pregunta de hasta 500 caracteres.', 'اكتب سؤالًا لا يتجاوز 500 حرف.', 'Напишите вопрос длиной до 500 символов.', 'Écrivez une question de 500 caractères maximum.'],
+  'The assistant is very busy today. Please write to the team instead.': ['El asistente está muy ocupado hoy. Escribe al equipo, por favor.', 'المساعد مشغول جدًا اليوم. يُرجى مراسلة الفريق بدلًا من ذلك.', 'Сегодня ассистент сильно загружен. Пожалуйста, напишите команде.', 'L’assistant est très sollicité aujourd’hui. Écrivez plutôt à l’équipe.'],
+  'Tick the box so the team can reply to you.': ['Marca la casilla para que el equipo pueda responderte.', 'ضع علامة في المربع ليتمكن الفريق من الرد عليك.', 'Отметьте поле, чтобы команда могла вам ответить.', 'Cochez la case pour que l’équipe puisse vous répondre.'],
+  'Thank you. The team will reply by email.': ['Gracias. El equipo te responderá por correo.', 'شكرًا لك. سيرد الفريق عبر البريد الإلكتروني.', 'Спасибо. Команда ответит по электронной почте.', 'Merci. L’équipe vous répondra par e-mail.'],
+  'Too many questions. Wait a few minutes and try again.': ['Demasiadas preguntas. Espera unos minutos e inténtalo de nuevo.', 'أسئلة كثيرة جدًا. انتظر بضع دقائق ثم حاول مجددًا.', 'Слишком много вопросов. Подождите несколько минут и попробуйте снова.', 'Trop de questions. Patientez quelques minutes et réessayez.'],
+  'Marked as answered.': ['Marcada como respondida.', 'تم وضع علامة «تم الرد».', 'Отмечено как отвеченное.', 'Marquée comme répondue.'],
+  'Only administrators can manage the assistant.': ['Solo los administradores pueden gestionar el asistente.', 'يمكن للمسؤولين فقط إدارة المساعد.', 'Управлять ассистентом могут только администраторы.', 'Seuls les administrateurs peuvent gérer l’assistant.'],
+}
+
+const pick = (index) => Object.fromEntries(Object.entries(TEXTS).map(([key, values]) => [key, values[index]]))
+export const assistantEs = pick(0)
+export const assistantAr = pick(1)
+export const assistantRu = pick(2)
+export const assistantFr = pick(3)

@@ -25,6 +25,7 @@ import {
 import { oidcCallback, oidcComplete, oidcStart, oidcStatus } from '../controllers/oidc.controller.js'
 import { authenticate } from '../middleware/authenticate.js'
 import { exportMyData } from '../controllers/users.controller.js'
+import { acceptPrivacy, myConsents, withdrawPrivacy } from '../controllers/consent.controller.js'
 
 const router = Router()
 
@@ -53,6 +54,9 @@ router.get('/me', authenticate, me)
 router.put('/me/avatar', authenticate, receiveAvatar, saveAvatar)
 router.delete('/me/avatar', authenticate, deleteAvatar)
 router.get('/me/export', authenticate, exportMyData)
+router.get('/consent', authenticate, myConsents)
+router.post('/consent', authenticate, acceptPrivacy)
+router.delete('/consent', authenticate, withdrawPrivacy)
 router.post('/logout', authenticate, logout)
 router.post('/password', authenticate, loginLimiter, changePassword)
 router.post('/logout-everywhere', authenticate, logoutEverywhere)

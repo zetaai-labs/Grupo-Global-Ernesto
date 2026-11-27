@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../api/client'
-import { useT } from '../../i18n'
+import { useLanguage, useT } from '../../i18n'
 import LanguageSwitch from '../../i18n/LanguageSwitch'
 import OnboardingPeople from './OnboardingPeople'
+import OnboardingMembership from './OnboardingMembership'
 import './ReceivedFileUpload.css'
 import './Onboarding.css'
 import { translateServer } from '../../i18n/serverMessages'
+import AssistantWidget from '../Portals/Shared/assistant/AssistantWidget'
 
 const CORRIDORS = [
   ['SPAIN_EU', 'Spain / European Union'],
@@ -36,12 +38,14 @@ const SECTORS = [
 const STAGES = ['Pre-registration', 'Legal documents', 'Automatic validation', 'AML / PEP screening', 'Approval & credentials']
 const EMPTY = {
   legal_name: '', tax_id: '', pic_code: '', country: 'ESP', region_corridor: 'SPAIN_EU', org_type: 'CLIENT',
-  contact_name: '', contact_email: '', contact_phone: '', sectors: [],
+  contact_name: '', contact_email: '', contact_phone: '', sectors: [], privacy_accepted: false,
+  membership_track: 'MEMBER', membership_plan_code: '', billing_address: '', survey: {},
 }
 
 /** Public KYC/KYB onboarding (Schema Document §2.4): steps 1–3 for applicants, no account required. */
 function Onboarding() {
   const t = useT()
+  const language = useLanguage()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const token = searchParams.get('ref')
@@ -78,6 +82,10 @@ function Onboarding() {
         country: form.country.trim().toUpperCase(),
         pic_code: form.pic_code || null,
         contact_phone: form.contact_phone || null,
+        language,
+        membership_plan_code: form.membership_track === 'MEMBER' ? form.membership_plan_code || null : null,
+        billing_address: form.membership_track === 'MEMBER' ? form.billing_address : null,
+        survey: Object.fromEntries(Object.entries(form.survey).filter(([, value]) => (Array.isArray(value) ? value.length : String(value).trim()))),
       })
       setNotice(t('Registration received. Save this page’s link to continue later.'))
       navigate(`/onboarding?ref=${response.data.data.token}`, { replace: true })
@@ -191,7 +199,8 @@ function Onboarding() {
                 </label>
               ))}
             </fieldset>
-            <h2>{t('Primary contact')}</h2>
+            <OnboardingMembership form={form} setForm={setForm} />
+            <h2>{t('3. Primary contact')}</h2>
             <div className="onboarding-grid">
               <label>{t('Full name')}
                 <input value={form.contact_name} onChange={change('contact_name')} required />
@@ -203,7 +212,15 @@ function Onboarding() {
                 <input value={form.contact_phone} onChange={change('contact_phone')} />
               </label>
             </div>
-            <button type="submit" className="primary-action" disabled={busy === 'register'}>
+            <label className="onboarding-consent">
+              <input type="checkbox" checked={form.privacy_accepted} onChange={(event) => setForm((current) => ({ ...current, privacy_accepted: event.target.checked }))} required />
+              <span>
+                {t('I have read and accept the privacy policy, the terms of use and the cookie policy.')}{' '}
+                <Link to="/legal/privacy" target="_blank" rel="noopener">{t('Privacy policy')}</Link>
+                {' · '}<Link to="/legal/terms" target="_blank" rel="noopener">{t('Terms of use')}</Link>
+              </span>
+            </label>
+            <button type="submit" className="primary-action" disabled={busy === 'register' || !form.privacy_accepted}>
               {busy === 'register' ? t('Registering…') : t('Continue to documents')}
             </button>
           </form>
@@ -260,6 +277,7 @@ function Onboarding() {
 
         <p className="onboarding-footer"><Link to="/login">{t('Already verified? Sign in')}</Link></p>
       </div>
+      <AssistantWidget />
     </main>
   )
 }

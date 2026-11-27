@@ -3,7 +3,7 @@ import api from '../../../../../api/client'
 import { getUser } from '../../../../../api/auth'
 import { downloadFromApi } from '../../../../../utils/download'
 import './UserManagement.css'
-import { useT } from '../../../../../i18n'
+import { dateLocale, useT } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
 
 const HR_MANAGED_ROLES = ['manager', 'employee']
@@ -134,6 +134,11 @@ function UserManagement() {
           <strong>{roles.length}</strong>
           <small>{t("Configured permissions")}</small>
         </div>
+        <div className="stat-card">
+          <div className="stat-top"><span>{t('Privacy policy accepted')}</span><span className="stat-icon">🛡</span></div>
+          <strong>{users.filter((user) => user.status === 'active' && user.privacy_version).length} / {users.filter((user) => user.status === 'active' && user.role !== 'admin').length}</strong>
+          <small>{t('Active accounts that accepted the current policy')}</small>
+        </div>
       </div>
 
       {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
@@ -186,6 +191,9 @@ function UserManagement() {
                 <span>{user.email} · {user.role_code || user.role}{user.region ? ` · ${user.region}` : ''}{user.organization ? ` · ${user.organization}` : ''}</span>
               </span>
               <span className={`item-status ${user.status === 'active' ? 'status-active' : ''}`}>{user.status}</span>
+              <span className={`item-status ${user.privacy_version ? 'status-active' : ''}`} title={user.privacy_accepted_at ? new Date(user.privacy_accepted_at).toLocaleString(dateLocale()) : ''}>
+                {user.role === 'admin' ? t('Policy owner') : user.privacy_version ? t('Privacy accepted') : t('Privacy pending')}
+              </span>
               {canChangeStatus(user) && (
                 <button type="button" onClick={() => toggleStatus(user)}>
                   {user.status === 'active' ? t("Suspend") : t("Activate")}

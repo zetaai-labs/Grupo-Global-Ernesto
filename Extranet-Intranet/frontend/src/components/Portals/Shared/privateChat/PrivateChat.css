@@ -1,0 +1,27 @@
+.pc-gate { display: grid; justify-items: center; gap: 10px; max-width: 440px; margin: 24px auto; padding: 20px; text-align: center; }
+.pc-gate h3 { margin: 0; }
+.pc-gate p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.pc-gate input[type=password] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: transparent; color: var(--text); font: inherit; }
+.pc-lock { font-size: 34px; }
+.pc-warn { padding: 8px 10px; border-radius: 8px; background: #fef3c7; color: #92400e !important; font-weight: 600; }
+.pc-check { display: flex; align-items: flex-start; gap: 8px; font-size: 12px; text-align: start; }
+.pc-error { margin: 0; color: #be123c; font-size: 13px; }
+.pc-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 12px; }
+.pc-link { border: 0; background: transparent; color: var(--purple, #6d28d9); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.pc-badge { display: inline-flex; align-items: center; gap: 4px; color: #15803d !important; font-weight: 600; }
+.pc-verify { margin-inline-start: auto; }
+.pc-codes { display: grid; gap: 6px; margin: 8px 12px; padding: 10px 12px; border-radius: 10px; background: var(--purple-soft, #ede9fe); font-size: 12px; }
+.pc-codes p { margin: 0; }
+.pc-codes code { display: block; font-size: 15px; letter-spacing: 0.08em; }
+.pc-locked { color: var(--muted); font-style: italic; }
+.pc-waiting { margin: 0; padding: 12px 16px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); }
+.pc-new { display: grid; gap: 8px; margin-bottom: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface, #fff); }
+.pc-new header { display: flex; align-items: center; justify-content: space-between; }
+.pc-new header button { border: 0; background: transparent; color: var(--text); cursor: pointer; }
+.pc-new input { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font: inherit; }
+.pc-new ul { display: grid; gap: 4px; max-height: 240px; margin: 0; padding: 0; overflow-y: auto; list-style: none; }
+.pc-new li button { display: grid; width: 100%; padding: 8px; border: 0; border-radius: 8px; background: transparent; color: var(--text); font: inherit; text-align: start; cursor: pointer; }
+.pc-new li button:hover { background: var(--purple-soft, #ede9fe); }
+.pc-new small, .pc-muted { color: var(--muted); font-size: 12px; }
+.pc-start { width: 100%; margin-bottom: 10px; padding: 9px 12px; border: 1px dashed var(--purple, #6d28d9); border-radius: 10px; background: transparent; color: var(--purple, #6d28d9); font: inherit; font-weight: 700; cursor: pointer; }
+.chat-contact .pc-tag { color: #15803d; }

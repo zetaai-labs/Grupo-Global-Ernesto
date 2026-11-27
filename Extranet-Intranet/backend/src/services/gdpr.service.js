@@ -24,6 +24,7 @@ export async function exportUserData(userId) {
   const email = profile.rows[0].email
 
   const sections = {
+    privacy_consents: ['SELECT policy_version, action, language, created_at FROM privacy_consents WHERE user_id = $1 ORDER BY created_at', [userId]],
     emails: ['SELECT folder, from_address, to_address, subject, body, status, created_at FROM emails WHERE user_id = $1 ORDER BY created_at', [userId]],
     chat_messages: [
       `SELECT c.name AS conversation, m.body, m.created_at FROM messages m
@@ -112,7 +113,7 @@ export async function eraseUser(userId, actorId) {
       [userId, label, `erased-user-${userId}@erased.invalid`],
     )
     for (const table of ['emails', 'notifications', 'password_resets', 'linked_folders', 'event_attendees',
-      'conversation_members', 'external_shares', 'webauthn_credentials', 'webauthn_challenges', 'course_attempts', 'zx_vehicle_positions', 'video_bios', 'push_subscriptions']) {
+      'conversation_members', 'external_shares', 'webauthn_credentials', 'webauthn_challenges', 'course_attempts', 'zx_vehicle_positions', 'video_bios', 'push_subscriptions', 'e2ee_keys']) {
       await client.query(`DELETE FROM ${table} WHERE user_id = $1`, [userId])
     }
     await client.query('DELETE FROM folder_permissions WHERE user_id = $1', [userId])

@@ -2,6 +2,7 @@ import './Landing.css'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useT, dateLocale } from '../../i18n'
+import AssistantWidget from '../Portals/Shared/assistant/AssistantWidget'
 
 function Landing() {
   const t = useT()
@@ -189,6 +190,14 @@ function Landing() {
             onClick={() => navigate('/login')}
           >
             {t("Sign In")}
+          </button>
+
+          <button
+            type="button"
+            className="landing-signin"
+            onClick={() => navigate('/onboarding')}
+          >
+            {t("Register")}
           </button>
 
           <div className="landing-security">
@@ -509,6 +518,7 @@ function Landing() {
         </span>
       </footer>
 
+      <AssistantWidget />
     </main>
   )
 }

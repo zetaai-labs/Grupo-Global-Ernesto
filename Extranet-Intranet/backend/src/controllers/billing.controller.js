@@ -5,6 +5,7 @@ import { query, withTransaction } from '../config/database.js'
 import { isExternal } from '../config/roles.js'
 import { writeAudit } from '../services/audit.js'
 import { addInterval, afterPayment, applyPayment, invoicePeriod, recurringRevenue, runBillingCycle, today } from '../services/billing.service.js'
+import { membershipReport, revenueShareRows, syncRevenueShares } from '../services/membership.service.js'
 import * as stripe from '../integrations/payments/stripe.js'
 import * as paypal from '../integrations/payments/paypal.js'
 
@@ -31,12 +32,16 @@ const planFields = {
   code: z.string().trim().min(2).max(40).regex(/^[A-Z0-9_-]+$/i, 'Code may only use letters, numbers, dash and underscore.'),
   name: z.string().trim().min(2).max(150),
   description: z.string().trim().max(2000).nullable().optional(),
-  billing_interval: z.enum(['MONTH', 'YEAR']),
+  billing_interval: z.enum(['MONTH', 'YEAR', 'YEARS_2', 'YEARS_3']),
   amount_eur: z.coerce.number().nonnegative().max(1e9),
   tax_rate: z.coerce.number().min(0).max(100),
   active: z.boolean(),
+  // MEMBERSHIP plans are offered to companies on the public registration form.
+  category: z.enum(['SERVICE', 'MEMBERSHIP']),
 }
-const planCreate = z.object({ ...planFields, tax_rate: planFields.tax_rate.default(21), active: planFields.active.default(true) })
+const planCreate = z.object({
+  ...planFields, tax_rate: planFields.tax_rate.default(21), active: planFields.active.default(true), category: planFields.category.default('SERVICE'),
+})
 const planUpdate = z.object({ name: planFields.name, description: planFields.description, active: planFields.active }).partial()
 
 export async function listPlans(req, res) {
@@ -52,9 +57,9 @@ export async function createPlan(req, res) {
   requireBilling(req)
   const d = parse(planCreate, req.body)
   const { rows } = await query(
-    `INSERT INTO billing_plans (code, name, description, billing_interval, amount_eur, tax_rate, active, created_by)
-     VALUES (UPPER($1), $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-    [d.code, d.name, d.description ?? null, d.billing_interval, d.amount_eur, d.tax_rate, d.active, req.user.sub],
+    `INSERT INTO billing_plans (code, name, description, billing_interval, amount_eur, tax_rate, active, created_by, category)
+     VALUES (UPPER($1), $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+    [d.code, d.name, d.description ?? null, d.billing_interval, d.amount_eur, d.tax_rate, d.active, req.user.sub, d.category],
   ).catch((error) => { if (error.code === '23505') throw httpError(409, 'A plan with this code already exists.'); throw error })
   await writeAudit(req.user.sub, 'BILLING_PLAN_CREATED', 'billing_plans', rows[0].plan_id, { code: rows[0].code })
   return res.status(201).json({ data: rows[0] })
@@ -153,6 +158,32 @@ export async function listPayments(req, res) {
   return res.json({ data: rows })
 }
 
+// ----- Memberships and the partners' revenue split -----
+
+export async function membershipOverview(req, res) {
+  requireBilling(req)
+  return res.json({ data: await membershipReport() })
+}
+
+const csvCell = (value) => {
+  const text = value instanceof Date ? value.toISOString() : String(value ?? '')
+  // Leading = + - @ would run as a formula in Excel.
+  const safe = /^[=+\-@\t\r]/.test(text) && !/^-?\d+(\.\d+)?$/.test(text) ? `'${text}` : text
+  return /[",\n;]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe
+}
+
+/** Every partner share, for the monthly settlement between Grupo Global and its partner. */
+export async function membershipSharesCsv(req, res) {
+  requireBilling(req)
+  const rows = await revenueShareRows()
+  const header = ['booked_at', 'invoice_number', 'member', 'kind', 'party', 'share_pct', 'invoice_net_eur', 'share_eur']
+  const lines = rows.map((row) => [row.booked_at, row.invoice_number, row.legal_name, row.kind, row.party, row.share_pct, row.net_eur, row.amount_eur].map(csvCell).join(','))
+  await writeAudit(req.user.sub, 'MEMBERSHIP_SHARES_EXPORTED', 'membership_revenue_shares', null, { rows: rows.length })
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+  res.setHeader('Content-Disposition', 'attachment; filename="membership-revenue-shares.csv"')
+  return res.send(`${String.fromCharCode(0xfeff)}${[header.join(','), ...lines].join('\r\n')}\r\n`)
+}
+
 export async function runCycle(req, res) {
   requireBilling(req)
   const summary = await runBillingCycle()
@@ -168,7 +199,7 @@ export async function myBilling(req, res) {
   if (!isExternal(req.user.role) || !req.user.org_id) throw httpError(403, 'Only customer accounts have billing here.')
   const [subs, invoices] = await Promise.all([
     query(`SELECT s.subscription_id, s.status, s.current_period_start::text AS current_period_start, s.current_period_end::text AS current_period_end,
-                  s.cancel_at_period_end, p.name AS plan_name, p.billing_interval, p.amount_eur, p.tax_rate
+                  s.cancel_at_period_end, p.name AS plan_name, p.billing_interval, p.amount_eur, p.tax_rate, p.category
            FROM billing_subscriptions s JOIN billing_plans p ON p.plan_id = s.plan_id WHERE s.org_id = $1 ORDER BY s.created_at DESC`, [req.user.org_id]),
     query(`SELECT i.invoice_id, i.invoice_number, i.kind, i.status, i.payment_method, i.total_eur, i.due_date::text AS due_date, i.created_at, i.paid_at,
                   (${payable}) AS payable
@@ -229,6 +260,7 @@ async function settlePaypalOrder(orderId) {
     invoiceId: capture.invoiceId, provider: 'PAYPAL', providerRef: orderId, amount: capture.amount, currency: capture.currency,
   }))
   await afterPayment(result, 'PAYPAL')
+  syncRevenueShares().catch(() => {}) // book the partners' split as soon as a membership is paid
   return result
 }
 
@@ -260,6 +292,7 @@ async function terminalWebhook(event, intent, res) {
     return applyPayment(client, { invoiceId, provider: 'STRIPE', providerRef: String(intent.id), amount: Number(intent.amount_received) / 100, currency: intent.currency })
   })
   await afterPayment(result, 'STRIPE_TERMINAL')
+  syncRevenueShares().catch(() => {}) // book the partners' split as soon as a membership is paid
   return res.json({ received: true })
 }
 
@@ -280,6 +313,7 @@ export async function stripeWebhook(req, res) {
     })
   })
   await afterPayment(result, 'STRIPE')
+  syncRevenueShares().catch(() => {}) // book the partners' split as soon as a membership is paid
   return res.json({ received: true })
 }
 

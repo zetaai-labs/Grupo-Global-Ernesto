@@ -27,6 +27,7 @@ describe('role checks', () => {
       .get('/api/chat/conversations?portal=extranet')
       .set('Authorization', `Bearer ${employee.token}`)
     assert.equal(response.status, 200)
-    assert.equal(response.body.data.length, 0)
+    // No partner group channels; their own private (end-to-end encrypted) chats are listed in every portal.
+    assert.equal(response.body.data.filter((conversation) => !conversation.e2ee).length, 0)
   })
 })

@@ -5,6 +5,7 @@ import { downloadFromApi } from '../../../../../utils/download'
 import { useT, dateLocale } from '../../../../../i18n'
 import './Organizations.css'
 import { translateServer } from '../../../../../i18n/serverMessages'
+import OrgMembership from './OrgMembership'
 
 const STEPS = [
   [1, 'Pre-registration'],
@@ -56,6 +57,7 @@ function Organizations() {
   const [screening, setScreening] = useState({ sanctions: 'CLEAR', pep: 'CLEAR', adverse_media: 'CLEAR', notes: '' })
   const [person, setPerson] = useState(EMPTY_PERSON)
   const [decisionNotes, setDecisionNotes] = useState('')
+  const [membershipChoice, setMembershipChoice] = useState(null)
   const [showCreate, setShowCreate] = useState(false)
   const [newOrg, setNewOrg] = useState(EMPTY_ORG)
   const [upload, setUpload] = useState({ doc_type: 'INCORPORATION_CERTIFICATE', file: null })
@@ -109,7 +111,13 @@ function Organizations() {
   }
   const decide = async (decision) => {
     const response = await act(
-      () => api.post(`/organizations/${selected.org_id}/decision`, { decision, notes: decisionNotes || undefined }),
+      () => api.post(`/organizations/${selected.org_id}/decision`, {
+        decision,
+        notes: decisionNotes || undefined,
+        ...(membershipChoice?.org_id === selected.org_id
+          ? { membership_track: membershipChoice.membership_track, membership_plan_code: membershipChoice.membership_plan_code || null }
+          : {}),
+      }),
       'Decision recorded.',
     )
     if (response?.data?.data?.set_password_link) {
@@ -278,6 +286,9 @@ function Organizations() {
                   <p>{selected.application.contact_name} · {selected.application.contact_email}{selected.application.contact_phone ? ` · ${selected.application.contact_phone}` : ''}</p>
                   {selected.application.decision_notes && <p className="org-muted">{t('Decision notes')}: {selected.application.decision_notes}</p>}
                 </section>
+              )}
+              {selected.application && (
+                <OrgMembership org={selected} editable={isCompliance && pending} choice={membershipChoice} onChoice={setMembershipChoice} />
               )}
 
               <section>

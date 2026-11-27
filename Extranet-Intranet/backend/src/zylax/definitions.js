@@ -55,7 +55,7 @@ export const MODULES = [
       f('user', 'Platform account', 'user', { ...REQ, assign: true }), f('job_title', 'Job title', 'text', REQ), ref('department', 'Department', 'people', 'departments'),
       f('manager', 'Reports to', 'user'), f('location', 'Location'), f('phone', 'Work phone', 'phone'), f('start_date', 'Start date', 'date'),
       f('salary_eur', 'Annual salary (EUR)', 'money', { secret: true }), f('national_id', 'National ID', 'text', { secret: true }),
-    ], { create: HR, manage: HR, unique: ['user'] }),
+    ], { create: HR, manage: HR, unique: ['user'], privateFiles: true }),
     entity('departments', 'Departments', 'Department', [f('head', 'Department head', 'user'), f('cost_center', 'Cost center')], { create: HR, manage: HR }),
     // Schema Document §3: HR keeps employee performance logs. Append-only; each employee sees only their own.
     entity('performance', 'Performance logs', 'Review title', [

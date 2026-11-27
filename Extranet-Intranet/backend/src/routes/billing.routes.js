@@ -15,6 +15,8 @@ router.post('/subscriptions', billing.createSubscription)
 router.post('/subscriptions/:id/cancel', billing.cancelSubscription)
 router.get('/payments', billing.listPayments)
 router.post('/run', billing.runCycle)
+router.get('/memberships', billing.membershipOverview)
+router.get('/memberships/shares.csv', billing.membershipSharesCsv)
 router.get('/risk', listRisk)
 router.post('/risk/run', runRisk)
 

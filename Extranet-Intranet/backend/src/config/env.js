@@ -38,6 +38,16 @@ export const config = {
     webauthnRpId: process.env.WEBAUTHN_RP_ID || '',
     webauthnRpName: process.env.WEBAUTHN_RP_NAME || 'Global Group',
   },
+  privacy: {
+    // Raise the version whenever the policy text changes: everyone is asked to accept it again.
+    version: process.env.PRIVACY_POLICY_VERSION || '2026-11',
+    // On unless explicitly turned off: nobody uses the platform without accepting the data-protection terms.
+    enforce: process.env.CONSENT_ENFORCE !== 'false',
+    // Grupo Global's published texts. When empty, the platform's built-in summary pages are used.
+    privacyUrl: process.env.PRIVACY_POLICY_URL || '',
+    termsUrl: process.env.TERMS_URL || '',
+    cookiesUrl: process.env.COOKIE_POLICY_URL || '',
+  },
   audit: {
     // Technical Spec §3.2: immutable copies of the audit chain in an S3 Object Lock bucket.
     bucket: process.env.AUDIT_S3_BUCKET || '',

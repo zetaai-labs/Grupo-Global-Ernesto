@@ -50,6 +50,7 @@ const intranet = [
     label: 'COMMUNICATION',
     items: [
       { name: 'Team Chat', path: '/intranet/chat', icon: '💬', description: 'Conversations with colleagues.' },
+      { name: 'Call Center', path: '/intranet/call-center', icon: '☎', description: 'Calls, campaigns, callbacks and the live board.' },
       { name: 'Video Conferencing', path: '/intranet/video-conferencing', icon: '📹', description: 'Video meetings in the browser.' },
     ],
   },
@@ -57,6 +58,7 @@ const intranet = [
     label: 'ADMINISTRATION',
     items: [
       { name: 'System Web Page', path: '/intranet/system-web-page', icon: '▣', description: 'Content of the public website.' },
+      { name: 'AI assistant knowledge', path: '/intranet/assistant-knowledge', icon: '💡', roles: ['admin', 'tech_admin'], description: 'What the public assistant answers, unanswered questions and requests to the team.' },
       { name: 'Company accounts', path: '/intranet/accounts', icon: '✉', roles: ['admin', 'tech_admin'], description: 'Google Workspace and Microsoft 365 accounts.' },
       { name: 'Integrations', path: '/intranet/integrations', icon: '⧉', roles: ['admin', 'tech_admin'], description: 'System health and outside services.' },
       { name: 'Audit Log', path: '/intranet/audit-log', icon: '◷', roles: ['admin', 'tech_admin'], description: 'Who did what, and when.' },
@@ -75,7 +77,7 @@ const extranet = [
       { name: 'Overview', path: '/extranet/overview', icon: '⌂', description: 'Your account at a glance.' },
       { name: 'All features', path: '/extranet/workspace', icon: '⊞', description: 'Every tool in one place, with search and favourites.' },
       { name: 'Quotes & Orders', path: '/extranet/orders', icon: '▣', roles: ['client', 'partner'], description: 'Your quotes, orders and invoices.' },
-      { name: 'Billing', path: '/extranet/billing', icon: '€', roles: ['client', 'partner'], description: 'Subscription and payments.' },
+      { name: 'Billing', path: '/extranet/billing', icon: '€', roles: ['client', 'partner', 'supplier', 'investor'], description: 'Membership, subscription and payments.' },
       { name: 'ZYLAX Extranet', path: '/extranet/zylax', icon: '◆', roles: ['client', 'partner', 'supplier'], description: 'Support tickets, bids and shared modules.' },
     ],
   },

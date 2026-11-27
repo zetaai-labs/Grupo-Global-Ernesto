@@ -8,6 +8,8 @@ import { sendStoredFile } from '../services/storage.service.js'
 import { COMPLIANCE_ROLES, CORRIDORS } from '../config/roles.js'
 import { amlConfigured, screenParties } from '../integrations/aml/openSanctions.js'
 import { SECTORS } from './vault.controller.js'
+import { recordConsent } from './consent.controller.js'
+import { MEMBERSHIP_SURVEY, checkSurvey, membershipPlans, startMembership } from '../services/membership.service.js'
 import {
   REQUIRED_DOCUMENTS,
   SCREENING_CHECKS,
@@ -38,6 +40,14 @@ const registrationSchema = z.object({
   contact_email: z.string().trim().email().max(255),
   contact_phone: z.string().trim().max(64).optional().nullable(),
   sectors: z.array(z.enum(SECTORS)).max(5).default([]),
+  // Nobody registers without accepting the privacy policy (the client's rule; GDPR art. 7 evidence is kept).
+  privacy_accepted: z.literal(true, { message: 'Accept the privacy policy and terms to register.' }),
+  language: z.string().trim().max(8).optional(),
+  // New members pay a membership; existing direct partners of Grupo Global do not (Compliance confirms it).
+  membership_track: z.enum(['MEMBER', 'EXISTING_PARTNER']).default('MEMBER'),
+  membership_plan_code: z.string().trim().max(40).optional().nullable(),
+  survey: z.record(z.string(), z.unknown()).optional(),
+  billing_address: z.string().trim().max(500).optional().nullable(),
 })
 
 function fail(res, status, message) {
@@ -64,21 +74,38 @@ export async function publicRegister(req, res) {
   if (!parsed.success) return fail(res, 400, parsed.error.issues[0]?.message || 'Please complete all required fields.')
   const data = parsed.data
 
+  // Membership: the survey is always answered; a member also picks a plan and gives an invoicing address.
+  const survey = checkSurvey(data.survey)
+  if (!survey.ok) return fail(res, 400, survey.message)
+  let plan = null
+  if (data.membership_track === 'MEMBER') {
+    plan = (await membershipPlans()).find((item) => item.code === data.membership_plan_code)
+    if (!plan) return fail(res, 400, 'Choose a membership plan.')
+    if (!data.billing_address || data.billing_address.length < 10) return fail(res, 400, 'Enter the full invoicing address.')
+  } else if (!survey.answers.referred_by) {
+    return fail(res, 400, 'Existing partners: tell us who at Grupo Global you work with.')
+  }
+
   const exists = await query('SELECT 1 FROM organizations WHERE LOWER(legal_name) = LOWER($1)', [data.legal_name])
   if (exists.rowCount) return fail(res, 409, 'An organisation with this legal name is already registered.')
 
   const { token, hash } = newAccessToken()
   const org = await withTransaction(async (client) => {
     const { rows } = await client.query(
-      `INSERT INTO organizations (legal_name, tax_id, pic_code, country, region_corridor, org_type, onboarding_stage, sectors)
-       VALUES ($1, $2, $3, $4, $5, $6, 2, $7) RETURNING org_id, legal_name`,
-      [data.legal_name, data.tax_id, data.pic_code || null, data.country, data.region_corridor, data.org_type, data.sectors],
+      `INSERT INTO organizations (legal_name, tax_id, pic_code, country, region_corridor, org_type, onboarding_stage, sectors, billing_address)
+       VALUES ($1, $2, $3, $4, $5, $6, 2, $7, $8) RETURNING org_id, legal_name`,
+      [data.legal_name, data.tax_id, data.pic_code || null, data.country, data.region_corridor, data.org_type, data.sectors, data.billing_address || null],
     )
-    await client.query(
-      `INSERT INTO kyc_applications (org_id, access_token_hash, contact_name, contact_email, contact_phone)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [rows[0].org_id, hash, data.contact_name, data.contact_email.toLowerCase(), data.contact_phone || null],
+    const application = await client.query(
+      `INSERT INTO kyc_applications (org_id, access_token_hash, contact_name, contact_email, contact_phone, privacy_version, privacy_accepted_at,
+                                     membership_track, membership_plan_id, survey)
+       VALUES ($1, $2, $3, $4, $5, $6, now(), $7, $8, $9) RETURNING application_id`,
+      [rows[0].org_id, hash, data.contact_name, data.contact_email.toLowerCase(), data.contact_phone || null, config.privacy.version,
+        data.membership_track, plan?.plan_id || null, JSON.stringify(survey.answers)],
     )
+    await recordConsent(client, {
+      applicationId: application.rows[0].application_id, action: 'ACCEPTED', language: /^[a-z]{2}$/.test(data.language || '') ? data.language : null, req,
+    })
     return rows[0]
   })
 
@@ -96,6 +123,19 @@ export async function publicRegister(req, res) {
   return res.status(201).json({
     data: { org_id: org.org_id, token, stage: 2 },
     message: 'Registration received. Upload your legal documents to continue.',
+  })
+}
+
+/** Public: the membership plans and survey questions shown on the registration form. */
+export async function publicMembershipInfo(_req, res) {
+  const plans = await membershipPlans()
+  return res.json({
+    data: {
+      plans: plans.map(({ code, name, description, billing_interval: interval, amount_eur: amount, tax_rate: taxRate, total_eur: total }) => ({
+        code, name, description, billing_interval: interval, amount_eur: amount, tax_rate: taxRate, total_eur: total,
+      })),
+      survey: MEMBERSHIP_SURVEY,
+    },
   })
 }
 
@@ -244,7 +284,12 @@ export async function getOrganization(req, res) {
   if (!org.rows[0]) return fail(res, 404, 'Organisation not found.')
 
   const [application, documents, checks, ndas, members] = await Promise.all([
-    query('SELECT contact_name, contact_email, contact_phone, submitted_at, decided_at, decision_notes FROM kyc_applications WHERE org_id = $1', [req.params.id]),
+    query(
+      `SELECT a.contact_name, a.contact_email, a.contact_phone, a.submitted_at, a.decided_at, a.decision_notes,
+              a.membership_track, a.survey, p.code AS membership_plan_code, p.name AS membership_plan_name
+       FROM kyc_applications a LEFT JOIN billing_plans p ON p.plan_id = a.membership_plan_id WHERE a.org_id = $1`,
+      [req.params.id],
+    ),
     query('SELECT document_id, doc_type, original_name, size_bytes, mime_type, created_at FROM kyc_documents WHERE org_id = $1 ORDER BY created_at', [req.params.id]),
     query(
       `SELECT c.check_type, c.result, c.details, c.created_at, u.name AS performed_by
@@ -513,6 +558,9 @@ const decisionSchema = z.object({
   decision: z.enum(['APPROVE', 'REJECT']),
   notes: z.string().trim().max(2000).optional(),
   create_account: z.boolean().optional(),
+  // Compliance confirms (or corrects) whether the company pays, and which plan.
+  membership_track: z.enum(['MEMBER', 'EXISTING_PARTNER']).optional(),
+  membership_plan_code: z.string().trim().max(40).optional().nullable(),
 })
 
 /** Step 5 — approval & credential issuance (or rejection). */
@@ -533,8 +581,28 @@ export async function decideOrganization(req, res) {
 
   const app = (await query('SELECT * FROM kyc_applications WHERE org_id = $1', [org.org_id])).rows[0]
   let account = null
+  let membership = null
+
+  // The decision may correct the applicant's own choice; without one, what they chose at registration applies.
+  const track = parsed.data.membership_track || app?.membership_track || 'EXISTING_PARTNER'
+  let membershipPlanId = null
+  if (decision === 'APPROVE' && track === 'MEMBER') {
+    const plans = await membershipPlans()
+    const chosen = parsed.data.membership_plan_code
+      ? plans.find((item) => item.code === parsed.data.membership_plan_code)
+      : plans.find((item) => item.plan_id === app?.membership_plan_id)
+    if (!chosen) return fail(res, 400, 'Choose the membership plan for this member.')
+    if (!org.billing_address?.trim()) return fail(res, 409, 'Add the member’s invoicing address before approving.')
+    membershipPlanId = chosen.plan_id
+  }
 
   await withTransaction(async (client) => {
+    if (app) {
+      await client.query(
+        'UPDATE kyc_applications SET membership_track = $2, membership_plan_id = COALESCE($3, membership_plan_id) WHERE org_id = $1',
+        [org.org_id, track, membershipPlanId],
+      )
+    }
     await client.query(
       'UPDATE organizations SET verification_status = $2, onboarding_stage = $3 WHERE org_id = $1',
       [org.org_id, decision === 'APPROVE' ? 'VERIFIED' : 'REJECTED', decision === 'APPROVE' ? 5 : org.onboarding_stage],
@@ -554,13 +622,20 @@ export async function decideOrganization(req, res) {
           account = await createPrimaryAccount(client, { org, name: app.contact_name, email: app.contact_email, role })
         }
       }
+      if (membershipPlanId) membership = await startMembership(client, { orgId: org.org_id, planId: membershipPlanId, actorId: req.user.sub })
     }
   })
 
   await writeAudit(req.user.sub, decision === 'APPROVE' ? 'ORGANIZATION_APPROVED' : 'ORGANIZATION_REJECTED', 'organizations', org.org_id, {
     notes: notes || null,
     account_created: Boolean(account),
+    membership: membership ? { plan: membership.plan_code, invoice: membership.invoice_number } : (decision === 'APPROVE' ? track : null),
   })
+  const payNote = membership
+    ? `
+
+Your ${membership.plan_name} invoice ${membership.invoice_number} (€${membership.total_eur}, VAT included) is ready. Pay it by card or PayPal from Billing in your portal.`
+    : ''
 
   let setPasswordLink = null
   if (account) {
@@ -569,7 +644,7 @@ export async function decideOrganization(req, res) {
       sendMail({
         to: app.contact_email,
         subject: 'Global Group — your organisation has been verified',
-        text: `${org.legal_name} has been verified on the Global Group platform.\n\nSet your password (link valid for 7 days):\n${link}\n\nYou will be asked to accept the confidentiality agreement (NDA) on first sign-in.`,
+        text: `${org.legal_name} has been verified on the Global Group platform.\n\nSet your password (link valid for 7 days):\n${link}\n\nYou will be asked to accept the confidentiality agreement (NDA) on first sign-in.${payNote}`,
       }).catch(() => {})
     } else if (process.env.NODE_ENV !== 'production') {
       setPasswordLink = link
@@ -583,9 +658,14 @@ export async function decideOrganization(req, res) {
   }
 
   return res.json({
-    data: { verification_status: decision === 'APPROVE' ? 'VERIFIED' : 'REJECTED', account_created: Boolean(account), set_password_link: setPasswordLink },
+    data: {
+      verification_status: decision === 'APPROVE' ? 'VERIFIED' : 'REJECTED',
+      account_created: Boolean(account),
+      set_password_link: setPasswordLink,
+      membership: membership ? { plan_code: membership.plan_code, invoice_number: membership.invoice_number, total_eur: membership.total_eur } : null,
+    },
     message: decision === 'APPROVE'
-      ? `Organisation verified.${account ? ' Account created and NDA issued.' : ' NDA issued.'}`
+      ? `Organisation verified.${account ? ' Account created and NDA issued.' : ' NDA issued.'}${membership ? ' Membership invoice issued.' : ''}`
       : 'Organisation rejected.',
   })
 }

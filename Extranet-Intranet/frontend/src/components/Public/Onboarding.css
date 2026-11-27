@@ -274,3 +274,60 @@
   gap: 6px;
   font-size: 13px;
 }
+
+/* Privacy acceptance: required before registering */
+.onboarding-consent { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border-radius: 10px; background: var(--purple-soft, #ede9fe); font-size: 14px; line-height: 1.45; cursor: pointer; }
+.onboarding-consent input { width: 18px; height: 18px; margin-top: 2px; flex: none; }
+.onboarding-consent a { color: var(--purple, #6d28d9); font-weight: 600; }
+
+/* Membership: track, plans and survey */
+.onboarding-membership { display: grid; gap: 14px; }
+.onboarding-membership h2 { margin: 0; }
+.onboarding-muted { margin: 0; color: var(--muted, #64748b); font-size: 13px; }
+.om-track, .om-plans { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.om-track label, .om-plans label { position: relative; display: grid; gap: 4px; padding: 14px; border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0); border-radius: 12px; cursor: pointer; transition: border-color 0.15s ease, box-shadow 0.15s ease; }
+.om-track label { grid-template-columns: auto 1fr; align-items: start; gap: 10px; }
+.om-track label span { display: grid; gap: 2px; }
+.om-track small, .om-plans small { color: var(--muted, #64748b); font-size: 12px; }
+.om-track label.on, .om-plans label.on { border-color: var(--purple, #6d28d9); box-shadow: 0 0 0 3px var(--purple-soft, #ede9fe); }
+.om-plans input { position: absolute; inset-block-start: 12px; inset-inline-end: 12px; }
+.om-plans strong { font-size: 15px; }
+.om-price { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.om-address { display: grid; gap: 6px; }
+.om-address textarea, .om-survey textarea { font: inherit; }
+.om-survey { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 0; padding: 12px; border: 1px solid var(--tc-bd-e2e8f0, #e2e8f0); border-radius: 10px; }
+.om-survey legend { padding: 0 4px; font-size: 13px; font-weight: 600; }
+.om-survey > label { display: grid; gap: 6px; font-size: 13px; }
+.om-survey .om-wide, .om-multi { grid-column: 1 / -1; }
+.om-multi { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 13px; }
+.om-multi > span { flex-basis: 100%; }
+.om-multi label { display: flex; align-items: center; gap: 6px; }
+
+/* Public pages do not load the portal stylesheet: the main buttons need their own look here. */
+.onboarding-page .primary-action,
+.onboarding-form .primary-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--purple, #6d28d9);
+  color: #ffffff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.onboarding-page .primary-action:disabled,
+.onboarding-form .primary-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.onboarding-form .onboarding-consent {
+  display: flex;
+}

@@ -164,6 +164,8 @@ export function contentHeaders(_req, res, next) {
   res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type, X-Experience-API-Version, If-Match, If-None-Match')
   res.setHeader('Access-Control-Expose-Headers', 'X-Experience-API-Version, ETag, Last-Modified')
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin')
+  // The app page sends COEP; a framed course page must send it too or the browser refuses to show it.
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless')
   res.setHeader('X-Frame-Options', 'SAMEORIGIN')
   res.setHeader('Referrer-Policy', 'no-referrer')
   res.setHeader('X-Robots-Tag', 'noindex')

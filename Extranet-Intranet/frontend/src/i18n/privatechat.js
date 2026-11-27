@@ -1,0 +1,52 @@
+// End-to-end encrypted private chat. English key -> [es, ar, ru, fr].
+const TEXTS = {
+  'New private chat': ['Nuevo chat privado', 'محادثة خاصة جديدة', 'Новый личный чат', 'Nouvelle discussion privée'],
+  'Private chat': ['Chat privado', 'محادثة خاصة', 'Личный чат', 'Discussion privée'],
+  'End-to-end encrypted': ['Cifrado de extremo a extremo', 'مشفّرة من طرف إلى طرف', 'Сквозное шифрование', 'Chiffrée de bout en bout'],
+  'Search by name or email': ['Buscar por nombre o correo', 'ابحث بالاسم أو البريد', 'Поиск по имени или email', 'Rechercher par nom ou e-mail'],
+  'has not turned on private chat yet': ['aún no ha activado el chat privado', 'لم يفعّل المحادثة الخاصة بعد', 'ещё не включил(а) личный чат', 'n’a pas encore activé la discussion privée'],
+  'Nobody found.': ['No se ha encontrado a nadie.', 'لم يتم العثور على أحد.', 'Никого не найдено.', 'Personne trouvé.'],
+  'You cannot start a private chat with this person.': ['No puedes iniciar un chat privado con esta persona.', 'لا يمكنك بدء محادثة خاصة مع هذا الشخص.', 'Вы не можете начать личный чат с этим человеком.', 'Vous ne pouvez pas démarrer de discussion privée avec cette personne.'],
+  'Choose who to talk to.': ['Elige con quién hablar.', 'اختر مع من تتحدث.', 'Выберите собеседника.', 'Choisissez avec qui parler.'],
+  'Unlock private chat': ['Desbloquear chat privado', 'فتح المحادثة الخاصة', 'Разблокировать личный чат', 'Déverrouiller la discussion privée'],
+  'Reset your passphrase': ['Restablecer tu frase de contraseña', 'إعادة تعيين عبارة المرور', 'Сбросить кодовую фразу', 'Réinitialiser votre phrase secrète'],
+  'Turn on private chat': ['Activar el chat privado', 'تفعيل المحادثة الخاصة', 'Включить личный чат', 'Activer la discussion privée'],
+  'Enter your private-chat passphrase. It stays in this browser tab and is never sent to the server.': ['Introduce tu frase de contraseña del chat privado. Se queda en esta pestaña del navegador y nunca se envía al servidor.', 'أدخل عبارة مرور المحادثة الخاصة. تبقى في علامة التبويب هذه ولا تُرسل إلى الخادم أبدًا.', 'Введите кодовую фразу личного чата. Она остаётся в этой вкладке и никогда не отправляется на сервер.', 'Saisissez votre phrase secrète de discussion privée. Elle reste dans cet onglet et n’est jamais envoyée au serveur.'],
+  'Private chats are end-to-end encrypted: only you and the other person can read them — not Grupo Global, not the administrators, not Zeta AI Labs.': ['Los chats privados están cifrados de extremo a extremo: solo tú y la otra persona podéis leerlos; ni Grupo Global, ni los administradores, ni Zeta AI Labs.', 'المحادثات الخاصة مشفّرة من طرف إلى طرف: لا يقرؤها إلا أنت والطرف الآخر — لا Grupo Global ولا المسؤولون ولا Zeta AI Labs.', 'Личные чаты защищены сквозным шифрованием: читать их можете только вы и собеседник — ни Grupo Global, ни администраторы, ни Zeta AI Labs.', 'Les discussions privées sont chiffrées de bout en bout : seuls vous et l’autre personne pouvez les lire — ni Grupo Global, ni les administrateurs, ni Zeta AI Labs.'],
+  'A new passphrase makes your earlier private messages unreadable for you. The other people can still read them.': ['Una nueva frase de contraseña hace que tus mensajes privados anteriores sean ilegibles para ti. Las otras personas podrán seguir leyéndolos.', 'تجعل عبارة المرور الجديدة رسائلك الخاصة السابقة غير قابلة للقراءة لك. يمكن للآخرين قراءتها.', 'Новая кодовая фраза сделает ваши прежние личные сообщения недоступными для вас. Собеседники по-прежнему смогут их читать.', 'Une nouvelle phrase secrète rend vos anciens messages privés illisibles pour vous. Les autres personnes pourront toujours les lire.'],
+  'If you forget this passphrase, nobody can recover your private messages. Write it down somewhere safe.': ['Si olvidas esta frase de contraseña, nadie podrá recuperar tus mensajes privados. Guárdala en un lugar seguro.', 'إذا نسيت عبارة المرور هذه، فلن يتمكن أحد من استعادة رسائلك الخاصة. احفظها في مكان آمن.', 'Если вы забудете эту кодовую фразу, никто не сможет восстановить ваши личные сообщения. Запишите её в надёжном месте.', 'Si vous oubliez cette phrase secrète, personne ne pourra récupérer vos messages privés. Notez-la en lieu sûr.'],
+  Passphrase: ['Frase de contraseña', 'عبارة المرور', 'Кодовая фраза', 'Phrase secrète'],
+  'Repeat the passphrase': ['Repite la frase de contraseña', 'كرّر عبارة المرور', 'Повторите кодовую фразу', 'Répétez la phrase secrète'],
+  'I understand that a forgotten passphrase cannot be recovered.': ['Entiendo que una frase de contraseña olvidada no se puede recuperar.', 'أفهم أنه لا يمكن استعادة عبارة مرور منسية.', 'Я понимаю, что забытую кодовую фразу восстановить нельзя.', 'Je comprends qu’une phrase secrète oubliée ne peut pas être récupérée.'],
+  'That passphrase is not correct.': ['Esa frase de contraseña no es correcta.', 'عبارة المرور غير صحيحة.', 'Кодовая фраза неверна.', 'Cette phrase secrète est incorrecte.'],
+  'Use at least {n} characters.': ['Usa al menos {n} caracteres.', 'استخدم {n} أحرف على الأقل.', 'Используйте не менее {n} символов.', 'Utilisez au moins {n} caractères.'],
+  'The two passphrases do not match.': ['Las dos frases de contraseña no coinciden.', 'عبارتا المرور غير متطابقتين.', 'Кодовые фразы не совпадают.', 'Les deux phrases secrètes ne correspondent pas.'],
+  'Private chat could not be set up. Try again.': ['No se ha podido activar el chat privado. Inténtalo de nuevo.', 'تعذّر إعداد المحادثة الخاصة. حاول مجددًا.', 'Не удалось включить личный чат. Попробуйте ещё раз.', 'La discussion privée n’a pas pu être activée. Réessayez.'],
+  'Forgot your passphrase?': ['¿Has olvidado tu frase de contraseña?', 'هل نسيت عبارة المرور؟', 'Забыли кодовую фразу?', 'Phrase secrète oubliée ?'],
+  Unlock: ['Desbloquear', 'فتح', 'Разблокировать', 'Déverrouiller'],
+  'Reset and unlock': ['Restablecer y desbloquear', 'إعادة التعيين والفتح', 'Сбросить и разблокировать', 'Réinitialiser et déverrouiller'],
+  'Turn on': ['Activar', 'تفعيل', 'Включить', 'Activer'],
+  'Verify security codes': ['Verificar códigos de seguridad', 'التحقق من رموز الأمان', 'Проверить коды безопасности', 'Vérifier les codes de sécurité'],
+  'Hide security codes': ['Ocultar códigos de seguridad', 'إخفاء رموز الأمان', 'Скрыть коды безопасности', 'Masquer les codes de sécurité'],
+  'Compare these codes with {name} by phone or in person. If they match, nobody is in the middle.': ['Compara estos códigos con {name} por teléfono o en persona. Si coinciden, nadie se interpone.', 'قارن هذه الرموز مع {name} عبر الهاتف أو شخصيًا. إذا تطابقت، فلا أحد في المنتصف.', 'Сравните эти коды с {name} по телефону или лично. Если они совпадают, посредника нет.', 'Comparez ces codes avec {name} par téléphone ou en personne. S’ils correspondent, personne n’intercepte la discussion.'],
+  'Your code': ['Tu código', 'رمزك', 'Ваш код', 'Votre code'],
+  '{name}’s code': ['Código de {name}', 'رمز {name}', 'Код {name}', 'Code de {name}'],
+  'Sent before your passphrase was reset: it cannot be read any more.': ['Enviado antes de restablecer tu frase de contraseña: ya no se puede leer.', 'أُرسلت قبل إعادة تعيين عبارة المرور: لم يعد بالإمكان قراءتها.', 'Отправлено до сброса кодовой фразы: прочитать больше нельзя.', 'Envoyé avant la réinitialisation de votre phrase secrète : il ne peut plus être lu.'],
+  'This message cannot be read.': ['Este mensaje no se puede leer.', 'لا يمكن قراءة هذه الرسالة.', 'Это сообщение невозможно прочитать.', 'Ce message ne peut pas être lu.'],
+  'Decrypting…': ['Descifrando…', 'جارٍ فك التشفير…', 'Расшифровка…', 'Déchiffrement…'],
+  'Messages here are end-to-end encrypted. Say hello!': ['Los mensajes aquí están cifrados de extremo a extremo. ¡Saluda!', 'الرسائل هنا مشفّرة من طرف إلى طرف. ألقِ التحية!', 'Сообщения здесь защищены сквозным шифрованием. Поздоровайтесь!', 'Les messages ici sont chiffrés de bout en bout. Dites bonjour !'],
+  'Write a private message…': ['Escribe un mensaje privado…', 'اكتب رسالة خاصة…', 'Напишите личное сообщение…', 'Écrivez un message privé…'],
+  'The message could not be sent.': ['No se ha podido enviar el mensaje.', 'تعذّر إرسال الرسالة.', 'Не удалось отправить сообщение.', 'Le message n’a pas pu être envoyé.'],
+  '{name} has not turned on private chat yet. They will be able to read messages once they do.': ['{name} aún no ha activado el chat privado. Podrá leer los mensajes cuando lo haga.', 'لم يفعّل {name} المحادثة الخاصة بعد. سيتمكن من قراءة الرسائل بعد تفعيلها.', '{name} ещё не включил(а) личный чат. Сообщения станут доступны после включения.', '{name} n’a pas encore activé la discussion privée. Les messages seront lisibles une fois activée.'],
+  'Private chats only accept encrypted messages. Unlock private chat and try again.': ['Los chats privados solo aceptan mensajes cifrados. Desbloquea el chat privado e inténtalo de nuevo.', 'لا تقبل المحادثات الخاصة إلا الرسائل المشفّرة. افتح المحادثة الخاصة وحاول مجددًا.', 'Личные чаты принимают только зашифрованные сообщения. Разблокируйте личный чат и попробуйте снова.', 'Les discussions privées n’acceptent que des messages chiffrés. Déverrouillez la discussion privée et réessayez.'],
+  'The encryption keys changed. Reload the conversation and send again.': ['Las claves de cifrado han cambiado. Recarga la conversación y vuelve a enviar.', 'تغيّرت مفاتيح التشفير. أعد تحميل المحادثة وأرسل مجددًا.', 'Ключи шифрования изменились. Обновите беседу и отправьте снова.', 'Les clés de chiffrement ont changé. Rechargez la conversation et renvoyez.'],
+  'Private chat is already set up on your account.': ['El chat privado ya está activado en tu cuenta.', 'المحادثة الخاصة مفعّلة بالفعل في حسابك.', 'Личный чат уже включён в вашей учётной записи.', 'La discussion privée est déjà activée sur votre compte.'],
+  'The encryption key could not be saved. Reload the page and try again.': ['No se ha podido guardar la clave de cifrado. Recarga la página e inténtalo de nuevo.', 'تعذّر حفظ مفتاح التشفير. أعد تحميل الصفحة وحاول مجددًا.', 'Не удалось сохранить ключ шифрования. Обновите страницу и попробуйте снова.', 'La clé de chiffrement n’a pas pu être enregistrée. Rechargez la page et réessayez.'],
+  'New encrypted message': ['Nuevo mensaje cifrado', 'رسالة مشفّرة جديدة', 'Новое зашифрованное сообщение', 'Nouveau message chiffré'],
+}
+
+const pick = (index) => Object.fromEntries(Object.entries(TEXTS).map(([key, values]) => [key, values[index]]))
+export const privateChatEs = pick(0)
+export const privateChatAr = pick(1)
+export const privateChatRu = pick(2)
+export const privateChatFr = pick(3)

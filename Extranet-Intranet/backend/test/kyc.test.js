@@ -5,6 +5,9 @@ import { app, loginAs } from './helpers.js'
 import { query } from '../src/config/database.js'
 
 const auth = (session) => ({ Authorization: `Bearer ${session.token}` })
+// The membership survey every registration answers (an existing partner pays no fee).
+const SURVEY = { company_size: '11-50', annual_revenue: '€1M-€10M', countries: 'Spain, Portugal', interests: ['Business matchmaking'], heard_from: 'Grupo Global team', referred_by: 'Ernesto' }
+// The membership survey every registration answers (an existing partner pays no fee).const SURVEY = { company_size: '11-50', annual_revenue: '€1M-€10M', countries: 'Spain, Portugal', interests: ['Business matchmaking'], heard_from: 'Grupo Global team', referred_by: 'Ernesto' }
 const pdf = Buffer.from('%PDF-1.4\n% test document\n')
 
 describe('KYC / KYB onboarding (5 steps)', () => {
@@ -19,7 +22,7 @@ describe('KYC / KYB onboarding (5 steps)', () => {
 
     try {
       // Step 1 — pre-registration (public).
-      const registered = await request(app).post('/api/public/onboarding').send({
+      const registered = await request(app).post('/api/public/onboarding').send({ privacy_accepted: true, membership_track: 'EXISTING_PARTNER', survey: SURVEY,
         legal_name: legalName, tax_id: 'B12345678', pic_code: '999999999', country: 'esp',
         region_corridor: 'SPAIN_EU', org_type: 'CLIENT', contact_name: 'Marta Ruiz', contact_email: email,
       })
@@ -100,7 +103,7 @@ describe('KYC / KYB onboarding (5 steps)', () => {
 
   it('rejects an invalid tax ID format during automatic validation', async () => {
     const stamp = Date.now()
-    const registered = await request(app).post('/api/public/onboarding').send({
+    const registered = await request(app).post('/api/public/onboarding').send({ privacy_accepted: true, membership_track: 'EXISTING_PARTNER', survey: SURVEY,
       legal_name: `Bad Tax ${stamp} Pvt Ltd`, tax_id: '123', country: 'IND', region_corridor: 'INDIA',
       org_type: 'VENDOR', contact_name: 'Test Person', contact_email: `bad-${stamp}@example.test`,
     })

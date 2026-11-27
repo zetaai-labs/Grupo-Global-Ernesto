@@ -8,6 +8,7 @@ import InstallAppButton from '../../../pwa/InstallAppButton'
 import ClockButton from '../Shared/clock/ClockButton'
 import ProfileMenu from '../Shared/profile/ProfileMenu'
 import QuickSearch from '../Shared/workspace/QuickSearch'
+import { visibleScreens } from '../Shared/navigation'
 import { useT } from '../../../i18n'
 
 const pageNames = {
@@ -48,9 +49,11 @@ function IntranetTopbar() {
   const t = useT()
   const location = useLocation()
 
-  const currentPage = location.pathname.split('/').filter(Boolean).pop()
-  const title = pageNames[currentPage] || 'Overview'
   const user = getUser()
+  const currentPage = location.pathname.split('/').filter(Boolean).pop()
+  // Names come from the shared menu, so every new screen is named here too; the list above covers the rest.
+  const screen = visibleScreens('intranet', user?.role).find((item) => location.pathname === item.path || location.pathname.startsWith(`${item.path}/`))
+  const title = screen?.name || pageNames[currentPage] || 'Overview'
   return (
     <header className="portal-topbar">
       <div className="topbar-breadcrumb">

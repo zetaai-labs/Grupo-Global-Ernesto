@@ -1,0 +1,4 @@
+.membership-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 18px; padding: 14px 18px; border: 1px solid var(--purple, #6d28d9); border-radius: 14px; background: var(--purple-soft, #ede9fe); color: var(--text); }
+.membership-banner div { flex: 1 1 280px; }
+.membership-banner p { margin: 2px 0 0; font-size: 13px; }
+.membership-banner .primary-action { display: inline-flex; align-items: center; min-height: 38px; padding: 0 18px; text-decoration: none; }

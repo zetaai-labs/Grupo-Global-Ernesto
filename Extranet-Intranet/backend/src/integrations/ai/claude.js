@@ -27,15 +27,16 @@ const fail = (status, message) => Object.assign(new Error(message), { status })
 
 /**
  * One request → one validated JSON object.
- * @param {{ system: string, content: Anthropic.Beta.BetaContentBlockParam[] | string, schema: import('zod').ZodType, effort?: string, maxTokens?: number }} options
+ * `system` may be a string or text blocks (so a large, unchanging part can be cached); `model` overrides AI_MODEL.
+ * @param {{ system: string | Anthropic.Beta.BetaTextBlockParam[], content: Anthropic.Beta.BetaContentBlockParam[] | string, schema: import('zod').ZodType, effort?: string, maxTokens?: number, model?: string }} options
  */
-export async function askClaude({ system, content, schema, effort = 'medium', maxTokens = 4000 }) {
+export async function askClaude({ system, content, schema, effort = 'medium', maxTokens = 4000, model }) {
   if (!aiConfigured()) throw fail(503, 'The AI assistant is not configured yet.')
   const format = zodOutputFormat(schema)
   let response
   try {
     response = await anthropic().beta.messages.create({
-      model: aiModel(),
+      model: model || aiModel(),
       max_tokens: maxTokens,
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',

@@ -6,6 +6,7 @@ import IntranetTopbar from './IntranetTopbar'
 import BottomToolbar from '../Shared/BottomToolbar'
 import HelpCenter from '../Shared/help/HelpCenter'
 import VisitTracker from '../Shared/workspace/VisitTracker'
+import ConsentGate from '../Shared/privacy/ConsentGate'
 import '../Portal.css'
 
 function IntranetLayout() {
@@ -22,6 +23,7 @@ function IntranetLayout() {
       </div>
       <BottomToolbar portal="intranet" />
       <HelpCenter />
+      <ConsentGate />
       <VisitTracker portal="intranet" />
     </div>
   )

@@ -18,6 +18,7 @@ import { sendOverdueRemediationAlerts } from './src/controllers/governance.contr
 import { query } from './src/config/database.js'
 import { sweepOrphanPackages } from './src/services/coursePackage.service.js'
 import { purgeOldPositions } from './src/zylax/fleet.controller.js'
+import { pruneAssistantData } from './src/controllers/assistant.controller.js'
 import { encryptExistingMessages } from './src/services/chatCrypto.service.js'
 import { computeRiskScores } from './src/services/churnRisk.service.js'
 import { indexPendingPosts } from './src/services/translation.service.js'
@@ -128,6 +129,16 @@ schedule('Fleet GPS retention', 24, async () => {
     if (removed) await safeAudit('FLEET_POSITIONS_PURGED', 'zx_vehicle_positions', { removed })
   } catch (error) {
     await safeAudit('FLEET_POSITIONS_PURGE_FAILED', 'zx_vehicle_positions', { error: error.message })
+  }
+})
+
+// Public assistant: anonymous questions are kept 90 days, answered contact requests one year (daily).
+schedule('Assistant data retention', 24, async () => {
+  try {
+    const removed = await pruneAssistantData()
+    if (removed) await safeAudit('ASSISTANT_DATA_PURGED', 'assistant_questions', { removed })
+  } catch (error) {
+    await safeAudit('ASSISTANT_DATA_PURGE_FAILED', 'assistant_questions', { error: error.message })
   }
 })
 

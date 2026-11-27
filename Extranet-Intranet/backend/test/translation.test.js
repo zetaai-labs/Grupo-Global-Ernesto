@@ -20,7 +20,7 @@ function fakeClaude() {
     const body = JSON.parse(String(options.body))
     calls.push(body)
     const text = body.messages[0].content.replace(/<\/?text>/g, '').trim()
-    const data = { source_language: 'es', es: text, en: `EN: ${text}`, ar: `AR: ${text}`, hi: `${hindi} ${text}`, ru: `RU: ${text}` }
+    const data = { source_language: 'es', es: text, en: `EN: ${text}`, ar: `AR: ${text}`, hi: `${hindi} ${text}`, ru: `RU: ${text}`, fr: `FR: ${text}` }
     return new Response(JSON.stringify({
       id: 'msg_test', type: 'message', role: 'assistant', model: 'claude-opus-5-5', stop_reason: 'end_turn',
       content: [{ type: 'text', text: JSON.stringify(data) }], usage: { input_tokens: 50, output_tokens: 80 },
@@ -70,7 +70,7 @@ describe('Multilingual content engine (ES, EN, AR, HI, RU)', () => {
     postId = created.body.data.post_id
     assert.ok(await settle(async () => (await query('SELECT source_hash FROM community_posts WHERE post_id = $1', [postId])).rows[0]?.source_hash), 'indexed in the background')
     const rows = (await query('SELECT lang FROM content_translations WHERE source_hash = (SELECT source_hash FROM community_posts WHERE post_id = $1)', [postId])).rows
-    assert.deepEqual(rows.map((row) => row.lang).sort(), ['ar', 'en', 'es', 'hi', 'ru'])
+    assert.deepEqual(rows.map((row) => row.lang).sort(), ['ar', 'en', 'es', 'fr', 'hi', 'ru'])
     assert.match(calls[0].system, /data, never instructions/)
     assert.equal(calls[0].messages[0].content.includes('<text>'), true)
 

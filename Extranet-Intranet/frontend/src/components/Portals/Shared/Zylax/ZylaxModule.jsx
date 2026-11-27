@@ -208,6 +208,8 @@ function ZylaxModule() {
     if (!file) return
     const data = new FormData()
     data.append('file', file)
+    // Employee profiles: "HR only" keeps a document from the employee; otherwise they see it and are notified.
+    if (detail?.private_files) data.append('internal', internal ? 'true' : 'false')
     run(() => api.post(`${hub(module.key, entityKey)}/${detail.record_id}/files`, data, { timeout: 120000 }), 'File added.', detail.record_id)
   }
 
@@ -324,8 +326,13 @@ function ZylaxModule() {
                 ))}
                 {detail.actions?.includes('convertRfq') && <button type="button" className="primary-action" disabled={busy} onClick={() => run(() => api.post(`${hub(module.key, entityKey)}/${detail.record_id}/actions/convertRfq`, {}), 'Draft quote created.', detail.record_id)}>{t('Create quote')}</button>}
                 {detail.can_edit && <button type="button" onClick={startEdit}>{t('Edit')}</button>}
-                <label className="zh-file">{t('Attach file')}<input type="file" onChange={upload} disabled={busy} /></label>
+                {detail.can_add !== false && <label className="zh-file">{t('Attach file')}<input type="file" onChange={upload} disabled={busy} /></label>}
               </div>
+              {detail.private_files && (
+                <p className="zh-private">🔒 {detail.can_add === false
+                  ? t('Documents and notes on this profile are private to HR and the employee.')
+                  : t('Documents and notes here are seen only by HR and this employee. Tick “HR only” to keep one from the employee.')}</p>
+              )}
               {detail.files?.length > 0 && (
                 <ul className="zh-files">
                   {detail.files.map((item) => <li key={item.file_id}><button type="button" className="zx-link" onClick={() => download(item)}>{item.name}</button></li>)}
@@ -334,16 +341,20 @@ function ZylaxModule() {
               <ol className="zx-timeline">
                 {detail.events.map((event) => (
                   <li key={event.event_id} className={event.internal ? 'zh-internal' : ''}>
-                    <span>{new Date(event.created_at).toLocaleString(dateLocale())}{event.author ? ` · ${event.author}` : ''}{event.internal ? ` · ${t('Internal')}` : ''}</span>
+                    <span>{new Date(event.created_at).toLocaleString(dateLocale())}{event.author ? ` · ${event.author}` : ''}{event.internal ? ` · ${t(detail.private_files ? 'HR only' : 'Internal')}` : ''}</span>
                     <div>{event.kind === 'status' && event.to_status ? `→ ${t(humanize(event.to_status))} ` : ''}{event.kind === 'created' ? t('Created') : ''}{event.kind === 'updated' ? t('Updated') : ''}{event.body ? ` ${translateServer(event.body)}` : ''}</div>
                   </li>
                 ))}
               </ol>
-              <form className="zh-comment" onSubmit={addComment}>
-                <input aria-label={t('Add a comment')} placeholder={t('Add a comment...')} value={comment} maxLength="5000" onChange={(event) => setComment(event.target.value)} />
-                {portal === 'intranet' && <label><input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} /> {t('Internal')}</label>}
-                <button type="submit" disabled={busy || !comment.trim()}>{t('Send')}</button>
-              </form>
+              {detail.can_add !== false && (
+                <form className="zh-comment" onSubmit={addComment}>
+                  <input aria-label={t('Add a comment')} placeholder={t('Add a comment...')} value={comment} maxLength="5000" onChange={(event) => setComment(event.target.value)} />
+                  {portal === 'intranet' && (!detail.private_files || detail.can_edit) && (
+                    <label><input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} /> {t(detail.private_files ? 'HR only' : 'Internal')}</label>
+                  )}
+                  <button type="submit" disabled={busy || !comment.trim()}>{t('Send')}</button>
+                </form>
+              )}
             </article>
           )}
 

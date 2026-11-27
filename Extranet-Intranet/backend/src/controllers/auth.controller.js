@@ -6,9 +6,11 @@ import { query } from '../config/database.js'
 import { generateSecret, otpauthUrl, verifyCode } from '../services/totp.js'
 import { sendMail, smtpConfigured } from '../services/email.service.js'
 import { MFA_REQUIRED_ROLES, roleCode } from '../config/roles.js'
+import { consentRequired } from '../services/consentRule.js'
 
 export const USER_FIELDS = `
   SELECT u.id, u.uuid, u.name, u.email, u.password_hash, u.mfa_secret, u.mfa_enabled, u.org_id, u.session_version, u.avatar_updated_at,
+         u.privacy_version, u.privacy_accepted_at,
          r.name AS role, r.code AS role_code, rg.code AS region, o.legal_name AS organization
   FROM users u
   JOIN roles r ON r.id = u.role_id
@@ -31,6 +33,13 @@ export const publicUser = (user) => ({
   mfa_enabled: Boolean(user.mfa_enabled),
   // Changes whenever the photo changes, so browsers never show an old cached one.
   avatar_version: user.avatar_updated_at ? new Date(user.avatar_updated_at).getTime() : null,
+  // The app shows the acceptance screen when `required` is true (the API refuses everything else meanwhile).
+  privacy: {
+    version: config.privacy.version,
+    accepted_version: user.privacy_version || null,
+    accepted_at: user.privacy_accepted_at || null,
+    required: consentRequired(user.role, user.privacy_version),
+  },
 })
 
 /** Technical Spec §3.1: privileged roles must use MFA (enforced when MFA_ENFORCE=true). */

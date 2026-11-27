@@ -5,12 +5,15 @@ import { app, loginAs } from './helpers.js'
 import { query } from '../src/config/database.js'
 
 const auth = (session) => ({ Authorization: `Bearer ${session.token}` })
+// The membership survey every registration answers (an existing partner pays no fee).
+const SURVEY = { company_size: '11-50', annual_revenue: '€1M-€10M', countries: 'Spain, Portugal', interests: ['Business matchmaking'], heard_from: 'Grupo Global team', referred_by: 'Ernesto' }
+// The membership survey every registration answers (an existing partner pays no fee).const SURVEY = { company_size: '11-50', annual_revenue: '€1M-€10M', countries: 'Spain, Portugal', interests: ['Business matchmaking'], heard_from: 'Grupo Global team', referred_by: 'Ernesto' }
 
 describe('applicant-declared directors and owners', () => {
   it('lets the applicant declare people, warns when none are declared, and supports GDPR erasure', async () => {
     const hr = await loginAs('hr@gmail.com')
     const stamp = Date.now()
-    const registered = await request(app).post('/api/public/onboarding').send({
+    const registered = await request(app).post('/api/public/onboarding').send({ privacy_accepted: true, membership_track: 'EXISTING_PARTNER', survey: SURVEY,
       legal_name: `People Test ${stamp} S.L.`, tax_id: 'B12345678', country: 'ESP', region_corridor: 'SPAIN_EU',
       org_type: 'CLIENT', contact_name: 'Ana Gil', contact_email: `people-${stamp}@example.test`,
     })

@@ -46,6 +46,9 @@ import { cloudflareEdge } from './middleware/cloudflare.js'
 import { authenticate } from './middleware/authenticate.js'
 import { requireIntranet, requireRole, requireSystemAdmin } from './middleware/authorize.js'
 import { databaseCheck, errorHandler, requestMonitor, systemHealth } from './monitoring/monitor.js'
+import { legalInfo } from './controllers/consent.controller.js'
+import assistantRoutes, { publicAssistantRoutes } from './routes/assistant.routes.js'
+import callCenterRoutes from './routes/callCenter.routes.js'
 
 const allowedOrigins = config.frontendOrigin.split(',').map((origin) => origin.trim())
 
@@ -55,10 +58,11 @@ export const isAllowedOrigin = (origin) => {
   return process.env.NODE_ENV !== 'production' && /^https?:\/\/localhost:\d+$/.test(origin)
 }
 
+// A foreign site is refused with 403 (a deliberate answer), not 500, so it is not reported as a crash.
 export const corsOrigin = (origin, callback) =>
   isAllowedOrigin(origin)
     ? callback(null, true)
-    : callback(new Error('Origin not allowed by CORS'))
+    : callback(Object.assign(new Error('Origin not allowed'), { status: 403 }))
 
 export function createApp() {
   const app = express()
@@ -139,6 +143,7 @@ export function createApp() {
   }), createSupportRequest)
   app.use('/api/organizations', authenticate, organizationRoutes)
   app.use('/api/crm', authenticate, requireIntranet, crmRoutes)
+  app.use('/api/call-center', authenticate, requireIntranet, callCenterRoutes)
   app.use('/api/imports', authenticate, requireIntranet, importRoutes)
   app.use('/api/community', authenticate, requireIntranet, communityRoutes)
   app.use('/api/courses', authenticate, courseRoutes)
@@ -147,6 +152,7 @@ export function createApp() {
   app.use('/api/vault', authenticate, vaultRoutes)
   app.use('/api/video', authenticate, videoRoutes)
   app.use('/api/ai', authenticate, aiRoutes)
+  app.use('/api/assistant', authenticate, assistantRoutes)
   app.use('/api/projects', authenticate, projectRoutes)
   app.use('/api/zylax/hub', authenticate, zylaxRoutes)
   app.use('/api/zylax/portal', authenticate, requireRole(...COMMERCIAL_CUSTOMER_ROLES), commercialPortalRoutes)
@@ -156,6 +162,8 @@ export function createApp() {
   app.use('/api/links', publicLinkRoutes)
   app.use('/api/public/received-files', publicReceivedRoutes)
   app.use('/api/public/onboarding', publicOnboardingRoutes)
+  app.get('/api/public/legal', legalInfo)
+  app.use('/api/public/assistant', publicAssistantRoutes)
   app.use('/api/webhooks', crmWebhookRoutes)
   app.use('/api/webhooks', paymentWebhookRoutes)
   app.use('/api/webhooks', videoWebhookRoutes)

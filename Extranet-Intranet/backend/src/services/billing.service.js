@@ -12,10 +12,13 @@ const MAX_CATCH_UP_PERIODS = 12
 const isoDate = (date) => date.toISOString().slice(0, 10)
 export const today = () => isoDate(new Date())
 
+/** Months in each billing interval (memberships can run for two or three years). */
+export const INTERVAL_MONTHS = { MONTH: 1, YEAR: 12, YEARS_2: 24, YEARS_3: 36 }
+
 /** Adds one billing interval, keeping month-end dates sensible (31 Jan + 1 month = 28/29 Feb). */
 export function addInterval(dateString, interval) {
   const [year, month, day] = dateString.split('-').map(Number)
-  const months = interval === 'YEAR' ? 12 : 1
+  const months = INTERVAL_MONTHS[interval] || 1
   const target = new Date(Date.UTC(year, month - 1 + months, 1))
   const lastDay = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate()
   target.setUTCDate(Math.min(day, lastDay))
@@ -182,7 +185,7 @@ export async function afterPayment(result, provider) {
 export async function recurringRevenue() {
   const { rows } = await query(
     `SELECT
-       COALESCE(sum(CASE WHEN p.billing_interval = 'YEAR' THEN p.amount_eur / 12 ELSE p.amount_eur END), 0) AS mrr,
+       COALESCE(sum(p.amount_eur / CASE p.billing_interval WHEN 'YEAR' THEN 12 WHEN 'YEARS_2' THEN 24 WHEN 'YEARS_3' THEN 36 ELSE 1 END), 0) AS mrr,
        count(*) FILTER (WHERE s.status = 'ACTIVE')::int AS active,
        count(*) FILTER (WHERE s.status = 'PAST_DUE')::int AS past_due
      FROM billing_subscriptions s JOIN billing_plans p ON p.plan_id = s.plan_id

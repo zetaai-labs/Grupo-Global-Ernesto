@@ -1,0 +1,15 @@
+.ak-form { display: grid; gap: 12px; }
+.ak-form label { display: grid; gap: 6px; font-size: 13px; }
+.ak-form input, .ak-form textarea { padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; color: var(--text); font: inherit; }
+.ak-form small { color: var(--muted); font-size: 12px; }
+.ak-row { display: flex; flex-wrap: wrap; align-items: end; gap: 16px; }
+.ak-row label:first-child { width: 120px; }
+.ak-check { display: flex !important; align-items: center; gap: 8px; }
+.ak-list { display: grid; gap: 10px; }
+.ak-entry { display: grid; gap: 8px; }
+.ak-entry header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.ak-entry p { margin: 0; font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+.ak-entry footer { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.ak-entry footer small { flex: 1; color: var(--muted); }
+.ak-off { opacity: 0.6; }
+.ak-danger { color: var(--tc-fg-be123c, #be123c) !important; }

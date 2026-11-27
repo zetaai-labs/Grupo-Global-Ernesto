@@ -17,7 +17,7 @@ import { findScopedFile } from './files.controller.js'
  * screens. Confidential (sealed) fields are never sent. Each call is logged and counted.
  */
 
-const LANGUAGE_NAMES = { es: 'Spanish (Spain)', en: 'English', ar: 'Arabic', ru: 'Russian' }
+const LANGUAGE_NAMES = { es: 'Spanish (Spain)', en: 'English', ar: 'Arabic', ru: 'Russian', fr: 'French' }
 const DAILY_LIMIT = () => Math.max(1, Number(process.env.AI_DAILY_LIMIT) || 100)
 const FILE_LIMIT_BYTES = 10 * 1024 * 1024
 const fail = (status, message) => Object.assign(new Error(message), { status })

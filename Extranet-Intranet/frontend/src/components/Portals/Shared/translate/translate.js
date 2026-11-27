@@ -9,6 +9,7 @@ export const TARGETS = [
   { code: 'ar', label: 'العربية' },
   { code: 'hi', label: 'हिन्दी' },
   { code: 'ru', label: 'Русский' },
+  { code: 'fr', label: 'Français' },
 ]
 const KEY = 'gg_translate_to'
 const memory = new Map()

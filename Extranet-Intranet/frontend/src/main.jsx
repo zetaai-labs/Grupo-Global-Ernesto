@@ -51,8 +51,10 @@ import Login from './components/Login/Login.jsx'
 const ResetPassword = page(() => import('./components/Login/ResetPassword.jsx'))
 import ProtectedRoute from './components/Auth/ProtectedRoute.jsx'
 import Unauthorized from './components/Auth/Unauthorized.jsx'
+import CookieNotice from './components/Portals/Shared/privacy/CookieNotice.jsx'
 const ReceivedFileUpload = page(() => import('./components/Public/ReceivedFileUpload.jsx'))
 const Onboarding = page(() => import('./components/Public/Onboarding.jsx'))
+const Legal = page(() => import('./components/Public/Legal.jsx'))
 const Privacy = page(() => import('./components/Portals/Shared/Privacy.jsx'))
 const VerifyCertificate = page(() => import('./components/Public/VerifyCertificate.jsx'))
 const Organizations = page(() => import('./components/Portals/Intranet/Features/Organizations/Organizations.jsx'))
@@ -65,6 +67,8 @@ const Crm = page(() => import('./components/Portals/Intranet/Features/Crm/Crm.js
 const DataImport = page(() => import('./components/Portals/Intranet/Features/DataImport/DataImport.jsx'))
 const Commercial = page(() => import('./components/Portals/Intranet/Features/Commercial/Commercial.jsx'))
 const Integrations = page(() => import('./components/Portals/Intranet/Features/Integrations/Integrations.jsx'))
+const CallCenter = page(() => import('./components/Portals/Intranet/Features/CallCenter/CallCenter.jsx'))
+const AssistantKnowledge = page(() => import('./components/Portals/Intranet/Features/AssistantKnowledge/AssistantKnowledge.jsx'))
 const Billing = page(() => import('./components/Portals/Intranet/Features/Billing/Billing.jsx'))
 const Provisioning = page(() => import('./components/Portals/Intranet/Features/Provisioning/Provisioning.jsx'))
 const MyBilling = page(() => import('./components/Portals/Extranet/Features/MyBilling/MyBilling.jsx'))
@@ -107,11 +111,15 @@ const Resources = page(() => import('./components/Portals/Extranet/Features/Reso
 const ExtranetChat = page(() => import('./components/Portals/Extranet/Features/Chat/Chat.jsx'))
 const ExtranetVideo = page(() => import('./components/Portals/Extranet/Features/VideoConferencing/VideoConferencing.jsx'))
 
+// Local development only: a dev server started with VITE_DEMO_AS=<role> signs in as that demo
+// account when "/" is opened. Never active in a production build.
+const DEMO_AS = import.meta.env.DEV ? import.meta.env.VITE_DEMO_AS : ''
+
 const router = createBrowserRouter(
   createRoutesFromElements(
     <>
       {/* Landing Page */}
-      <Route path="/" element={<Landing />} />
+      <Route path="/" element={DEMO_AS ? <Navigate to={`/login?as=${encodeURIComponent(DEMO_AS)}`} replace /> : <Landing />} />
 
       {/* Authentication */}
       <Route path="/login" element={<Login />} />
@@ -119,6 +127,7 @@ const router = createBrowserRouter(
       <Route path="/unauthorized" element={<Unauthorized />} />
       <Route path="/upload" element={<ReceivedFileUpload />} />
       <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/legal/:doc" element={<Legal />} />
       <Route path="/verify-certificate" element={<VerifyCertificate />} />
 
       {/* Intranet Portal — employees and administrators only */}
@@ -145,6 +154,8 @@ const router = createBrowserRouter(
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
         <Route path="integrations" element={<ProtectedRoute roles={['admin', 'tech_admin']}><Integrations /></ProtectedRoute>} />
+        <Route path="call-center" element={<CallCenter />} />
+        <Route path="assistant-knowledge" element={<ProtectedRoute roles={['admin', 'tech_admin']}><AssistantKnowledge /></ProtectedRoute>} />
         <Route path="billing" element={<ProtectedRoute roles={['admin', 'finance']}><Billing /></ProtectedRoute>} />
         <Route path="accounts" element={<ProtectedRoute roles={['admin', 'tech_admin']}><Provisioning /></ProtectedRoute>} />
         <Route path="security" element={<MfaSettings />} />
@@ -225,7 +236,7 @@ const router = createBrowserRouter(
         <Route path="zylax" element={<ProtectedRoute roles={['client', 'partner', 'supplier']}><ZylaxHub /></ProtectedRoute>} />
         <Route path="zylax/:module" element={<ProtectedRoute roles={['client', 'partner', 'supplier']}><ZylaxModule /></ProtectedRoute>} />
         <Route path="orders" element={<ProtectedRoute roles={['client', 'partner']}><MyOrders /></ProtectedRoute>} />
-        <Route path="billing" element={<ProtectedRoute roles={['client', 'partner']}><MyBilling /></ProtectedRoute>} />
+        <Route path="billing" element={<ProtectedRoute roles={['client', 'partner', 'supplier', 'investor']}><MyBilling /></ProtectedRoute>} />
         <Route path="ethics" element={<Ethics />} />
         <Route path="courses" element={<Courses />} />
         <Route path="privacy" element={<Privacy />} />
@@ -255,5 +266,6 @@ createRoot(document.getElementById('root')).render(
     <Suspense fallback={<div className="page-loading" role="status" aria-live="polite" />}>
       <RouterProvider router={router} />
     </Suspense>
+    <CookieNotice />
   </StrictMode>
 )

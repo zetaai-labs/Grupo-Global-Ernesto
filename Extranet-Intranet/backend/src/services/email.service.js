@@ -19,9 +19,9 @@ function getTransporter() {
 }
 
 /** Sends a plain-text email, optionally with attachments. Throws if SMTP is not configured or delivery fails. */
-export async function sendMail({ to, subject, text, attachments }) {
+export async function sendMail({ to, subject, text, attachments, replyTo }) {
   if (!smtpConfigured()) throw new Error('SMTP is not configured.')
-  await getTransporter().sendMail({ from: config.smtp.from, to, subject, text, ...(attachments ? { attachments } : {}) })
+  await getTransporter().sendMail({ from: config.smtp.from, to, subject, text, ...(attachments ? { attachments } : {}), ...(replyTo ? { replyTo } : {}) })
 }
 
 export default { sendMail, smtpConfigured }

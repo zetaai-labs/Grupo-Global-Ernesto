@@ -6,6 +6,8 @@ import './ChatWorkspace.css'
 import TranslateText from './translate/TranslateText'
 import { useT, dateLocale } from '../../../i18n'
 import { translateServer } from '../../../i18n/serverMessages'
+import PrivateChatView from './privateChat/PrivateChatView'
+import NewPrivateChat from './privateChat/NewPrivateChat'
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || (import.meta.env.PROD ? window.location.origin : 'http://localhost:5000')
 
@@ -20,6 +22,7 @@ function ChatWorkspace({ portal = 'intranet' }) {
   const [messages, setMessages] = useState([])
   const [message, setMessage] = useState('')
   const [notice, setNotice] = useState('')
+  const [starting, setStarting] = useState(false)
   const socketRef = useRef(null)
   const user = getUser()
 
@@ -101,6 +104,18 @@ function ChatWorkspace({ portal = 'intranet' }) {
 
   const active = conversations.find((conversation) => conversation.id === activeId)
 
+  const openPrivate = async (id) => {
+    setStarting(false)
+    const response = await api.get('/chat/conversations', { params: { portal } }).catch(() => null)
+    if (response) setConversations(response.data?.data || [])
+    setActiveId(id)
+  }
+  // Shows and relays a sent private message (the server only ever sees ciphertext).
+  const relay = (payload) => {
+    setMessages((current) => (current.some((item) => item.id === payload.id) ? current : [...current, payload]))
+    socketRef.current?.emit('chat:message', { ...payload, conversation_id: activeId })
+  }
+
   return (
     <div className="communication-page">
       <header className="communication-header">
@@ -117,16 +132,19 @@ function ChatWorkspace({ portal = 'intranet' }) {
       <div className="chat-container">
         <aside className="chat-sidebar">
           <h3>{t("Conversations")}</h3>
+          {starting
+            ? <NewPrivateChat onOpen={openPrivate} onClose={() => setStarting(false)} />
+            : <button type="button" className="pc-start" onClick={() => setStarting(true)}>🔒 {t('New private chat')}</button>}
           {conversations.map((conversation) => (
             <button
               key={conversation.id}
               className={`chat-contact ${activeId === conversation.id ? 'active' : ''}`}
               onClick={() => setActiveId(conversation.id)}
             >
-              <div className="chat-avatar">{conversation.name.charAt(0)}</div>
+              <div className="chat-avatar">{conversation.e2ee ? '🔒' : conversation.name.charAt(0)}</div>
               <div className="chat-contact-info">
-                <strong>{conversation.name}</strong>
-                <span>{conversation.last_message || t("No messages yet")}</span>
+                <strong><bdi>{conversation.e2ee ? conversation.with_name || t('Private chat') : conversation.name}</bdi></strong>
+                <span className={conversation.e2ee ? 'pc-tag' : ''}>{conversation.e2ee ? t('End-to-end encrypted') : conversation.last_message || t("No messages yet")}</span>
               </div>
             </button>
           ))}
@@ -134,7 +152,8 @@ function ChatWorkspace({ portal = 'intranet' }) {
         </aside>
 
         <section className="chat-conversation">
-          {active && (
+          {active?.e2ee && <PrivateChatView key={active.id} conversation={active} messages={messages} onSent={relay} />}
+          {active && !active.e2ee && (
             <>
               <div className="chat-conversation-header">
                 <div className="chat-avatar">{active.name.charAt(0)}</div>

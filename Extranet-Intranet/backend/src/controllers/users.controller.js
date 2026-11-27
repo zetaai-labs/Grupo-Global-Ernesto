@@ -7,7 +7,7 @@ import { suspendLinkedAccounts } from './provisioning.controller.js'
 
 const USER_LIST_QUERY = `
   SELECT u.id, u.uuid, u.name, u.email, u.status, r.name AS role, r.code AS role_code, rg.code AS region,
-         u.org_id, o.legal_name AS organization, u.mfa_enabled, u.created_at
+         u.org_id, o.legal_name AS organization, u.mfa_enabled, u.created_at, u.privacy_version, u.privacy_accepted_at
   FROM users u
   JOIN roles r ON r.id = u.role_id
   LEFT JOIN regions rg ON rg.id = u.region_id

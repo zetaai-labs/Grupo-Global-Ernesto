@@ -3,8 +3,12 @@ import { config } from '../config/env.js'
 import { query } from '../config/database.js'
 import { isExternal } from '../config/roles.js'
 import { organisationScope } from '../services/scope.js'
+import { consentRequired } from '../services/consentRule.js'
 
 const MFA_SETUP_PATHS = ['/api/auth/mfa/', '/api/auth/me', '/api/auth/logout', '/api/notifications']
+// Until the current privacy policy is accepted, only these are reachable: reading your own account and data
+// (GDPR access), accepting, signing out, two-step setup and asking for help.
+const CONSENT_PATHS = ['/api/auth/me', '/api/auth/consent', '/api/auth/logout', '/api/auth/mfa/', '/api/support']
 
 /**
  * Verifies the JWT, then reloads the account from the database on every request.
@@ -32,7 +36,7 @@ export async function authenticate(req, res, next) {
   }
 
   const { rows } = await query(
-    `SELECT u.id, u.uuid, u.name, u.email, u.status, u.org_id, u.session_version, r.name AS role, r.code AS role_code, rg.code AS region,
+    `SELECT u.id, u.uuid, u.name, u.email, u.status, u.org_id, u.session_version, u.privacy_version, r.name AS role, r.code AS role_code, rg.code AS region,
             o.verification_status AS org_status, o.org_type, o.parent_org_id
      FROM users u
      JOIN roles r ON r.id = u.role_id
@@ -73,6 +77,9 @@ export async function authenticate(req, res, next) {
   // Sessions issued for mandatory MFA setup may only reach the MFA and session endpoints.
   if (claims.mfa_setup && !MFA_SETUP_PATHS.some((path) => req.originalUrl.startsWith(path))) {
     return res.status(403).json({ code: 'MFA_SETUP_REQUIRED', message: 'Set up multi-factor authentication to continue.' })
+  }
+  if (consentRequired(user.role, user.privacy_version) && !CONSENT_PATHS.some((path) => req.originalUrl.startsWith(path))) {
+    return res.status(403).json({ code: 'CONSENT_REQUIRED', message: 'Accept the privacy policy to continue.' })
   }
   return next()
 }

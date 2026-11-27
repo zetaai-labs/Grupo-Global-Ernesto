@@ -19,5 +19,11 @@ import { monitoringAr } from './monitoring'
 import { attendanceAr } from './attendance'
 import { translateAr } from './translate'
 import { workspaceAr } from './workspace'
+import { privacyAr } from './privacy'
+import { membershipAr } from './membership'
+import { assistantAr } from './assistant'
+import { auditAr } from './audit'
+import { callCenterAr } from './callcenter'
+import { privateChatAr } from './privatechat'
 
-export default { ...ar1, ...ar2, ...ar3, ...ar4, ...ar5, ...ar6, ...landingAr, ...coursePackagesAr, ...orgPeopleAr, ...zylaxDepthAr, ...eventsHybridAr, ...aiAr, ...pwaAr, ...aiEngineAr, ...clockAr, ...videoAr, ...monitoringAr, ...attendanceAr, ...translateAr, ...workspaceAr }
+export default { ...ar1, ...ar2, ...ar3, ...ar4, ...ar5, ...ar6, ...landingAr, ...coursePackagesAr, ...orgPeopleAr, ...zylaxDepthAr, ...eventsHybridAr, ...aiAr, ...pwaAr, ...aiEngineAr, ...clockAr, ...videoAr, ...monitoringAr, ...attendanceAr, ...translateAr, ...workspaceAr, ...privacyAr, ...membershipAr, ...assistantAr, ...auditAr, ...callCenterAr, ...privateChatAr }

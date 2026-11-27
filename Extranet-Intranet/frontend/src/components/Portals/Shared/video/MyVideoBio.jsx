@@ -45,7 +45,7 @@ function sendToProvider({ upload_url: url, method, field }, file, onProgress, si
 function MyVideoBio({ onChange, onLinkSave }) {
   const t = useT()
   const [info, setInfo] = useState(null)
-  const [language, setLanguage] = useState(() => (['es', 'ar', 'ru'].includes(getLanguage()) ? getLanguage() : 'en'))
+  const [language, setLanguage] = useState(() => (['es', 'ar', 'ru', 'fr'].includes(getLanguage()) ? getLanguage() : 'en'))
   const [progress, setProgress] = useState(null)
   const [message, setMessage] = useState('')
   const [link, setLink] = useState('')

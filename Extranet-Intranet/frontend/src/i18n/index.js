@@ -3,20 +3,21 @@ import es from './es'
 import './rtl.css'
 
 /**
- * Minimal i18n: English text is the key; Spanish, Arabic and Russian come from ./es.js, ./ar.js, ./ru.js.
+ * Minimal i18n: English text is the key; Spanish, Arabic, Russian and French come from ./es.js, ./ar.js, ./ru.js, ./fr.js.
  * Missing translations fall back to English, so screens never break.
  * The choice is remembered per browser.
  */
 
 const STORAGE_KEY = 'gg_language'
 const DICTIONARIES = { es }
-// Arabic and Russian are downloaded only when someone picks them.
-const LOADERS = { ar: () => import('./ar'), ru: () => import('./ru') }
+// Arabic, Russian and French are downloaded only when someone picks them.
+const LOADERS = { ar: () => import('./ar'), ru: () => import('./ru'), fr: () => import('./fr') }
 export const LANGUAGES = [
   { code: 'en', label: 'EN', name: 'English' },
   { code: 'es', label: 'ES', name: 'Español' },
   { code: 'ar', label: 'AR', name: 'العربية', dir: 'rtl' },
   { code: 'ru', label: 'RU', name: 'Русский' },
+  { code: 'fr', label: 'FR', name: 'Français' },
 ]
 const CODES = LANGUAGES.map((item) => item.code)
 
@@ -87,7 +88,7 @@ export function getLanguage() {
 }
 
 // Locale for dates and times. Arabic keeps Latin digits so dates match the numbers elsewhere.
-const DATE_LOCALES = { en: 'en-GB', es: 'es-ES', ar: 'ar-u-nu-latn', ru: 'ru-RU' }
+const DATE_LOCALES = { en: 'en-GB', es: 'es-ES', ar: 'ar-u-nu-latn', ru: 'ru-RU', fr: 'fr-FR' }
 
 /** Locale to pass to toLocaleDateString / toLocaleTimeString / toLocaleString. */
 export function dateLocale() {

@@ -9,7 +9,7 @@ import { aiConfigured, askClaude } from '../integrations/ai/claude.js'
  * and community posts are indexed in every language so a search in one language finds posts in another.
  */
 
-export const CONTENT_LANGUAGES = ['es', 'en', 'ar', 'hi', 'ru']
+export const CONTENT_LANGUAGES = ['es', 'en', 'ar', 'hi', 'ru', 'fr']
 export const MAX_CHARS = 5000
 
 export const hashText = (text) => createHash('sha256').update(String(text).trim()).digest('hex')
@@ -21,6 +21,7 @@ const schema = z.object({
   ar: z.string().describe('Modern Standard Arabic'),
   hi: z.string().describe('Hindi in Devanagari script'),
   ru: z.string().describe('Russian'),
+  fr: z.string().describe('French (France)'),
 })
 
 const SYSTEM = `You translate messages written by staff and partners of Grupo Global, a business group working across Spain, the EU, India, the UAE, Latin America and Morocco.

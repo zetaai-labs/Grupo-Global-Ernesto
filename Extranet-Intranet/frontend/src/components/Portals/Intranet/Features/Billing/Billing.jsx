@@ -5,10 +5,12 @@ import { translateServer } from '../../../../../i18n/serverMessages'
 import { euro } from '../Commercial/format'
 import '../Commercial/Commercial.css'
 import '../../../Shared/MatchSuggestions.css'
+import MembershipRevenue from './MembershipRevenue'
 
-const TABS = [['subscriptions', 'Subscriptions'], ['plans', 'Plans'], ['payments', 'Online payments'], ['risk', 'Renewal risk']]
+const TABS = [['subscriptions', 'Subscriptions'], ['memberships', 'Memberships'], ['plans', 'Plans'], ['payments', 'Online payments'], ['risk', 'Renewal risk']]
+const PER = { MONTH: 'month', YEAR: 'year', YEARS_2: '2 years', YEARS_3: '3 years' }
 const today = () => new Date().toISOString().slice(0, 10)
-const EMPTY_PLAN = { code: '', name: '', billing_interval: 'MONTH', amount_eur: '', tax_rate: 21, description: '' }
+const EMPTY_PLAN = { code: '', name: '', billing_interval: 'MONTH', amount_eur: '', tax_rate: 21, description: '', category: 'SERVICE' }
 const tone = { ACTIVE: 'zx-accepted', COMPLETED: 'zx-accepted', PAST_DUE: 'zx-expired', CANCELED: 'zx-rejected', FAILED: 'zx-rejected', DUPLICATE: 'zx-expired', CREATED: 'zx-sent' }
 
 function Billing() {
@@ -24,8 +26,9 @@ function Billing() {
 
   const load = useCallback(async () => {
     try {
-      const [list, stats, planList] = await Promise.all([api.get(`/billing/${tab}`), api.get('/billing/metrics'), api.get('/billing/plans')])
-      setRows(list.data?.data || [])
+      // The Memberships tab loads its own report.
+      const [list, stats, planList] = await Promise.all([tab === 'memberships' ? null : api.get(`/billing/${tab}`), api.get('/billing/metrics'), api.get('/billing/plans')])
+      setRows(list?.data?.data || [])
       setMetrics(stats.data?.data || null)
       setPlans(planList.data?.data || [])
     } catch (error) {
@@ -89,7 +92,7 @@ function Billing() {
         </div>
         <div className="zx-form-actions">
           {tab === 'risk' && <button type="button" className="primary-action" disabled={busy} onClick={runRisk}>{t('Recalculate risk')}</button>}
-          {!['payments', 'risk'].includes(tab) && <button type="button" className="primary-action" onClick={() => setForm(tab === 'plans' ? EMPTY_PLAN : { org_id: '', plan_id: '', start_date: today() })}>＋ {t('New')}</button>}
+          {!['payments', 'risk', 'memberships'].includes(tab) && <button type="button" className="primary-action" onClick={() => setForm(tab === 'plans' ? EMPTY_PLAN : { org_id: '', plan_id: '', start_date: today() })}>＋ {t('New')}</button>}
           <button type="button" disabled={busy} onClick={() => act(() => api.post('/billing/run'), (data) => `${t('Billing run finished.')} ${t('Invoices')}: ${data?.invoices ?? 0}`)}>{t('Run billing now')}</button>
         </div>
       </div>
@@ -115,7 +118,8 @@ function Billing() {
             <>
               <input required placeholder={t('Code')} maxLength="40" {...field('code')} />
               <input required placeholder={t('Plan name')} maxLength="150" {...field('name')} />
-              <select aria-label={t('Billing interval')} {...field('billing_interval')}><option value="MONTH">{t('Monthly')}</option><option value="YEAR">{t('Yearly')}</option></select>
+              <select aria-label={t('Billing interval')} {...field('billing_interval')}><option value="MONTH">{t('Monthly')}</option><option value="YEAR">{t('Yearly')}</option><option value="YEARS_2">{t('Every 2 years')}</option><option value="YEARS_3">{t('Every 3 years')}</option></select>
+              <select aria-label={t('Plan type')} {...field('category')}><option value="SERVICE">{t('Service plan')}</option><option value="MEMBERSHIP">{t('Membership plan (shown at registration)')}</option></select>
               <label>{t('Price without VAT (EUR)')}<input required type="number" min="0" step="0.01" {...field('amount_eur')} /></label>
               <label>{t('VAT %')}<input required type="number" min="0" max="100" step="0.01" {...field('tax_rate')} /></label>
               <textarea rows="2" placeholder={t('Description')} {...field('description')} />
@@ -123,7 +127,7 @@ function Billing() {
           ) : (
             <>
               <select required aria-label={t('Customer')} {...field('org_id')}><option value="">{t('Select customer')}</option>{customers.map((org) => <option key={org.org_id} value={org.org_id}>{org.legal_name}{org.billing_address ? '' : ` (${t('no billing address')})`}</option>)}</select>
-              <select required aria-label={t('Plan')} {...field('plan_id')}><option value="">{t('Select plan')}</option>{plans.filter((plan) => plan.active).map((plan) => <option key={plan.plan_id} value={plan.plan_id}>{plan.name} · {euro(plan.amount_eur)} / {t(plan.billing_interval === 'YEAR' ? 'year' : 'month')}</option>)}</select>
+              <select required aria-label={t('Plan')} {...field('plan_id')}><option value="">{t('Select plan')}</option>{plans.filter((plan) => plan.active).map((plan) => <option key={plan.plan_id} value={plan.plan_id}>{plan.name} · {euro(plan.amount_eur)} / {t(PER[plan.billing_interval] || 'month')}</option>)}</select>
               <label>{t('Start date')}<input required type="date" min={today()} {...field('start_date')} /></label>
             </>
           )}
@@ -131,7 +135,9 @@ function Billing() {
         </form>
       )}
 
-      <div className="zx-table-wrap zx-card">
+      {tab === 'memberships' && <MembershipRevenue />}
+
+      {tab !== 'memberships' && <div className="zx-table-wrap zx-card">
         <table>
           {tab === 'subscriptions' && <thead><tr><th>{t('Customer')}</th><th>{t('Plan')}</th><th>{t('Current period')}</th><th>{t('Status')}</th><th /></tr></thead>}
           {tab === 'plans' && <thead><tr><th>{t('Code')}</th><th>{t('Plan')}</th><th>{t('Price')}</th><th>{t('Subscriptions')}</th><th>{t('Status')}</th></tr></thead>}
@@ -148,7 +154,7 @@ function Billing() {
             ))}
             {tab === 'plans' && rows.map((row) => (
               <tr key={row.plan_id}>
-                <td className="zx-mono">{row.code}</td><td>{row.name}</td><td>{euro(row.amount_eur)} / {t(row.billing_interval === 'YEAR' ? 'year' : 'month')} + {Number(row.tax_rate)}% {t('VAT')}</td><td>{row.live_subscriptions}</td>
+                <td className="zx-mono">{row.code}</td><td>{t(row.name)}{row.category === 'MEMBERSHIP' ? ` · ${t('Membership')}` : ''}</td><td>{euro(row.amount_eur)} / {t(PER[row.billing_interval] || 'month')} + {Number(row.tax_rate)}% {t('VAT')}</td><td>{row.live_subscriptions}</td>
                 <td><button type="button" className="zx-link" disabled={busy} onClick={() => act(() => api.patch(`/billing/plans/${row.plan_id}`, { active: !row.active }), 'Saved.')}>{t(row.active ? 'Active' : 'Inactive')}</button></td>
               </tr>
             ))}
@@ -169,7 +175,7 @@ function Billing() {
             {!rows.length && <tr><td colSpan="6" className="zx-empty">{t('Nothing here yet.')}</td></tr>}
           </tbody>
         </table>
-      </div>
+      </div>}
     </section>
   )
 }

@@ -1,6 +1,7 @@
 import axios from 'axios'
 import { getToken, clearSession } from './auth'
 import { translate } from '../i18n'
+import { requireConsent } from '../components/Portals/Shared/privacy/consentEvents'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
@@ -22,6 +23,7 @@ api.interceptors.response.use(
     if (error.response?.status === 500 && data && typeof data === 'object' && data.request_id) {
       data.message = `${translate('Something went wrong on the server.')} ${translate('Reference: {ref}', { ref: data.request_id })}`
     }
+    if (error.response?.status === 403 && data?.code === 'CONSENT_REQUIRED') requireConsent()
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       clearSession()
       if (!window.location.pathname.startsWith('/login')) {

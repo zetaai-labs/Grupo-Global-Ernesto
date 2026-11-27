@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { rateLimit } from 'express-rate-limit'
 import {
   publicRegister,
+  publicMembershipInfo,
   publicStatus,
   publicUploadDocument,
   publicSubmit,
@@ -38,6 +39,7 @@ const onboardingLimiter = rateLimit({
 })
 publicOnboardingRoutes.use(onboardingLimiter)
 publicOnboardingRoutes.post('/', publicRegister)
+publicOnboardingRoutes.get('/membership', publicMembershipInfo)
 publicOnboardingRoutes.get('/:token', publicStatus)
 publicOnboardingRoutes.post('/:token/documents', upload.single('file'), persistUpload, publicUploadDocument)
 publicOnboardingRoutes.post('/:token/people', publicAddPerson)

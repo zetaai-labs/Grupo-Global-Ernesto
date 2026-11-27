@@ -42,6 +42,16 @@ const canRead = (user, def) => def.read.includes(user.role) || Boolean(externalA
 const canManage = (user, def) => def.manage.includes(user.role)
 const canCreate = (user, def) => def.create.includes(user.role) || Boolean(externalAccess(user, def)?.create && user.org_id)
 const isOwner = (user, row) => row.created_by === user.sub || row.assigned_to === user.sub
+/**
+ * Records holding personal documents (employee profiles): files and comments are seen only by the managers
+ * of the entity (HR, admin) and by the person the record is about. Everyone else still sees the basic card
+ * (name, job title, department), which the organisation chart needs.
+ * 'full' = everything, 'own' = the person (not HR-only notes), 'none' = no files or comments.
+ */
+const privateAccess = (user, def, row) => {
+  if (!def.privateFiles || canManage(user, def)) return 'full'
+  return row.assigned_to === user.sub ? 'own' : 'none'
+}
 const isCustomer = (user, def, row) => Boolean(externalAccess(user, def) && user.org_id && row.customer_org_id === user.org_id)
 
 function visibility(user, def, params, alias = 'r') {
@@ -447,8 +457,14 @@ export async function visibleRecord(req) {
       [row.record_id, external],
     ),
   ])
-  const eventsOut = external ? events.rows.map(({ author: _author, ...event }) => event) : events.rows
-  return { module, def, record: { ...present(req.user, def, row, labels), events: eventsOut, files: files.rows } }
+  const access = privateAccess(req.user, def, row)
+  const shownEvents = events.rows.filter((event) => access === 'full' || (access === 'own' ? !event.internal : !['comment', 'file'].includes(event.kind)))
+  const shownFiles = access === 'full' ? files.rows : access === 'own' ? files.rows.filter((file) => !file.internal) : []
+  const eventsOut = external ? shownEvents.map(({ author: _author, ...event }) => event) : shownEvents
+  return {
+    module, def,
+    record: { ...present(req.user, def, row, labels), events: eventsOut, files: shownFiles, private_files: Boolean(def.privateFiles), can_add: access !== 'none' },
+  }
 }
 
 export async function getRecord(req, res) {
@@ -572,7 +588,10 @@ export async function addComment(req, res) {
   const body = String(req.body?.body || '').trim().slice(0, 5000)
   if (!body) throw httpError(400, 'Write a comment first.')
   const row = await loadRow({ query }, req, def, module.key)
-  const internal = isExternal(req.user.role) ? false : Boolean(req.body?.internal)
+  const access = privateAccess(req.user, def, row)
+  if (access === 'none') throw httpError(403, 'Only HR and the person concerned can add notes here.')
+  // On private records "internal" means HR only, so the person cannot mark their own notes that way.
+  const internal = isExternal(req.user.role) || access === 'own' ? false : Boolean(req.body?.internal)
   await query(`INSERT INTO zx_record_events (record_id, kind, body, internal, created_by) VALUES ($1, 'comment', $2, $3, $4)`, [row.record_id, body, internal, req.user.sub])
   const people = [row.created_by, row.assigned_to].filter((id) => id && id !== req.user.sub)
   if (people.length && !internal) await notify(people, { type: 'zylax', title: `New comment on ${row.ref_no}`, body: row.title, link: `/intranet/zylax/${module.key}` })
@@ -582,6 +601,7 @@ export async function addComment(req, res) {
 export async function preflightFile(req, _res, next) {
   const { module, def } = resolve(req)
   const row = await loadRow({ query }, req, def, module.key)
+  if (privateAccess(req.user, def, row) === 'none') throw httpError(403, 'Only HR and the person concerned can add documents here.')
   req.zxRecord = row
   req.zxDefinition = def
   return next()
@@ -590,7 +610,11 @@ export async function preflightFile(req, _res, next) {
 export async function addFile(req, res) {
   if (!req.file) throw httpError(400, 'Choose a PDF, Office, text, image or ZIP file up to 25 MB.')
   const external = isExternal(req.user.role)
-  const internal = external ? false : req.body?.shared !== 'true'
+  const def = req.zxDefinition
+  // Private records (employee profiles): HR chooses "HR only"; otherwise the person sees the document.
+  const internal = def?.privateFiles
+    ? privateAccess(req.user, def, req.zxRecord) === 'full' && req.body?.internal === 'true'
+    : external ? false : req.body?.shared !== 'true'
   const { rows } = await query(
     `INSERT INTO zx_record_files (record_id, name, stored_name, mime_type, size_bytes, internal, created_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING file_id, name, size_bytes, internal, created_at`,
@@ -598,6 +622,10 @@ export async function addFile(req, res) {
   )
   await query(`INSERT INTO zx_record_events (record_id, kind, body, internal, created_by) VALUES ($1, 'file', $2, $3, $4)`, [req.zxRecord.record_id, rows[0].name, internal, req.user.sub])
   await writeAudit(req.user.sub, 'ZX_FILE_ADDED', 'zx_record_files', rows[0].file_id)
+  const person = req.zxRecord.assigned_to
+  if (def?.privateFiles && !internal && person && person !== req.user.sub) {
+    await notify([person], { type: 'zylax', title: 'A document was added to your profile', body: rows[0].name, link: `/intranet/zylax/${req.zxRecord.module}` })
+  }
   return res.status(201).json({ data: rows[0] })
 }
 
@@ -606,8 +634,8 @@ export async function downloadRecordFile(req, res) {
   const row = await loadRow({ query }, req, def, module.key)
   if (!isUuid(req.params.fileId)) throw httpError(400, 'Invalid id.')
   const { rows } = await query(
-    `SELECT name, stored_name, mime_type FROM zx_record_files WHERE file_id = $1 AND record_id = $2 AND ($3::boolean = false OR internal = false)`,
-    [req.params.fileId, row.record_id, isExternal(req.user.role)],
+    `SELECT name, stored_name, mime_type FROM zx_record_files WHERE file_id = $1 AND record_id = $2 AND ($3::boolean = false OR internal = false) AND $4::text <> 'none'`,
+    [req.params.fileId, row.record_id, isExternal(req.user.role) || privateAccess(req.user, def, row) === 'own', privateAccess(req.user, def, row)],
   )
   if (!rows[0]) throw httpError(404, 'File not found.')
   await writeAudit(req.user.sub, 'ZX_FILE_DOWNLOADED', 'zx_record_files', req.params.fileId)

@@ -38,6 +38,13 @@ const LABELS = {
     CASH: 'نقدًا', CARD: 'بطاقة', TRANSFER: 'تحويل بنكي', PAYPAL: 'PayPal',
     DRAFT: 'مسودة', SENT: 'مُرسل', ACCEPTED: 'مقبول', REJECTED: 'مرفوض', EXPIRED: 'منتهي الصلاحية', ISSUED: 'صادرة', PAID: 'مدفوعة', REFUNDED: 'مستردة', CANCELLED: 'ملغاة',
   },
+  fr: {
+    QUOTE: 'DEVIS', INVOICE: 'FACTURE', CORRECTIVE: 'FACTURE RECTIFICATIVE', corrects: 'Rectifie', reason: 'Motif de la rectification', number: 'Numéro', date: 'Date', validUntil: 'Valable jusqu’au', status: 'Statut', payment: 'Paiement',
+    from: 'Émetteur', to: 'Client', taxId: 'N° fiscal', sku: 'Réf.', item: 'Description', qty: 'Qté', price: 'Prix', discount: 'Rem.', vat: 'TVA', net: 'HT',
+    vatSummary: 'Détail de la TVA', base: 'Base imposable', totalVat: 'Total TVA', total: 'TOTAL', notes: 'Remarques', page: 'Page', walkIn: 'Client de passage',
+    CASH: 'Espèces', CARD: 'Carte', TRANSFER: 'Virement', PAYPAL: 'PayPal',
+    DRAFT: 'BROUILLON', SENT: 'Envoyé', ACCEPTED: 'Accepté', REJECTED: 'Refusé', EXPIRED: 'Expiré', ISSUED: 'Émise', PAID: 'Payée', REFUNDED: 'REMBOURSÉE', CANCELLED: 'ANNULÉE',
+  },
 }
 const WATERMARK = new Set(['DRAFT', 'REFUNDED', 'EXPIRED', 'REJECTED', 'CANCELLED'])
 const INK = '#0f172a'
@@ -65,7 +72,7 @@ const fontsForCoverage = () => {
   return coverage
 }
 
-export const PDF_LANGUAGES = ['es', 'en', 'ru', 'ar']
+export const PDF_LANGUAGES = ['es', 'en', 'ru', 'ar', 'fr']
 /** Language of the document: Spanish by default. */
 export const pdfLanguage = (value) => (PDF_LANGUAGES.includes(value) ? value : 'es')
 export const walkInName = (lang) => LABELS[pdfLanguage(lang)].walkIn

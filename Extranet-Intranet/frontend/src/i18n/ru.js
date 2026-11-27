@@ -19,5 +19,11 @@ import { monitoringRu } from './monitoring'
 import { attendanceRu } from './attendance'
 import { translateRu } from './translate'
 import { workspaceRu } from './workspace'
+import { privacyRu } from './privacy'
+import { membershipRu } from './membership'
+import { assistantRu } from './assistant'
+import { auditRu } from './audit'
+import { callCenterRu } from './callcenter'
+import { privateChatRu } from './privatechat'
 
-export default { ...ru1, ...ru2, ...ru3, ...ru4, ...ru5, ...ru6, ...landingRu, ...coursePackagesRu, ...orgPeopleRu, ...zylaxDepthRu, ...eventsHybridRu, ...aiRu, ...pwaRu, ...aiEngineRu, ...clockRu, ...videoRu, ...monitoringRu, ...attendanceRu, ...translateRu, ...workspaceRu }
+export default { ...ru1, ...ru2, ...ru3, ...ru4, ...ru5, ...ru6, ...landingRu, ...coursePackagesRu, ...orgPeopleRu, ...zylaxDepthRu, ...eventsHybridRu, ...aiRu, ...pwaRu, ...aiEngineRu, ...clockRu, ...videoRu, ...monitoringRu, ...attendanceRu, ...translateRu, ...workspaceRu, ...privacyRu, ...membershipRu, ...assistantRu, ...auditRu, ...callCenterRu, ...privateChatRu }

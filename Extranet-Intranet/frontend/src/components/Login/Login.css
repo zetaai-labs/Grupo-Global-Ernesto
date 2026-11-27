@@ -455,6 +455,30 @@
   background: var(--tc-bg-eef3fb, #eef3fb);
 }
 
+.login-register {
+  padding: 12px 14px;
+  border: 1px dashed var(--tc-bd-0a2f6b, #0a2f6b);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.login-register p {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.login-register a {
+  color: var(--tc-fg-0a2f6b, #0a2f6b);
+  font-weight: 700;
+}
+
+.login-register small {
+  display: block;
+  color: var(--muted, #64748b);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .login-submit:hover:not(:disabled) {
   background: var(--tc-bg-0b3b86, #0b3b86);
   transform: translateY(-1px);
@@ -563,4 +587,21 @@
 /* Language switch sits in the top-right corner of the sign-in pages. */
 .login-page {
   position: relative;
+}
+
+.login-legal {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px 16px;
+  font-size: 12px;
+}
+
+.login-legal a {
+  color: var(--muted, #64748b);
+  text-decoration: none;
+}
+
+.login-legal a:hover {
+  text-decoration: underline;
 }

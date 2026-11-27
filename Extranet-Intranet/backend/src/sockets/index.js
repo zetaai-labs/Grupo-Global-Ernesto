@@ -5,6 +5,7 @@ import { setIo } from './io.js'
 import { canJoinRoom } from '../controllers/calendar.controller.js'
 import { originSecretValid } from '../middleware/cloudflare.js'
 import { openMessage } from '../services/chatCrypto.service.js'
+import { consentRequired } from '../services/consentRule.js'
 
 const MAX_PARTICIPANTS = 8
 
@@ -27,10 +28,12 @@ export function registerSockets(io) {
       if (claims.purpose || claims.mfa_setup) return next(new Error("Unauthorized"))
 
       const { rows } = await query(
-        `SELECT u.id, u.name, u.status, u.session_version FROM users u WHERE u.id = $1`,
+        `SELECT u.id, u.name, u.status, u.session_version, u.privacy_version, r.name AS role FROM users u JOIN roles r ON r.id = u.role_id WHERE u.id = $1`,
         [claims.sub],
       )
       if (!rows[0] || rows[0].status !== 'active' || (claims.sv ?? 0) !== rows[0].session_version) return next(new Error('Unauthorized'))
+      // Same rule as the API: no live chat or calls before the privacy policy is accepted.
+      if (consentRequired(rows[0].role, rows[0].privacy_version)) return next(new Error('Unauthorized'))
 
       socket.user = { ...claims, name: rows[0].name }
       socket.data.name = rows[0].name

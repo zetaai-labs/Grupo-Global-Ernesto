@@ -8,6 +8,7 @@ import api from '../../api/client'
 import { saveSession, PORTAL_ROLES } from '../../api/auth'
 import './Login.css'
 import { translateServer } from '../../i18n/serverMessages'
+import AssistantWidget from '../Portals/Shared/assistant/AssistantWidget'
 
 // Demo one-click sign-in: only in development or when VITE_DEMO_LOGIN=true (removed from normal production builds).
 const DemoLogins = import.meta.env.DEV || import.meta.env.VITE_DEMO_LOGIN === 'true' ? lazy(() => import('./DemoLogins')) : null
@@ -198,7 +199,13 @@ function Login() {
     if (ssoHandled.current) return
     ssoHandled.current = true
     const failure = searchParams.get('sso_error')
-    if (failure) {
+    const consent = searchParams.get('consent')
+    if (consent === 'declined' || consent === 'withdrawn') {
+      setError(t(consent === 'declined'
+        ? 'You declined the privacy policy, so you have been signed out. Sign in again whenever you are ready to accept it.'
+        : 'Your acceptance was withdrawn and you have been signed out. To use the platform again, sign in and accept the privacy policy.'))
+      window.history.replaceState(null, '', '/login')
+    } else if (failure) {
       setError(t(SSO_ERRORS[failure] || SSO_ERRORS.failed))
       window.history.replaceState(null, '', '/login')
     } else if (searchParams.get('sso') === '1') {
@@ -429,6 +436,13 @@ function Login() {
                 {t('Continue with {provider}', { provider: ssoProvider })}
               </a>
             )}
+            <div className="login-register">
+              <p>
+                <strong>{t('New company?')}</strong>{' '}
+                <Link to="/onboarding">{t('Register your organisation')}</Link>
+              </p>
+              <small>{t('Customers, partners and suppliers apply here. Our compliance team reviews every request and emails your access.')} {t('Employees get their account from HR.')}</small>
+            </div>
           </form>
           )}
 
@@ -449,8 +463,14 @@ function Login() {
             <ShieldIcon />
             {t('Secure Access')} <b>|</b> Global Group
           </div>
+          <nav className="login-legal" aria-label={t('Legal documents')}>
+            <Link to="/legal/privacy">{t('Privacy policy')}</Link>
+            <Link to="/legal/terms">{t('Terms of use')}</Link>
+            <Link to="/legal/cookies">{t('Cookie policy')}</Link>
+          </nav>
         </div>
       </section>
+      <AssistantWidget />
     </main>
   )
 }
