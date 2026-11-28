@@ -331,3 +331,7 @@
 .onboarding-form .onboarding-consent {
   display: flex;
 }
+
+/* "+ I have an EU PIC number" and "Try again" */
+.onboarding-link { align-self: end; justify-self: start; padding: 10px 0; border: 0; background: transparent; color: #5542bf; font: inherit; font-weight: 600; cursor: pointer; }
+.onboarding-link:hover { text-decoration: underline; }

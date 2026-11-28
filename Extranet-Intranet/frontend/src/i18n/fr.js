@@ -14,5 +14,6 @@ import { privateChatFr } from './privatechat'
 import { userMgmtFr } from './usermgmt'
 import { presidentialFr } from './presidential'
 import { extranetHubFr } from './extranethub'
+import { onboardingFormFr } from './onboardingform'
 
-export default { ...fr1, ...fr2, ...fr3, ...fr4, ...fr5, ...fr6, ...privacyFr, ...membershipFr, ...assistantFr, ...auditFr, ...callCenterFr, ...privateChatFr, ...userMgmtFr, ...presidentialFr, ...extranetHubFr }
+export default { ...fr1, ...fr2, ...fr3, ...fr4, ...fr5, ...fr6, ...privacyFr, ...membershipFr, ...assistantFr, ...auditFr, ...callCenterFr, ...privateChatFr, ...userMgmtFr, ...presidentialFr, ...extranetHubFr, ...onboardingFormFr }

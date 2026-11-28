@@ -74,8 +74,9 @@ export async function publicRegister(req, res) {
   if (!parsed.success) return fail(res, 400, parsed.error.issues[0]?.message || 'Please complete all required fields.')
   const data = parsed.data
 
-  // Membership: the survey is always answered; a member also picks a plan and gives an invoicing address.
-  const survey = checkSurvey(data.survey)
+  // Membership: new members answer the survey, pick a plan and give an invoicing address;
+  // existing partners only name their contact at Grupo Global.
+  const survey = checkSurvey(data.survey, data.membership_track)
   if (!survey.ok) return fail(res, 400, survey.message)
   let plan = null
   if (data.membership_track === 'MEMBER') {

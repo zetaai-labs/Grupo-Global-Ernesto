@@ -28,5 +28,6 @@ import { privateChatRu } from './privatechat'
 import { userMgmtRu } from './usermgmt'
 import { presidentialRu } from './presidential'
 import { extranetHubRu } from './extranethub'
+import { onboardingFormRu } from './onboardingform'
 
-export default { ...ru1, ...ru2, ...ru3, ...ru4, ...ru5, ...ru6, ...landingRu, ...coursePackagesRu, ...orgPeopleRu, ...zylaxDepthRu, ...eventsHybridRu, ...aiRu, ...pwaRu, ...aiEngineRu, ...clockRu, ...videoRu, ...monitoringRu, ...attendanceRu, ...translateRu, ...workspaceRu, ...privacyRu, ...membershipRu, ...assistantRu, ...auditRu, ...callCenterRu, ...privateChatRu, ...userMgmtRu, ...presidentialRu, ...extranetHubRu }
+export default { ...ru1, ...ru2, ...ru3, ...ru4, ...ru5, ...ru6, ...landingRu, ...coursePackagesRu, ...orgPeopleRu, ...zylaxDepthRu, ...eventsHybridRu, ...aiRu, ...pwaRu, ...aiEngineRu, ...clockRu, ...videoRu, ...monitoringRu, ...attendanceRu, ...translateRu, ...workspaceRu, ...privacyRu, ...membershipRu, ...assistantRu, ...auditRu, ...callCenterRu, ...privateChatRu, ...userMgmtRu, ...presidentialRu, ...extranetHubRu, ...onboardingFormRu }

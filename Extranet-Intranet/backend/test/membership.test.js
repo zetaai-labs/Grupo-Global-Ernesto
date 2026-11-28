@@ -53,6 +53,9 @@ describe('Paid membership', () => {
     assert.equal(noAddress.status, 400)
     const partnerWithoutContact = await request(app).post('/api/public/onboarding').send({ ...company('a'), survey: SURVEY, membership_track: 'EXISTING_PARTNER' })
     assert.equal(partnerWithoutContact.status, 400, 'an existing partner names their Grupo Global contact')
+    // An existing partner answers only that one question: the rest of the survey is for new members.
+    const partner = await request(app).post('/api/public/onboarding').send({ ...company('p'), survey: { referred_by: 'Ernesto Morilla' }, membership_track: 'EXISTING_PARTNER' })
+    assert.equal(partner.status, 201, partner.body.message)
   })
 
   it('starts the membership and issues its invoice when Compliance approves the company', async () => {

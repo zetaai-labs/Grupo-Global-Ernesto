@@ -24,21 +24,23 @@ export const MEMBERSHIP_SURVEY = [
 ]
 
 /** Turns the survey definition into a validator, so the server accepts only known questions and answers. */
-function surveySchema() {
+function surveySchema(partner) {
   const shape = {}
   for (const question of MEMBERSHIP_SURVEY) {
+    // Existing direct partners pay no fee and skip the survey: only their Grupo Global contact is asked.
+    const required = partner ? question.key === 'referred_by' : question.required
     let field
     if (question.type === 'select') field = z.enum(question.options)
     else if (question.type === 'multi') field = z.array(z.enum(question.options)).min(1).max(question.options.length)
-    else field = z.string().trim().min(question.required ? 2 : 0).max(question.max || 500)
-    shape[question.key] = question.required ? field : field.optional()
+    else field = z.string().trim().min(required ? 2 : 0).max(question.max || 500)
+    shape[question.key] = required ? field : field.optional()
   }
   return z.object(shape).strict()
 }
 
 /** Returns the cleaned answers, or a readable reason they were refused. */
-export function checkSurvey(answers) {
-  const result = surveySchema().safeParse(answers || {})
+export function checkSurvey(answers, track = 'MEMBER') {
+  const result = surveySchema(track === 'EXISTING_PARTNER').safeParse(answers || {})
   if (result.success) return { ok: true, answers: result.data }
   const question = MEMBERSHIP_SURVEY.find((item) => item.key === result.error.issues[0]?.path?.[0])
   return { ok: false, message: question ? `Answer the survey question: ${question.label}` : 'Please complete the membership survey.' }

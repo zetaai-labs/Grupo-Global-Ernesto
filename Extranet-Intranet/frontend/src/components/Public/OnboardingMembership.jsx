@@ -10,19 +10,33 @@ const YEARS = { YEAR: 1, YEARS_2: 2, YEARS_3: 3 }
  * partners of Grupo Global answer the survey and name their contact (no fee). The survey and plans come
  * from the server, so Finance can change prices without a new release.
  */
-function OnboardingMembership({ form, setForm }) {
+function OnboardingMembership({ form, setForm, children }) {
   const t = useT()
   const [info, setInfo] = useState(null)
 
-  useEffect(() => {
-    api.get('/public/onboarding/membership').then((response) => setInfo(response.data.data)).catch(() => setInfo({ plans: [], survey: [] }))
-  }, [])
+  const load = () => {
+    setInfo(null)
+    api.get('/public/onboarding/membership').then((response) => setInfo(response.data.data)).catch(() => setInfo({ failed: true, plans: [], survey: [] }))
+  }
+  useEffect(load, [])
 
   const set = (patch) => setForm((current) => ({ ...current, ...patch }))
   const answer = (key, value) => setForm((current) => ({ ...current, survey: { ...current.survey, [key]: value } }))
   const member = form.membership_track === 'MEMBER'
 
   if (!info) return <p className="onboarding-muted">{t('Loading membership options…')}</p>
+  if (info.failed) {
+    // The server may be starting up: never show an empty plan list or survey.
+    return (
+      <section className="onboarding-membership">
+        <h2>{t('2. Membership')}</h2>
+        <div className="cloud-notice" role="alert">
+          {t('The membership options could not be loaded. The server may be starting up; this can take up to a minute.')}
+          {' '}<button type="button" className="onboarding-link" onClick={load}>{t('Try again')}</button>
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section className="onboarding-membership">
@@ -59,9 +73,13 @@ function OnboardingMembership({ form, setForm }) {
 
       <fieldset className="om-survey">
         <legend>{t('About your company')}</legend>
-        {info.survey.map((question) => {
+        {children}
+        {info.survey
+          // Existing partners pay no fee: they only name their contact at Grupo Global.
+          .filter((question) => member || question.key === 'referred_by')
+          .map((question) => {
           const value = form.survey[question.key]
-          const required = question.required || (!member && question.key === 'referred_by')
+          const required = member ? question.required : question.key === 'referred_by'
           const label = !member && question.key === 'referred_by' ? t('Your contact at Grupo Global') : t(question.label)
           if (question.type === 'select') {
             return (
@@ -77,10 +95,12 @@ function OnboardingMembership({ form, setForm }) {
             const chosen = value || []
             return (
               <div key={question.key} className="om-multi" role="group" aria-label={label}>
-                <span>{label}</span>
-                {question.options.map((option) => (
+                <span>{label}{required ? ` — ${t('choose at least one')}` : ''}</span>
+                {question.options.map((option, index) => (
                   <label key={option}>
                     <input type="checkbox" checked={chosen.includes(option)}
+                      // The browser stops the form and points here until one option is ticked.
+                      ref={index === 0 ? (element) => element?.setCustomValidity(required && !chosen.length ? t('Choose at least one option.') : '') : undefined}
                       onChange={(event) => answer(question.key, event.target.checked ? [...chosen, option] : chosen.filter((item) => item !== option))} />
                     {t(option)}
                   </label>

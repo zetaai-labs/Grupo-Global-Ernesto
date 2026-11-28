@@ -9,6 +9,7 @@ import './ReceivedFileUpload.css'
 import './Onboarding.css'
 import { translateServer } from '../../i18n/serverMessages'
 import AssistantWidget from '../Portals/Shared/assistant/AssistantWidget'
+import { COUNTRY_CORRIDOR, countryOptions } from './countries'
 
 const CORRIDORS = [
   ['SPAIN_EU', 'Spain / European Union'],
@@ -55,6 +56,8 @@ function Onboarding() {
   const [busy, setBusy] = useState('')
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [showPic, setShowPic] = useState(false)
+  const [otherCountry, setOtherCountry] = useState(false)
 
   const loadStatus = useCallback(async () => {
     if (!token) return
@@ -71,6 +74,27 @@ function Onboarding() {
   }, [loadStatus])
 
   const change = (field) => (event) => setForm((current) => ({ ...current, [field]: event.target.value }))
+  // Choosing a country fills in its corridor; the applicant can still change it.
+  const chooseCountry = (event) => {
+    const code = event.target.value
+    if (code === 'OTHER') { setOtherCountry(true); setForm((current) => ({ ...current, country: '' })); return }
+    setForm((current) => ({ ...current, country: code, region_corridor: COUNTRY_CORRIDOR[code] || current.region_corridor }))
+  }
+  const sectorsField = (
+    <div className="om-multi" role="group" aria-label={t('Sectors you work in (optional)')}>
+      <span>{t('Sectors you work in (optional)')}</span>
+      {SECTORS.map(([code, label]) => (
+        <label key={code}>
+          <input
+            type="checkbox"
+            checked={form.sectors.includes(code)}
+            onChange={(event) => setForm((current) => ({ ...current, sectors: event.target.checked ? [...current.sectors, code] : current.sectors.filter((item) => item !== code) }))}
+          />
+          {t(label)}
+        </label>
+      ))}
+    </div>
+  )
 
   const register = async (event) => {
     event.preventDefault()
@@ -169,37 +193,35 @@ function Onboarding() {
               <label>{t('Tax ID (NIF / VAT / PAN)')}
                 <input value={form.tax_id} onChange={change('tax_id')} required placeholder="B12345678" />
               </label>
-              <label>{t('EU PIC (optional, 9 digits)')}
-                <input value={form.pic_code} onChange={change('pic_code')} inputMode="numeric" placeholder="861161733" />
-              </label>
-              <label>{t('Country (ISO 3)')}
-                <input value={form.country} onChange={change('country')} required maxLength={3} placeholder="ESP" />
-              </label>
-              <label>{t('Corridor')}
-                <select value={form.region_corridor} onChange={change('region_corridor')}>
-                  {CORRIDORS.map(([code, name]) => <option key={code} value={code}>{t(name)}</option>)}
-                </select>
+              <label>{t('Country')}
+                {otherCountry ? (
+                  <input value={form.country} onChange={change('country')} required maxLength={3} placeholder={t('3-letter code, e.g. JPN')} aria-label={t('Country')} />
+                ) : (
+                  <select value={form.country} onChange={chooseCountry} required>
+                    {countryOptions(language).map((country) => <option key={country.code} value={country.code}>{country.name}</option>)}
+                    <option value="OTHER">{t('Other country…')}</option>
+                  </select>
+                )}
               </label>
               <label>{t('Organisation type')}
                 <select value={form.org_type} onChange={change('org_type')}>
                   {ORG_TYPES.map(([code, name]) => <option key={code} value={code}>{t(name)}</option>)}
                 </select>
               </label>
-            </div>
-            <fieldset className="onboarding-sectors">
-              <legend>{t('Sectors you work in (optional)')}</legend>
-              {SECTORS.map(([code, label]) => (
-                <label key={code}>
-                  <input
-                    type="checkbox"
-                    checked={form.sectors.includes(code)}
-                    onChange={(event) => setForm((current) => ({ ...current, sectors: event.target.checked ? [...current.sectors, code] : current.sectors.filter((item) => item !== code) }))}
-                  />
-                  {t(label)}
+              <label>{t('Corridor')}
+                <select value={form.region_corridor} onChange={change('region_corridor')}>
+                  {CORRIDORS.map(([code, name]) => <option key={code} value={code}>{t(name)}</option>)}
+                </select>
+              </label>
+              {showPic ? (
+                <label>{t('EU PIC (optional, 9 digits)')}
+                  <input value={form.pic_code} onChange={change('pic_code')} inputMode="numeric" placeholder="861161733" autoFocus />
                 </label>
-              ))}
-            </fieldset>
-            <OnboardingMembership form={form} setForm={setForm} />
+              ) : (
+                <button type="button" className="onboarding-link" onClick={() => setShowPic(true)}>+ {t('I have an EU PIC number')}</button>
+              )}
+            </div>
+            <OnboardingMembership form={form} setForm={setForm}>{sectorsField}</OnboardingMembership>
             <h2>{t('3. Primary contact')}</h2>
             <div className="onboarding-grid">
               <label>{t('Full name')}

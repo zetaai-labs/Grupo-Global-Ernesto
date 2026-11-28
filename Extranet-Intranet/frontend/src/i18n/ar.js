@@ -28,5 +28,6 @@ import { privateChatAr } from './privatechat'
 import { userMgmtAr } from './usermgmt'
 import { presidentialAr } from './presidential'
 import { extranetHubAr } from './extranethub'
+import { onboardingFormAr } from './onboardingform'
 
-export default { ...ar1, ...ar2, ...ar3, ...ar4, ...ar5, ...ar6, ...landingAr, ...coursePackagesAr, ...orgPeopleAr, ...zylaxDepthAr, ...eventsHybridAr, ...aiAr, ...pwaAr, ...aiEngineAr, ...clockAr, ...videoAr, ...monitoringAr, ...attendanceAr, ...translateAr, ...workspaceAr, ...privacyAr, ...membershipAr, ...assistantAr, ...auditAr, ...callCenterAr, ...privateChatAr, ...userMgmtAr, ...presidentialAr, ...extranetHubAr }
+export default { ...ar1, ...ar2, ...ar3, ...ar4, ...ar5, ...ar6, ...landingAr, ...coursePackagesAr, ...orgPeopleAr, ...zylaxDepthAr, ...eventsHybridAr, ...aiAr, ...pwaAr, ...aiEngineAr, ...clockAr, ...videoAr, ...monitoringAr, ...attendanceAr, ...translateAr, ...workspaceAr, ...privacyAr, ...membershipAr, ...assistantAr, ...auditAr, ...callCenterAr, ...privateChatAr, ...userMgmtAr, ...presidentialAr, ...extranetHubAr, ...onboardingFormAr }
