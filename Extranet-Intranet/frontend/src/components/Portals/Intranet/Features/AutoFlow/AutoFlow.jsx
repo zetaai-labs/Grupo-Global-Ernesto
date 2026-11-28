@@ -4,6 +4,7 @@ import { getUser } from '../../../../../api/auth'
 import './AutoFlow.css'
 import { useT, dateLocale } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
+import { roleLabel } from '../../../../../utils/roles'
 
 const EMPTY_FORM = { title: '', description: '', template: 'purchase', approver_id: '', assigned_to: '', due_at: '' }
 const FILTERS = [
@@ -12,7 +13,6 @@ const FILTERS = [
   ['all', 'All'],
 ]
 
-const roleLabel = (role) => (role ? role.charAt(0).toUpperCase() + role.slice(1) : '')
 
 function stepName(step) {
   return step.approver || `Any ${roleLabel(step.approver_role)}`
@@ -149,7 +149,7 @@ function AutoFlow() {
             <select value={form.approver_id} onChange={change('approver_id')} aria-label={t("Approver")} required>
               <option value="">{t("Choose approver…")}</option>
               {people.map((person) => (
-                <option key={person.id} value={person.id}>{person.name} ({person.role})</option>
+                <option key={person.id} value={person.id}>{person.name} ({t(roleLabel(person.role))})</option>
               ))}
             </select>
           )}

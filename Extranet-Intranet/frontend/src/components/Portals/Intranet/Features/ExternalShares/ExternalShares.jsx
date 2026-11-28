@@ -3,6 +3,7 @@ import api from '../../../../../api/client'
 import './ExternalShares.css'
 import { useT } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
+import { roleLabel } from '../../../../../utils/roles'
 
 function ExternalShares() {
   const t = useT()
@@ -90,7 +91,7 @@ function ExternalShares() {
           </select>
           <select value={userId} onChange={(event) => setUserId(event.target.value)} required>
             {!partners.length && <option value="">{t("No external accounts")}</option>}
-            {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name} ({partner.role})</option>)}
+            {partners.map((partner) => <option key={partner.id} value={partner.id}>{partner.name} ({t(roleLabel(partner.role))})</option>)}
           </select>
           <button type="submit" className="primary-action">{t("♧ Share folder")}</button>
         </form>

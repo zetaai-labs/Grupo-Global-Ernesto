@@ -82,4 +82,17 @@ describe('role consoles', () => {
     const customer = await loginAs('customer@gmail.com')
     assert.equal((await request(app).get('/api/dashboard/console').set(auth(customer))).status, 403)
   })
+
+  it('gives the Super Admin a to-do list and the latest activity', async () => {
+    const admin = await loginAs('admin@gmail.com')
+    const { body } = await request(app).get('/api/dashboard/console').set(auth(admin))
+    assert.ok(Array.isArray(body.data.attention))
+    assert.ok(body.data.attention.every((item) => item.count > 0 && item.link.startsWith('/intranet/')))
+    assert.ok(body.data.recent.length > 0, 'the admin sign-in itself is recorded')
+    assert.ok(body.data.recent.every((entry) => entry.action && entry.created_at))
+    // Other roles do not see the Super Admin's to-do list.
+    const hr = await loginAs('hr@gmail.com')
+    const hrConsole = await request(app).get('/api/dashboard/console').set(auth(hr))
+    assert.equal(hrConsole.body.data.attention, undefined)
+  })
 })

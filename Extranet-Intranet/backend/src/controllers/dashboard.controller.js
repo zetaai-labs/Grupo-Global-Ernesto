@@ -43,32 +43,71 @@ export async function getDashboard(req, res) {
 // ---------------------------------------------------------------------------
 
 async function presidentialConsole() {
-  const [orgs, crm, projects, investors, sanctions, alerts] = await Promise.all([
+  const [orgs, crm, projects, investors, revenue, attention, recent] = await Promise.all([
     single(`SELECT COUNT(*) FILTER (WHERE verification_status = 'VERIFIED')::int AS verified,
                    COUNT(*) FILTER (WHERE verification_status = 'PENDING')::int AS pending FROM organizations`),
     single(`SELECT COALESCE(SUM(estimated_value_eur) FILTER (WHERE pipeline_stage IN ('LEAD', 'PROPOSAL', 'DUE_DILIGENCE')), 0)::float AS open_value,
                    COALESCE(SUM(estimated_value_eur) FILTER (WHERE pipeline_stage = 'ACTIVE_CONTRACT'), 0)::float AS active_value
             FROM crm_relationships`),
-    single(`SELECT COUNT(*) FILTER (WHERE phase <> 'COMPLETED')::int AS active, COALESCE(SUM(budget_eur), 0)::float AS budget FROM projects_programs`),
+    single(`SELECT COUNT(*) FILTER (WHERE phase <> 'COMPLETED')::int AS active FROM projects_programs`),
     single("SELECT COUNT(*)::int AS total FROM investors_vault WHERE status = 'ACTIVE'"),
-    single("SELECT COUNT(*)::int AS total FROM governance_sanctions WHERE status = 'ACTIVE'"),
-    single(`SELECT COUNT(*)::int AS total FROM audit_logs
-            WHERE action IN ('VAULT_UNAUTHORIZED_ATTEMPT', 'WEBHOOK_SIGNATURE_REJECTED') AND created_at > now() - interval '7 days'`),
+    single(`SELECT COALESCE(SUM(CASE WHEN kind = 'SALE' THEN amount_eur ELSE -amount_eur END), 0)::float AS total
+            FROM membership_revenue_shares WHERE booked_at >= date_trunc('year', now())`),
+    attentionItems(),
+    recentActivity(),
   ])
   return {
     console: 'PRESIDENTIAL',
     title: 'Presidential Master Console',
+    attention,
+    recent,
     cards: [
-      { label: 'Verified organisations', value: orgs.verified, note: '{count} pending KYC', noteValues: { count: orgs.pending }, link: '/intranet/organizations' },
+      { label: 'Member companies', value: orgs.verified, note: '{count} waiting for approval', noteValues: { count: orgs.pending }, link: '/intranet/organizations' },
+      { label: 'Membership revenue this year', value: revenue.total, format: 'eur', note: 'Paid memberships, before the 50/50 split', link: '/intranet/billing' },
       { label: 'Open pipeline', value: crm.open_value, format: 'eur', note: 'Lead → due diligence', link: '/intranet/crm' },
       { label: 'Active contracts', value: crm.active_value, format: 'eur', note: 'CRM value', link: '/intranet/crm' },
       { label: 'Active projects', value: projects.active, note: 'Across corridors', link: '/intranet/projects' },
-      { label: 'Programme budget', value: projects.budget, format: 'eur', note: 'Total allocated', link: '/intranet/projects' },
       { label: 'Investors in vault', value: investors.total, note: 'Confidential records', link: '/intranet/investor-vault' },
-      { label: 'Active sanctions', value: sanctions.total, note: 'Code of Ethics', link: '/intranet/ethics' },
-      { label: 'Security alerts (7 days)', value: alerts.total, note: 'Blocked intrusions', link: '/intranet/audit-log', alert: alerts.total > 0 },
     ],
   }
+}
+
+/** What the Super Admin should act on now. Only items with something waiting are returned. */
+async function attentionItems() {
+  const [kyc, approvals, visitors, mfa, privacy, sanctions, alerts] = await Promise.all([
+    single("SELECT COUNT(*)::int AS total FROM organizations WHERE verification_status = 'PENDING'"),
+    single("SELECT COUNT(*)::int AS total FROM workflows WHERE status = 'pending'"),
+    single("SELECT COUNT(*)::int AS total FROM assistant_contact_requests WHERE status = 'OPEN'"),
+    single(
+      `SELECT COUNT(*)::int AS total FROM users u JOIN roles r ON r.id = u.role_id
+       WHERE u.status = 'active' AND NOT u.mfa_enabled AND r.name = ANY($1::text[])`,
+      [MFA_REQUIRED_ROLES],
+    ),
+    single(`SELECT COUNT(*)::int AS total FROM users u JOIN roles r ON r.id = u.role_id
+            WHERE u.status = 'active' AND r.name <> 'admin' AND u.privacy_version IS NULL`),
+    single("SELECT COUNT(*)::int AS total FROM governance_sanctions WHERE status = 'ACTIVE'"),
+    single(`SELECT COUNT(*)::int AS total FROM audit_logs
+            WHERE action IN ('VAULT_UNAUTHORIZED_ATTEMPT', 'WEBHOOK_SIGNATURE_REJECTED') AND created_at > now() - interval '7 days'`),
+  ])
+  return [
+    { key: 'kyc', count: kyc.total, label: 'Companies waiting for approval', action: 'Review now', link: '/intranet/organizations' },
+    { key: 'approvals', count: approvals.total, label: 'Approval requests open', action: 'Open AutoFlow', link: '/intranet/autoflow' },
+    { key: 'visitors', count: visitors.total, label: 'Visitors waiting for an answer', action: 'Answer', link: '/intranet/assistant-knowledge' },
+    { key: 'mfa', count: mfa.total, label: 'Admin, HR or Finance accounts without two-step sign-in', action: 'See accounts', link: '/intranet/user-management' },
+    { key: 'privacy', count: privacy.total, label: 'People who have not accepted the privacy policy yet', action: 'See accounts', link: '/intranet/user-management' },
+    { key: 'sanctions', count: sanctions.total, label: 'Active Code of Ethics sanctions', action: 'View', link: '/intranet/ethics' },
+    { key: 'security', count: alerts.total, label: 'Blocked security attempts in the last 7 days', action: 'Check', link: '/intranet/audit-log', alert: true },
+  ].filter((item) => item.count > 0)
+}
+
+/** The latest operations on the platform, for the Super Admin's home page. */
+async function recentActivity() {
+  const { rows } = await query(
+    `SELECT a.id, a.action, a.entity, a.created_at, u.name AS user_name
+     FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id
+     ORDER BY a.created_at DESC, a.id DESC LIMIT 8`,
+  )
+  return rows
 }
 
 async function devOpsConsole() {

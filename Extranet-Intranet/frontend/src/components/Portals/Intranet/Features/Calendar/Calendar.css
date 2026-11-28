@@ -215,3 +215,5 @@
 .calendar-row.selected {
   background: var(--purple-soft);
 }
+
+.calendar-invite-search { width: 100%; margin-bottom: 10px; padding: 8px 10px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; background: transparent; color: inherit; font: inherit; }

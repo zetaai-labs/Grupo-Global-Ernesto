@@ -1,63 +1,47 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import api from '../../../../../api/client'
 import { PORTAL_ROLES, getUser } from '../../../../../api/auth'
 import RoleConsole from './RoleConsole'
+import PresidentialHome from './PresidentialHome'
 import ClockCard from '../../../Shared/clock/ClockCard'
 import './Overview.css'
 import { useT } from '../../../../../i18n'
-import { translateServer } from '../../../../../i18n/serverMessages'
+import { visibleScreens } from '../../../Shared/navigation'
 
 function Overview() {
-  const t = useT()
   const user = getUser()
-  const [stats, setStats] = useState(null)
-  const [notice, setNotice] = useState('')
+  // The Super Admin gets the Presidential Master Console; every other role keeps its workspace view.
+  if (user?.role === 'admin') return <PresidentialHome name={user.name} />
+  return <RoleOverview user={user} />
+}
 
-  useEffect(() => {
-    api.get('/dashboard')
-      .then((response) => setStats(response.data?.data || {}))
-      .catch(() => setNotice('Could not load dashboard counts.'))
-  }, [])
+// Each role's most used screens (Schema Document §3 consoles).
+const SHORTCUTS = {
+  hr: ['/intranet/user-management', '/intranet/zylax', '/intranet/ethics', '/intranet/courses'],
+  finance: ['/intranet/billing', '/intranet/commercial', '/intranet/zylax', '/intranet/projects'],
+  tech_admin: ['/intranet/backups', '/intranet/audit-log', '/intranet/system', '/intranet/user-management'],
+  default: ['/intranet/cloud-folders', '/intranet/autoflow', '/intranet/projects', '/intranet/chat'],
+}
 
-  const cards = [
-    { label: 'Total users', value: stats?.users, note: 'Active accounts', show: user?.role === 'admin' },
-    { label: 'Folders', value: stats?.folders, note: 'In your region' },
-    { label: 'Files', value: stats?.files, note: 'Available documents' },
-    { label: 'Pending approvals', value: stats?.pendingApprovals, note: 'AutoFlow requests' },
-    { label: 'Workflows', value: stats?.workflows, note: 'Tracked processes' },
-    { label: 'Emails', value: stats?.emails, note: 'Recorded messages' },
-  ].filter((card) => card.show !== false)
+function RoleOverview({ user }) {
+  const t = useT()
+  const screens = visibleScreens('intranet', user?.role)
+  const shortcuts = (SHORTCUTS[user?.role] || SHORTCUTS.default)
+    .map((path) => screens.find((item) => item.path === path))
+    .filter(Boolean)
 
   return (
     <section className="feature-page">
       <div className="feature-heading">
         <div>
           <div className="feature-eyebrow">{t('WORKSPACE')}</div>
-          <h1>{t('Overview')}</h1>
-          <p>
-            {user?.name
-              ? t('Welcome back, {name}. Here is your workspace at a glance.', { name: user.name })
-              : t('Welcome back. Here is your workspace at a glance.')}
-          </p>
+          <h1>{t('Welcome, {name}', { name: (user?.name || '').split(' ')[0] })}</h1>
+          <p>{t('Here is your workspace at a glance.')}</p>
         </div>
       </div>
-
-      {notice && <div className="cloud-notice">{translateServer(notice)}</div>}
 
       {PORTAL_ROLES.intranet.includes(user?.role) && <ClockCard showLeave />}
 
       <RoleConsole />
-
-      <div className="feature-stats">
-        {cards.map((card) => (
-          <div className="stat-card" key={card.label}>
-            <div className="stat-top"><span>{t(card.label)}</span><span className="stat-icon">▤</span></div>
-            <strong>{stats ? (card.value ?? 0) : '…'}</strong>
-            <small>{t(card.note)}</small>
-          </div>
-        ))}
-      </div>
 
       <div className="feature-panel">
         <div className="panel-heading">
@@ -67,10 +51,7 @@ function Overview() {
           </div>
         </div>
         <div className="overview-links">
-          <Link to="/intranet/cloud-folders">{t("▤ Cloud Folders")}</Link>
-          <Link to="/intranet/autoflow">{t("⟳ AutoFlow")}</Link>
-          <Link to="/intranet/metalinks">{t("↗ MetaLinks")}</Link>
-          <Link to="/intranet/recycle-bin">{t("▧ Recycle Bin")}</Link>
+          {shortcuts.map((item) => <Link key={item.path} to={item.path}>{item.icon} {t(item.name)}</Link>)}
         </div>
       </div>
     </section>

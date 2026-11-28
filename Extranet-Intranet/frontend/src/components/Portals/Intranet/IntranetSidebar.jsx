@@ -2,7 +2,7 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { getUser } from '../../../api/auth'
 import { useT } from '../../../i18n'
-import { visibleNavigation } from '../Shared/navigation'
+import { sidebarNavigation } from '../Shared/navigation'
 import { openHelp } from '../Shared/help/helpEvents'
 
 
@@ -12,7 +12,7 @@ function IntranetSidebar() {
   const user = getUser()
   const role = String(user?.role || '').toLowerCase()
   // Hide screens this role cannot use (the API enforces the same rules).
-  const navigation = visibleNavigation('intranet', role)
+  const navigation = sidebarNavigation('intranet', role)
 
   return (
     <aside className="portal-sidebar">

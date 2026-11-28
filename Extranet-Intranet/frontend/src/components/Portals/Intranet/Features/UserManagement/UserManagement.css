@@ -47,3 +47,19 @@
   border-color: var(--tc-bd-fecdd3, #fecdd3);
   color: var(--tc-fg-be123c, #be123c);
 }
+
+/* Labelled "Add a user" form */
+.users-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px 16px; align-items: start; padding: 16px 20px; }
+.users-form-grid label { display: grid; gap: 6px; font-size: 12px; font-weight: 600; color: var(--text, #17142b); }
+.users-form-grid label small { font-weight: 400; color: var(--muted, #64748b); line-height: 1.4; }
+.users-form-grid input, .users-form-grid select { width: 100%; }
+.users-password { display: flex; gap: 6px; }
+.users-password input { flex: 1; min-width: 0; }
+.users-password button { padding: 0 10px; border: 1px solid var(--tc-bd-cbd5e1, #cbd5e1); border-radius: 10px; background: transparent; color: inherit; font: inherit; font-size: 12px; cursor: pointer; white-space: nowrap; }
+.users-form-submit { display: flex; align-items: flex-end; height: 100%; }
+.users-created { margin: 0 20px 4px; padding: 14px 16px; border-radius: 12px; background: #e6f3ec; color: #1f5c40; font-size: 13px; }
+.users-created p { margin: 0 0 8px; }
+.users-created pre { margin: 0 0 8px; padding: 10px 12px; border-radius: 8px; background: #fff; color: #17142b; font-size: 13px; white-space: pre-wrap; word-break: break-all; }
+.users-created .users-hint { font-size: 12px; opacity: 0.85; }
+.users-created-actions { display: flex; gap: 12px; align-items: center; }
+.users-link { border: 0; background: transparent; color: inherit; font: inherit; font-weight: 600; cursor: pointer; text-decoration: underline; }

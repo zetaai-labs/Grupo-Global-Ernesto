@@ -1,82 +1,155 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import api from '../../../../../api/client'
-import { useT } from '../../../../../i18n'
+import { getUser } from '../../../../../api/auth'
+import { useT, dateLocale } from '../../../../../i18n'
+import '../../../Intranet/Features/Overview/PresidentialHome.css'
 
-const SHORTCUTS = [
-  { name: 'Shared Documents', description: 'Access documents shared with you', icon: '▤', path: '/extranet/shared-documents' },
-  { name: 'My Submissions', description: 'Review files you have submitted', icon: '⇧', path: '/extranet/my-submissions' },
-  { name: 'Shared Links', description: 'Links shared with you.', icon: '↗', path: '/extranet/shared-links' },
-  { name: 'Project Updates', description: 'Stay informed about project activity', icon: '◷', path: '/extranet/project-updates' },
-]
+const euro = (value) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(Number(value || 0))
+const shortDate = (value) => (value ? new Date(value).toLocaleDateString(dateLocale(), { day: 'numeric', month: 'short', year: 'numeric' }) : '')
+const settle = (request, pick, fallback) => request.then((response) => pick(response.data?.data)).catch(() => fallback)
 
-/** Partner home: real counts of what is shared with the organisation, and shortcuts to each area. */
+const TITLES = { investor: 'Investor Confidential Vault', supplier: 'Supplier Hub', client: 'Client & Partner Hub', partner: 'Client & Partner Hub' }
+
+/**
+ * Client & Partner Hub (Schema Document §3): shared project milestones, shared documents,
+ * invoice history and the team chat. Investors see their vault and deal rooms first.
+ */
 function Overview() {
   const t = useT()
-  // null = still loading; '—' = could not be counted (no access or offline).
-  const [counts, setCounts] = useState({ documents: null, submissions: null, links: null })
+  const user = getUser()
+  const role = user?.role
+  const sells = ['client', 'partner'].includes(role)
+  const [data, setData] = useState(null)
 
   useEffect(() => {
     let alive = true
-    const count = (request, pick) => request.then((response) => pick(response.data?.data)).catch(() => '—')
     Promise.all([
-      count(api.get('/external-shares/shared-with-me'), (data) => (data?.files?.length || 0) + (data?.folders?.length || 0)),
-      count(api.get('/content/my-submissions'), (data) => (Array.isArray(data) ? data.length : 0)),
-      count(api.get('/external-shares/shared-links'), (data) => (Array.isArray(data) ? data.length : 0)),
-    ]).then(([documents, submissions, links]) => { if (alive) setCounts({ documents, submissions, links }) })
+      settle(api.get('/external-shares/shared-with-me'), (d) => (d?.files?.length || 0) + (d?.folders?.length || 0), null),
+      settle(api.get('/content/my-submissions'), (d) => (Array.isArray(d) ? d.length : 0), null),
+      settle(api.get('/projects/shared'), (d) => (Array.isArray(d) ? d : []), []),
+      settle(api.get('/billing/my'), (d) => d || null, null),
+      sells ? settle(api.get('/zylax/portal/quotes'), (d) => (Array.isArray(d) ? d : []), []) : Promise.resolve([]),
+      role === 'investor' ? settle(api.get('/vault/rooms'), (d) => (Array.isArray(d) ? d : []), []) : Promise.resolve([]),
+      settle(api.get('/organizations/me'), (d) => d || null, null),
+    ]).then(([documents, submissions, projects, billing, quotes, rooms, org]) => {
+      if (alive) setData({ documents, submissions, projects, billing, quotes, rooms, org })
+    })
     return () => { alive = false }
-  }, [])
+  }, [role, sells])
 
-  const stats = [
-    { key: 'documents', label: 'Shared documents', note: 'Available to you', icon: '▤', path: '/extranet/shared-documents' },
-    { key: 'submissions', label: 'My submissions', note: 'Uploaded documents', icon: '⇧', path: '/extranet/my-submissions' },
-    { key: 'links', label: 'Shared links', note: 'Accessible links', icon: '↗', path: '/extranet/shared-links' },
-  ]
+  const invoices = data?.billing?.invoices || []
+  const toPay = invoices.filter((invoice) => invoice.payable)
+  const toPayTotal = toPay.reduce((sum, invoice) => sum + Number(invoice.total_eur || 0), 0)
+  const membership = (data?.billing?.subscriptions || []).find((sub) => sub.category === 'MEMBERSHIP') || data?.billing?.subscriptions?.[0]
+  const quotesToAnswer = (data?.quotes || []).filter((quote) => quote.status === 'SENT')
+  const milestones = (data?.projects || [])
+    .flatMap((project) => (project.milestones || []).map((milestone) => ({ ...milestone, project: project.title })))
+    .filter((milestone) => milestone.status !== 'DONE')
+    .sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')))
+    .slice(0, 5)
+  const ndaPending = data?.org?.nda && !data.org.nda.accepted_at
+
+  const attention = data ? [
+    ndaPending && { key: 'nda', count: '!', label: 'Accept the confidentiality agreement (NDA) to unlock shared documents', action: 'Read and accept', link: '/extranet/overview', alert: true },
+    toPay.length && { key: 'pay', count: toPay.length, label: 'Invoices to pay: {total}', values: { total: euro(toPayTotal) }, action: 'Pay now', link: '/extranet/billing', alert: true },
+    quotesToAnswer.length && { key: 'quotes', count: quotesToAnswer.length, label: 'Quotes waiting for your answer', action: 'Review now', link: '/extranet/orders' },
+  ].filter(Boolean) : []
+
+  const cards = [
+    role === 'investor' && { label: 'Deal rooms', value: data?.rooms?.length ?? '…', note: 'Opened to you', link: '/extranet/investor-vault' },
+    { label: 'Shared documents', value: data?.documents ?? '…', note: 'Available to you', link: '/extranet/shared-documents' },
+    { label: 'Active projects', value: data ? data.projects.filter((project) => project.phase !== 'COMPLETED').length : '…', note: 'Shared with your company', link: '/extranet/project-updates' },
+    data?.billing && role !== 'investor' && { label: 'Membership', value: membership ? t(membership.status === 'ACTIVE' ? 'Active' : membership.status) : t('None'), note: membership?.current_period_end ? t('Until {date}', { date: shortDate(membership.current_period_end) }) : membership?.plan_name || 'No plan yet', link: '/extranet/billing' },
+    { label: 'My submissions', value: data?.submissions ?? '…', note: 'Files you sent to us', link: '/extranet/my-submissions' },
+  ].filter(Boolean)
 
   return (
-    <section className="feature-page">
+    <section className="feature-page presidential">
       <div className="feature-heading">
         <div>
-          <div className="feature-eyebrow">{t('PARTNER WORKSPACE')}</div>
-          <h1>{t('Overview')}</h1>
-          <p>{t('Your secure workspace for accessing shared documents and collaborating with Global Group.')}</p>
+          <div className="feature-eyebrow">{t(TITLES[role] || 'Client & Partner Hub')}</div>
+          <h1>{t('Welcome, {name}', { name: (user?.name || '').split(' ')[0] })}</h1>
+          <p>{data?.org?.legal_name || t('Your secure workspace with Global Group.')}</p>
         </div>
-        <Link className="primary-action" to="/extranet/shared-documents">{t('Browse documents')}</Link>
+        {role === 'investor'
+          ? <Link className="primary-action" to="/extranet/investor-vault">{t('Open my vault')}</Link>
+          : <Link className="primary-action" to="/extranet/shared-documents">{t('Browse documents')}</Link>}
       </div>
 
-      <div className="feature-stats">
-        {stats.map((stat) => (
-          <Link className="stat-card" key={stat.key} to={stat.path} style={{ color: 'inherit', textDecoration: 'none' }}>
-            <div className="stat-top">
-              <span>{t(stat.label)}</span>
-              <span className="stat-icon">{stat.icon}</span>
-            </div>
-            <strong aria-busy={counts[stat.key] === null}>{counts[stat.key] ?? '…'}</strong>
-            <small>{t(stat.note)}</small>
+      <div className="ph-layout">
+        <div className="feature-panel ph-attention">
+          <div className="panel-heading"><div><h3>{t('Needs your attention')}</h3></div></div>
+          {!data && <p className="ph-muted">{t('Loading…')}</p>}
+          {data && !attention.length && <p className="ph-clear">✓ {t('All clear. Nothing is waiting for you.')}</p>}
+          <ul>
+            {attention.map((item) => (
+              <li key={item.key} className={item.alert ? 'is-alert' : ''}>
+                <strong>{item.count}</strong>
+                <span>{t(item.label, item.values)}</span>
+                <Link to={item.link} className="secondary-action">{t(item.action)}</Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="feature-panel ph-actions">
+          <div className="panel-heading"><div><h3>{t('Quick actions')}</h3></div></div>
+          <div className="ph-action-grid">
+            <Link to="/extranet/my-submissions"><span aria-hidden="true">⇧</span>{t('Send us a document')}</Link>
+            <Link to="/extranet/chat"><span aria-hidden="true">💬</span>{t('Message the Global Group team')}</Link>
+            <Link to="/extranet/video-conferencing"><span aria-hidden="true">📹</span>{t('Start a video meeting')}</Link>
+            {sells && <Link to="/extranet/orders"><span aria-hidden="true">▣</span>{t('Quotes & Orders')}</Link>}
+          </div>
+        </div>
+      </div>
+
+      <div className="ph-cards">
+        {cards.map((card) => (
+          <Link key={card.label} to={card.link} className="stat-card ph-card">
+            <span>{t(card.label)}</span>
+            <strong>{card.value}</strong>
+            <small>{t(card.note)}</small>
           </Link>
         ))}
       </div>
 
-      <div className="feature-panel">
-        <div className="panel-heading">
-          <div>
-            <h3>{t('Quick access')}</h3>
-            <p>{t('Manage and access everything in {area}.', { area: t('Overview') })}</p>
+      <div className="ph-layout">
+        <div className="feature-panel">
+          <div className="panel-heading">
+            <div><h3>{t('Upcoming project milestones')}</h3></div>
+            <Link to="/extranet/project-updates" className="ph-link">{t('All projects')} →</Link>
           </div>
-          <Link className="secondary-action" to="/extranet/workspace">{t('View all ↗')}</Link>
+          {data && !milestones.length && <p className="ph-muted">{t('No upcoming milestones shared with you.')}</p>}
+          <ul className="ph-recent">
+            {milestones.map((milestone) => (
+              <li key={milestone.milestone_id}>
+                <span>{milestone.title}</span>
+                <em>{milestone.project}</em>
+                <time>{shortDate(milestone.due_date)}</time>
+              </li>
+            ))}
+          </ul>
         </div>
-        <div className="feature-list">
-          {SHORTCUTS.map((item) => (
-            <Link className="feature-list-row" key={item.path} to={item.path} style={{ color: 'inherit', textDecoration: 'none' }}>
-              <div className="list-item-icon">{item.icon}</div>
-              <div className="list-item-copy">
-                <strong>{t(item.name)}</strong>
-                <span>{t(item.description)}</span>
-              </div>
-              <span className="list-item-arrow">↗</span>
-            </Link>
-          ))}
-        </div>
+
+        {data?.billing && (
+          <div className="feature-panel">
+            <div className="panel-heading">
+              <div><h3>{t('Invoice history')}</h3></div>
+              <Link to="/extranet/billing" className="ph-link">{t('Billing')} →</Link>
+            </div>
+            {!invoices.length && <p className="ph-muted">{t('No invoices yet.')}</p>}
+            <ul className="ph-recent">
+              {invoices.slice(0, 5).map((invoice) => (
+                <li key={invoice.invoice_id}>
+                  <span>{invoice.invoice_number || '—'}</span>
+                  <em>{invoice.paid_at ? t('Invoice paid') : invoice.payable ? t('Payment pending') : t(invoice.status)}</em>
+                  <time>{euro(invoice.total_eur)}</time>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     </section>
   )

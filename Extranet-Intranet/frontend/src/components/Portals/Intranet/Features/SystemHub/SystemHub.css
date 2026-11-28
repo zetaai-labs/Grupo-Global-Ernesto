@@ -1,0 +1,6 @@
+.system-hub-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.system-hub-tile { display: grid; align-content: start; gap: 6px; padding: 20px; border: 1px solid var(--border, #e2e8f0); border-radius: 16px; background: var(--surface, #fff); color: var(--text, #17142b); text-decoration: none; transition: border-color 0.15s, transform 0.15s; }
+.system-hub-tile:hover { border-color: var(--purple, #6d28d9); transform: translateY(-1px); }
+.system-hub-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: var(--purple-soft, #ede9fe); color: var(--purple, #6d28d9); font-size: 18px; }
+.system-hub-tile strong { font-size: 15px; }
+.system-hub-tile small { color: var(--muted, #64748b); font-size: 13px; line-height: 1.45; }

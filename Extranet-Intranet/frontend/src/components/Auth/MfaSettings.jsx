@@ -5,6 +5,7 @@ import api from '../../api/client'
 import { saveSession } from '../../api/auth'
 import './ResetPassword.css'
 import ChangePassword from './ChangePassword'
+import QRCode from 'qrcode'
 import { useT, dateLocale } from '../../i18n'
 
 function MfaSettings() {
@@ -13,7 +14,7 @@ function MfaSettings() {
   const [searchParams] = useSearchParams()
   const setupRequired = searchParams.get('required') === '1'
   const [secret, setSecret] = useState('')
-  const [uri, setUri] = useState('')
+  const [qr, setQr] = useState('')
   const [code, setCode] = useState('')
   const [notice, setNotice] = useState('')
   const [status, setStatus] = useState({ credentials: [], mfa_enabled: false, totp_enabled: false })
@@ -39,15 +40,18 @@ function MfaSettings() {
   const finishSetup = (data) => {
     if (!data?.token) return
     saveSession(data.token, data.user, Boolean(window.localStorage.getItem('gg_token')))
-    if (setupRequired) navigate('/intranet/overview', { replace: true })
+    const portal = window.location.pathname.startsWith('/extranet') ? 'extranet' : 'intranet'
+    if (setupRequired) navigate(`/${portal}/overview`, { replace: true })
   }
 
   const setup = async () => {
     try {
       const response = await api.post('/auth/mfa/setup')
       setSecret(response.data?.data?.secret || '')
-      setUri(response.data?.data?.uri || '')
-      setNotice('Scan the URI in your authenticator, then enter a code to enable.')
+      const setupUri = response.data?.data?.uri || ''
+      // Drawn in the browser: the secret never leaves this page.
+      setQr(setupUri ? await QRCode.toDataURL(setupUri, { margin: 1, width: 200 }) : '')
+      setNotice('')
     } catch (error) {
       setNotice(error.response?.data?.message || 'Could not start MFA setup.')
     }
@@ -58,7 +62,6 @@ function MfaSettings() {
       const response = await api.post(path, { code })
       setNotice(response.data?.message || 'MFA updated.')
       setSecret('')
-      setUri('')
       setCode('')
       await load()
       if (path.includes('enable')) finishSetup(response.data?.data)
@@ -78,7 +81,6 @@ function MfaSettings() {
       setKeyName('')
       setPassword('')
       setSecret('')
-      setUri('')
       await load()
       finishSetup(response.data?.data)
     } catch (error) {
@@ -118,7 +120,38 @@ function MfaSettings() {
       {notice && <div className="cloud-notice" role="status">{t(notice)}</div>}
 
       <div className="feature-panel">
-        <div className="panel-heading"><div><h3>{t('Security keys')}</h3><p>{t('Use a FIDO2 key, or your device’s fingerprint or face sign-in. Register two keys in case you lose one.')}</p></div></div>
+        <div className="panel-heading"><div><h3>{t('Authenticator app')}</h3><p>{status.totp_enabled ? t('Active on this account.') : t('Use Google Authenticator, Microsoft Authenticator or any similar app on your phone.')}</p></div></div>
+        <div className="reset-card" style={{ boxShadow: 'none', maxWidth: '100%' }}>
+          {!status.mfa_enabled && !secret && <button type="button" className="primary-action" onClick={setup}>{t('Set up with QR code')}</button>}
+          {status.mfa_enabled && !status.totp_enabled && <p>{t('Remove your security keys before switching to an authenticator app.')}</p>}
+          {secret && (
+            <div className="mfa-qr-setup">
+              {qr && <img src={qr} alt={t('QR code for your authenticator app')} width={200} height={200} />}
+              <ol>
+                <li>{t('Install Google Authenticator or Microsoft Authenticator on your phone.')}</li>
+                <li>{t('In the app, tap + and scan this QR code.')}</li>
+                <li>{t('Type the 6-digit code the app shows, then press Enable.')}</li>
+              </ol>
+              <details>
+                <summary>{t('Cannot scan? Enter the key by hand')}</summary>
+                <code style={{ wordBreak: 'break-all' }}>{secret}</code>
+              </details>
+            </div>
+          )}
+          {(secret || status.totp_enabled) && (
+            <>
+              <input value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))} placeholder={t('6-digit code')} maxLength={6} inputMode="numeric" autoComplete="one-time-code" aria-label={t('6-digit code')} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                {secret && <button type="button" className="primary-action" disabled={code.length !== 6} onClick={() => submit('/auth/mfa/enable')}>{t('Enable')}</button>}
+                {status.totp_enabled && <button type="button" className="secondary-action" onClick={() => submit('/auth/mfa/disable')}>{t('Disable MFA')}</button>}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      <details className="feature-panel mfa-keys" open={status.credentials.length > 0}>
+        <summary className="panel-heading"><div><h3>{t('Security keys (optional)')}</h3><p>{t('Use a FIDO2 key, or your device’s fingerprint or face sign-in. Register two keys in case you lose one.')}</p></div></summary>
         <div className="reset-card" style={{ boxShadow: 'none', maxWidth: '100%' }}>
           {status.credentials.map((key) => (
             <div key={key.webauthn_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -138,30 +171,7 @@ function MfaSettings() {
             </form>
           ) : <p>{t('This browser does not support security keys.')}</p>}
         </div>
-      </div>
-
-      <div className="feature-panel">
-        <div className="panel-heading"><div><h3>{t('Authenticator app')}</h3><p>{status.totp_enabled ? t('Active on this account.') : t('Use any TOTP authenticator app.')}</p></div></div>
-        <div className="reset-card" style={{ boxShadow: 'none', maxWidth: '100%' }}>
-          {!status.mfa_enabled && !secret && <button type="button" className="primary-action" onClick={setup}>{t('Set up MFA')}</button>}
-          {status.mfa_enabled && !status.totp_enabled && <p>{t('Remove your security keys before switching to an authenticator app.')}</p>}
-          {secret && (
-            <>
-              <p><strong>{t('Secret')}:</strong> {secret}</p>
-              <p style={{ wordBreak: 'break-all' }}><strong>{t('Setup URI')}:</strong> {uri}</p>
-            </>
-          )}
-          {(secret || status.totp_enabled) && (
-            <>
-              <input value={code} onChange={(event) => setCode(event.target.value)} placeholder={t('6-digit code')} maxLength={6} inputMode="numeric" aria-label={t('6-digit code')} />
-              <div style={{ display: 'flex', gap: 8 }}>
-                {secret && <button type="button" className="primary-action" onClick={() => submit('/auth/mfa/enable')}>{t('Enable MFA')}</button>}
-                {status.totp_enabled && <button type="button" className="secondary-action" onClick={() => submit('/auth/mfa/disable')}>{t('Disable MFA')}</button>}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      </details>
 
       {!setupRequired && <ChangePassword />}
     </section>

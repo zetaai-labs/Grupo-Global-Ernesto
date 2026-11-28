@@ -3,6 +3,7 @@ import api from '../../../../../api/client'
 import { useT, dateLocale } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
 import '../Commercial/Commercial.css'
+import { roleLabel } from '../../../../../utils/roles'
 
 const PROVIDERS = [['GOOGLE', 'Google Workspace'], ['MICROSOFT', 'Microsoft 365']]
 const tone = { SUCCESS: 'zx-accepted', PLANNED: 'zx-sent', FAILED: 'zx-rejected' }
@@ -91,7 +92,7 @@ function Provisioning() {
             <tbody>
               {staff.map((person) => (
                 <tr key={person.id}>
-                  <td>{person.name}<br /><small className="zx-mono">{person.email}</small></td><td>{t(person.role)}</td><td>{t(person.status)}</td>
+                  <td>{person.name}<br /><small className="zx-mono">{person.email}</small></td><td>{t(roleLabel(person.role))}</td><td>{t(person.status)}</td>
                   <td>{(person.accounts || []).map((item) => <div key={`${item.provider}-${item.at}`} className="zx-mono">{item.provider === 'GOOGLE' ? t("Google") : t("Microsoft")} · {item.email} · {t(item.action === 'SUSPEND' ? 'Suspended' : 'Created')}</div>)}</td>
                   <td className="zx-form-actions">
                     {PROVIDERS.map(([key, label]) => (has(person, key)

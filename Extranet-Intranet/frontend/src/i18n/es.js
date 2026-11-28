@@ -31,6 +31,9 @@ import { assistantEs } from './assistant'
 import { auditEs } from './audit'
 import { callCenterEs } from './callcenter'
 import { privateChatEs } from './privatechat'
+import { userMgmtEs } from './usermgmt'
+import { presidentialEs } from './presidential'
+import { extranetHubEs } from './extranethub'
 
 const es = {
   // ---- Login & password reset ----
@@ -280,4 +283,4 @@ const es = {
   'Your records will appear here.': 'Tus registros aparecerán aquí.',
 }
 
-export default { ...esExtra1, ...esExtra2, ...esExtra3, ...esExtra4, ...esExtra5, ...esExtra6, ...landingEs, ...coursePackagesEs, ...orgPeopleEs, ...zylaxDepthEs, ...eventsHybridEs, ...aiEs, ...pwaEs, ...aiEngineEs, ...clockEs, ...videoEs, ...monitoringEs, ...attendanceEs, ...translateEs, ...workspaceEs, ...privacyEs, ...membershipEs, ...assistantEs, ...auditEs, ...callCenterEs, ...privateChatEs, ...esAccounts, ...esBilling, ...esIntegrations, ...esServer, ...esZylax, ...es }
+export default { ...esExtra1, ...esExtra2, ...esExtra3, ...esExtra4, ...esExtra5, ...esExtra6, ...landingEs, ...coursePackagesEs, ...orgPeopleEs, ...zylaxDepthEs, ...eventsHybridEs, ...aiEs, ...pwaEs, ...aiEngineEs, ...clockEs, ...videoEs, ...monitoringEs, ...attendanceEs, ...translateEs, ...workspaceEs, ...privacyEs, ...membershipEs, ...assistantEs, ...auditEs, ...callCenterEs, ...privateChatEs, ...userMgmtEs, ...presidentialEs, ...extranetHubEs, ...esAccounts, ...esBilling, ...esIntegrations, ...esServer, ...esZylax, ...es }

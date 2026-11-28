@@ -5,6 +5,7 @@ import { getUser } from '../../../../../api/auth'
 import './Calendar.css'
 import { useT, dateLocale } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
+import { roleLabel } from '../../../../../utils/roles'
 
 const EMPTY_FORM = { title: '', starts_at: '', ends_at: '', description: '', online: true, attendee_ids: [] }
 const EXTERNAL = ['partner', 'client', 'supplier']
@@ -34,6 +35,7 @@ function Calendar() {
   const [selectedId, setSelectedId] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
   const [notice, setNotice] = useState('')
+  const [inviteSearch, setInviteSearch] = useState('')
 
   const load = useCallback(async () => {
     try {
@@ -114,8 +116,13 @@ function Calendar() {
     }
   }
 
-  const staff = people.filter((person) => !EXTERNAL.includes(person.role))
-  const external = people.filter((person) => EXTERNAL.includes(person.role))
+  // With hundreds of accounts a full list is unusable: show who is invited plus search matches.
+  const needle = inviteSearch.trim().toLowerCase()
+  const shown = (person) => form.attendee_ids.includes(person.id)
+    || (needle && `${person.name} ${person.email || ''}`.toLowerCase().includes(needle))
+  const visiblePeople = !needle && people.length <= 24 ? people : people.filter(shown)
+  const staff = visiblePeople.filter((person) => !EXTERNAL.includes(person.role))
+  const external = visiblePeople.filter((person) => EXTERNAL.includes(person.role))
 
   return (
     <section className="feature-page">
@@ -147,9 +154,18 @@ function Calendar() {
 
             <fieldset className="calendar-invitees">
               <legend>{t("Invite (")}{form.attendee_ids.length}{" "}{t("selected)")}</legend>
+              <input
+                type="search"
+                className="calendar-invite-search"
+                value={inviteSearch}
+                onChange={(event) => setInviteSearch(event.target.value)}
+                placeholder={t('Search by name or email')}
+                aria-label={t('Search by name or email')}
+              />
+              {needle && !staff.length && !external.length && <small>{t('Nobody found.')}</small>}
               {[['Colleagues', staff], ['Partners, clients & suppliers', external]].map(([label, group]) => group.length > 0 && (
                 <div key={label}>
-                  <small>{label}</small>
+                  <small>{t(label)}</small>
                   <div className="invitee-chips">
                     {group.map((person) => (
                       <button
@@ -159,7 +175,7 @@ function Calendar() {
                         aria-pressed={form.attendee_ids.includes(person.id)}
                         onClick={() => toggleAttendee(person.id)}
                       >
-                        {person.name} <em>{person.role}</em>
+                        {person.name} <em>{t(roleLabel(person.role))}</em>
                       </button>
                     ))}
                   </div>
@@ -185,7 +201,7 @@ function Calendar() {
                 <ul className="attendee-list">
                   {selected.attendees.map((attendee) => (
                     <li key={attendee.id}>
-                      <span>{attendee.name} <em>{attendee.role}</em></span>
+                      <span>{attendee.name} <em>{t(roleLabel(attendee.role))}</em></span>
                       <span className={`rsvp rsvp-${attendee.response}`}>{RESPONSE_LABELS[attendee.response]}</span>
                     </li>
                   ))}

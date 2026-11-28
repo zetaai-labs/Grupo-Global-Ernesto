@@ -5,8 +5,17 @@ import { downloadFromApi } from '../../../../../utils/download'
 import './UserManagement.css'
 import { dateLocale, useT } from '../../../../../i18n'
 import { translateServer } from '../../../../../i18n/serverMessages'
+import { roleLabel } from '../../../../../utils/roles'
 
 const HR_MANAGED_ROLES = ['manager', 'employee']
+
+
+// A strong temporary password without look-alike characters (no 0/O, 1/l/I).
+function generatePassword(length = 14) {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#$%*?'
+  const bytes = crypto.getRandomValues(new Uint32Array(length))
+  return Array.from(bytes, (value) => chars[value % chars.length]).join('')
+}
 
 function UserManagement() {
   const t = useT()
@@ -28,6 +37,9 @@ function UserManagement() {
   const [organizations, setOrganizations] = useState([])
   const [form, setForm] = useState({ name: '', email: '', password: '', role_id: '', region_id: '', org_id: '' })
   const [notice, setNotice] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [created, setCreated] = useState(null)
+  const [copied, setCopied] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -66,6 +78,10 @@ function UserManagement() {
         region_id: form.region_id ? Number(form.region_id) : null,
         org_id: form.org_id || null,
       })
+      setCreated({ name: form.name, email: form.email, password: form.password })
+      setCopied(false)
+      setShowPassword(false)
+      setNotice('')
       setForm({ name: '', email: '', password: '', role_id: String(roles.find((role) => canAssignRole(role.name))?.id || ''), region_id: '', org_id: '' })
       await load()
     } catch (error) {
@@ -151,26 +167,85 @@ function UserManagement() {
             <p>{isHr ? t("HR can add employees and managers to Grupo Global entities.") : t("New accounts receive a role and an optional region.")}</p>
           </div>
         </div>
-        <form className="users-form" onSubmit={addUser}>
-          <input value={form.name} onChange={change('name')} placeholder={t("Full name")} required />
-          <input type="email" value={form.email} onChange={change('email')} placeholder={t("Email address")} required />
-          <input type="password" value={form.password} onChange={change('password')} placeholder={t("Password (min. 10 characters)")} minLength={10} required />
-          <select value={form.role_id} onChange={change('role_id')} required aria-label={t("Role")}>
-            {roles
-              .filter((role) => canAssignRole(role.name))
-              .map((role) => <option key={role.id} value={role.id}>{role.name}{role.code ? ` — ${role.code}` : ''}</option>)}
-          </select>
-          <select value={form.region_id} onChange={change('region_id')} aria-label={t("Corridor")}>
-            <option value="">{t("No corridor")}</option>
-            {regions.map((region) => <option key={region.id} value={region.id}>{region.code}</option>)}
-          </select>
-          <select value={form.org_id} onChange={change('org_id')} aria-label={t("Organisation")}>
-            <option value="">{t("No organisation")}</option>
-            {organizations
-              .filter((org) => !isHr || ['PARENT', 'BUSINESS_UNIT'].includes(org.org_type))
-              .map((org) => <option key={org.org_id} value={org.org_id}>{org.legal_name}</option>)}
-          </select>
-          <button type="submit" className="primary-action">{t("＋ Add user")}</button>
+        {created && (
+          <div className="users-created" role="status">
+            <p>{t('Account created. Send these sign-in details to {name} privately (not in a group chat):', { name: created.name })}</p>
+            <pre>{`${t('Sign-in page')}: ${window.location.origin}/login\n${t('Email address')}: ${created.email}\n${t('Temporary password')}: ${created.password}`}</pre>
+            <p className="users-hint">{t('Ask them to change this password after their first sign-in.')}</p>
+            <div className="users-created-actions">
+              <button
+                type="button"
+                className="primary-action"
+                onClick={() => {
+                  const text = `${t('Sign-in page')}: ${window.location.origin}/login\n${t('Email address')}: ${created.email}\n${t('Temporary password')}: ${created.password}`
+                  navigator.clipboard?.writeText(text).then(() => setCopied(true), () => {})
+                }}
+              >
+                {copied ? `✓ ${t('Copied')}` : t('Copy sign-in details')}
+              </button>
+              <button type="button" className="users-link" onClick={() => setCreated(null)}>{t('Close')}</button>
+            </div>
+          </div>
+        )}
+        <form className="users-form users-form-grid" onSubmit={addUser}>
+          <label>
+            <span>{t('Full name')}</span>
+            <input value={form.name} onChange={change('name')} required autoComplete="off" />
+          </label>
+          <label>
+            <span>{t('Email address')}</span>
+            <input type="email" value={form.email} onChange={change('email')} required autoComplete="off" />
+          </label>
+          <label>
+            <span>{t('Temporary password')}</span>
+            <span className="users-password">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={form.password}
+                onChange={change('password')}
+                minLength={10}
+                required
+                autoComplete="new-password"
+              />
+              <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? t('Hide password') : t('Show password')} title={showPassword ? t('Hide password') : t('Show password')}>
+                {showPassword ? '🙈' : '👁'}
+              </button>
+              <button type="button" onClick={() => { setForm((current) => ({ ...current, password: generatePassword() })); setShowPassword(true) }}>
+                {t('Generate')}
+              </button>
+            </span>
+            <small>{t('At least 10 characters. Use Generate for a strong one.')}</small>
+          </label>
+          <label>
+            <span>{t('Role')}</span>
+            <select value={form.role_id} onChange={change('role_id')} required>
+              <option value="" disabled>{t('Choose a role')}</option>
+              {roles
+                .filter((role) => canAssignRole(role.name))
+                .map((role) => <option key={role.id} value={role.id}>{t(roleLabel(role.name))}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>{t('Country corridor (optional)')}</span>
+            <select value={form.region_id} onChange={change('region_id')}>
+              <option value="">{t("No corridor")}</option>
+              {regions.map((region) => <option key={region.id} value={region.id}>{region.code}</option>)}
+            </select>
+            <small>{t('Decides which country folders and records this person sees. Leave empty for staff who work across all countries.')}</small>
+          </label>
+          <label>
+            <span>{t('Company (optional)')}</span>
+            <select value={form.org_id} onChange={change('org_id')}>
+              <option value="">{t("No organisation")}</option>
+              {organizations
+                .filter((org) => !isHr || ['PARENT', 'BUSINESS_UNIT'].includes(org.org_type))
+                .map((org) => <option key={org.org_id} value={org.org_id}>{org.legal_name}</option>)}
+            </select>
+            <small>{t('The Grupo Global company or member company this person belongs to.')}</small>
+          </label>
+          <div className="users-form-submit">
+            <button type="submit" className="primary-action">{t("＋ Add user")}</button>
+          </div>
         </form>
       </div>
       )}
@@ -188,7 +263,7 @@ function UserManagement() {
               <span className="list-item-icon">♙</span>
               <span className="list-item-copy">
                 <strong>{user.name}</strong>
-                <span>{user.email} · {user.role_code || user.role}{user.region ? ` · ${user.region}` : ''}{user.organization ? ` · ${user.organization}` : ''}</span>
+                <span>{user.email} · {t(roleLabel(user.role)) || user.role_code}{user.region ? ` · ${user.region}` : ''}{user.organization ? ` · ${user.organization}` : ''}</span>
               </span>
               <span className={`item-status ${user.status === 'active' ? 'status-active' : ''}`}>{user.status}</span>
               <span className={`item-status ${user.privacy_version ? 'status-active' : ''}`} title={user.privacy_accepted_at ? new Date(user.privacy_accepted_at).toLocaleString(dateLocale()) : ''}>

@@ -25,5 +25,8 @@ import { assistantAr } from './assistant'
 import { auditAr } from './audit'
 import { callCenterAr } from './callcenter'
 import { privateChatAr } from './privatechat'
+import { userMgmtAr } from './usermgmt'
+import { presidentialAr } from './presidential'
+import { extranetHubAr } from './extranethub'
 
-export default { ...ar1, ...ar2, ...ar3, ...ar4, ...ar5, ...ar6, ...landingAr, ...coursePackagesAr, ...orgPeopleAr, ...zylaxDepthAr, ...eventsHybridAr, ...aiAr, ...pwaAr, ...aiEngineAr, ...clockAr, ...videoAr, ...monitoringAr, ...attendanceAr, ...translateAr, ...workspaceAr, ...privacyAr, ...membershipAr, ...assistantAr, ...auditAr, ...callCenterAr, ...privateChatAr }
+export default { ...ar1, ...ar2, ...ar3, ...ar4, ...ar5, ...ar6, ...landingAr, ...coursePackagesAr, ...orgPeopleAr, ...zylaxDepthAr, ...eventsHybridAr, ...aiAr, ...pwaAr, ...aiEngineAr, ...clockAr, ...videoAr, ...monitoringAr, ...attendanceAr, ...translateAr, ...workspaceAr, ...privacyAr, ...membershipAr, ...assistantAr, ...auditAr, ...callCenterAr, ...privateChatAr, ...userMgmtAr, ...presidentialAr, ...extranetHubAr }

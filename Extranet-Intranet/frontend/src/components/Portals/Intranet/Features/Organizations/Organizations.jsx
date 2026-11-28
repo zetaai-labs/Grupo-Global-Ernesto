@@ -6,6 +6,7 @@ import { useT, dateLocale } from '../../../../../i18n'
 import './Organizations.css'
 import { translateServer } from '../../../../../i18n/serverMessages'
 import OrgMembership from './OrgMembership'
+import { roleLabel } from '../../../../../utils/roles'
 
 const STEPS = [
   [1, 'Pre-registration'],
@@ -441,7 +442,7 @@ function Organizations() {
                 {selected.members.length ? (
                   <ul className="org-members">
                     {selected.members.map((member) => (
-                      <li key={member.id}><span>{member.name}<small>{member.email}</small></span><span className="mono">{member.role_code}</span></li>
+                      <li key={member.id}><span>{member.name}<small>{member.email}</small></span><span>{member.role ? t(roleLabel(member.role)) : member.role_code}</span></li>
                     ))}
                   </ul>
                 ) : <p className="org-muted">{t('No user accounts yet.')}</p>}

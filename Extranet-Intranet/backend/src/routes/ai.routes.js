@@ -4,6 +4,8 @@ import { aiStatus, summarizeRecord, smartSearch, crmNextStep, summarizeFile, tra
 
 // Mounted behind authenticate. Each handler checks staff role, the daily limit and record access.
 const router = Router()
+// Every ZYLAX page asks whether AI is available: that check is free and must not use up the AI limit.
+router.get('/status', aiStatus)
 router.use(rateLimit({
   windowMs: 60 * 1000,
   limit: 20,
@@ -12,7 +14,6 @@ router.use(rateLimit({
   legacyHeaders: false,
   message: { message: 'Too many AI requests. Wait a minute and try again.' },
 }))
-router.get('/status', aiStatus)
 router.post('/translate', translate)
 router.post('/zylax/:module/:entity/search', smartSearch)
 router.post('/zylax/:module/:entity/:id/summary', summarizeRecord)

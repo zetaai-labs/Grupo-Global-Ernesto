@@ -67,6 +67,7 @@ const Crm = page(() => import('./components/Portals/Intranet/Features/Crm/Crm.js
 const DataImport = page(() => import('./components/Portals/Intranet/Features/DataImport/DataImport.jsx'))
 const Commercial = page(() => import('./components/Portals/Intranet/Features/Commercial/Commercial.jsx'))
 const Integrations = page(() => import('./components/Portals/Intranet/Features/Integrations/Integrations.jsx'))
+const SystemHub = page(() => import('./components/Portals/Intranet/Features/SystemHub/SystemHub.jsx'))
 const CallCenter = page(() => import('./components/Portals/Intranet/Features/CallCenter/CallCenter.jsx'))
 const AssistantKnowledge = page(() => import('./components/Portals/Intranet/Features/AssistantKnowledge/AssistantKnowledge.jsx'))
 const Billing = page(() => import('./components/Portals/Intranet/Features/Billing/Billing.jsx'))
@@ -153,6 +154,7 @@ const router = createBrowserRouter(
         <Route path="emails" element={<Emails />} />
         <Route path="external-shares" element={<ExternalShares />} />
         <Route path="system-web-page" element={<SystemWebPage />} />
+        <Route path="system" element={<ProtectedRoute roles={['admin', 'tech_admin']}><SystemHub /></ProtectedRoute>} />
         <Route path="integrations" element={<ProtectedRoute roles={['admin', 'tech_admin']}><Integrations /></ProtectedRoute>} />
         <Route path="call-center" element={<CallCenter />} />
         <Route path="assistant-knowledge" element={<ProtectedRoute roles={['admin', 'tech_admin']}><AssistantKnowledge /></ProtectedRoute>} />
@@ -240,6 +242,7 @@ const router = createBrowserRouter(
         <Route path="ethics" element={<Ethics />} />
         <Route path="courses" element={<Courses />} />
         <Route path="privacy" element={<Privacy />} />
+        <Route path="security" element={<MfaSettings />} />
         <Route
           path="investor-vault"
           element={

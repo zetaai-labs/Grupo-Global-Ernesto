@@ -1,0 +1,82 @@
+// Super Admin home (Presidential Master Console), shorter sidebar and System settings. English key -> [es, ar, ru, fr].
+const TEXTS = {
+  HOME: ['INICIO', 'الرئيسية', 'ГЛАВНАЯ', 'ACCUEIL'],
+  DOCUMENTS: ['DOCUMENTOS', 'المستندات', 'ДОКУМЕНТЫ', 'DOCUMENTS'],
+  TEAM: ['EQUIPO', 'الفريق', 'КОМАНДА', 'ÉQUIPE'],
+  'System settings': ['Configuración del sistema', 'إعدادات النظام', 'Настройки системы', 'Paramètres système'],
+  'Integrations, company email accounts and the AI assistant.': [
+    'Integraciones, cuentas de correo de la empresa y el asistente de IA.',
+    'التكاملات وحسابات البريد للشركة والمساعد الذكي.',
+    'Интеграции, корпоративная почта и ИИ-ассистент.',
+    'Intégrations, comptes e-mail de l’entreprise et l’assistant IA.',
+  ],
+  'Your day at a glance: what needs you, key numbers and recent activity.': [
+    'Tu día de un vistazo: lo que te necesita, cifras clave y actividad reciente.',
+    'يومك بنظرة سريعة: ما يحتاجك والأرقام الرئيسية والنشاط الأخير.',
+    'Ваш день с первого взгляда: что требует внимания, ключевые цифры и последние действия.',
+    'Votre journée en un coup d’œil : ce qui vous attend, les chiffres clés et l’activité récente.',
+  ],
+  'Company announcements, news and resources.': ['Avisos, noticias y recursos de la empresa.', 'إعلانات الشركة وأخبارها ومواردها.', 'Объявления, новости и ресурсы компании.', 'Annonces, actualités et ressources de l’entreprise.'],
+  'Good morning, {name}': ['Buenos días, {name}', 'صباح الخير يا {name}', 'Доброе утро, {name}', 'Bonjour, {name}'],
+  'Good afternoon, {name}': ['Buenas tardes, {name}', 'مساء الخير يا {name}', 'Добрый день, {name}', 'Bon après-midi, {name}'],
+  'Good evening, {name}': ['Buenas noches, {name}', 'مساء الخير يا {name}', 'Добрый вечер, {name}', 'Bonsoir, {name}'],
+  'The server is waking up. This can take up to a minute.': [
+    'El servidor se está activando. Puede tardar hasta un minuto.',
+    'الخادم قيد التشغيل. قد يستغرق ذلك حتى دقيقة.',
+    'Сервер запускается. Это может занять до минуты.',
+    'Le serveur démarre. Cela peut prendre jusqu’à une minute.',
+  ],
+  'Try again': ['Reintentar', 'أعد المحاولة', 'Повторить', 'Réessayer'],
+  'Here is your workspace at a glance.': ['Este es tu espacio de trabajo de un vistazo.', 'إليك نظرة سريعة على مساحة عملك.', 'Ваше рабочее пространство с первого взгляда.', 'Voici votre espace de travail en un coup d’œil.'],
+  Colleagues: ['Compañeros', 'الزملاء', 'Коллеги', 'Collègues'],
+  'Partners, clients & suppliers': ['Socios, clientes y proveedores', 'الشركاء والعملاء والموردون', 'Партнёры, клиенты и поставщики', 'Partenaires, clients et fournisseurs'],
+  'Needs your attention': ['Requiere tu atención', 'يحتاج إلى انتباهك', 'Требует вашего внимания', 'Demande votre attention'],
+  'All clear. Nothing is waiting for you.': ['Todo en orden. No hay nada pendiente.', 'كل شيء على ما يرام. لا شيء بانتظارك.', 'Всё в порядке. Ничего не ждёт вашего решения.', 'Tout est en ordre. Rien ne vous attend.'],
+  'Quick actions': ['Acciones rápidas', 'إجراءات سريعة', 'Быстрые действия', 'Actions rapides'],
+  'Add a user': ['Añadir un usuario', 'إضافة مستخدم', 'Добавить пользователя', 'Ajouter un utilisateur'],
+  'Approve companies': ['Aprobar empresas', 'اعتماد الشركات', 'Одобрить компании', 'Approuver des entreprises'],
+  'Upload a document': ['Subir un documento', 'رفع مستند', 'Загрузить документ', 'Téléverser un document'],
+  'Post an announcement': ['Publicar un aviso', 'نشر إعلان', 'Опубликовать объявление', 'Publier une annonce'],
+  'Recent activity': ['Actividad reciente', 'النشاط الأخير', 'Последние действия', 'Activité récente'],
+  'Full audit log': ['Registro de auditoría completo', 'سجل التدقيق الكامل', 'Полный журнал аудита', 'Journal d’audit complet'],
+  'No activity yet.': ['Aún no hay actividad.', 'لا يوجد نشاط بعد.', 'Пока нет действий.', 'Aucune activité pour l’instant.'],
+  System: ['Sistema', 'النظام', 'Система', 'Système'],
+  'Member companies': ['Empresas miembro', 'الشركات الأعضاء', 'Компании-участники', 'Entreprises membres'],
+  '{count} waiting for approval': ['{count} pendientes de aprobación', '{count} بانتظار الاعتماد', '{count} ожидают одобрения', '{count} en attente d’approbation'],
+  'Membership revenue this year': ['Ingresos por membresías este año', 'إيرادات العضوية هذا العام', 'Доход от членства в этом году', 'Revenus des adhésions cette année'],
+  'Paid memberships, before the 50/50 split': ['Membresías pagadas, antes del reparto 50/50', 'العضويات المدفوعة قبل التقسيم 50/50', 'Оплаченное членство до раздела 50/50', 'Adhésions payées, avant le partage 50/50'],
+  'Companies waiting for approval': ['Empresas pendientes de aprobación', 'شركات بانتظار الاعتماد', 'Компании ожидают одобрения', 'Entreprises en attente d’approbation'],
+  'Approval requests open': ['Solicitudes de aprobación abiertas', 'طلبات اعتماد مفتوحة', 'Открытые запросы на согласование', 'Demandes d’approbation ouvertes'],
+  'Visitors waiting for an answer': ['Visitantes esperando respuesta', 'زوار بانتظار الرد', 'Посетители ждут ответа', 'Visiteurs en attente de réponse'],
+  'Admin, HR or Finance accounts without two-step sign-in': [
+    'Cuentas de administración, RR. HH. o finanzas sin verificación en dos pasos',
+    'حسابات الإدارة أو الموارد البشرية أو المالية بدون تسجيل دخول بخطوتين',
+    'Учётные записи администраторов, HR или финансов без двухэтапного входа',
+    'Comptes admin, RH ou finance sans connexion en deux étapes',
+  ],
+  'People who have not accepted the privacy policy yet': [
+    'Personas que aún no han aceptado la política de privacidad',
+    'أشخاص لم يقبلوا سياسة الخصوصية بعد',
+    'Пользователи, ещё не принявшие политику конфиденциальности',
+    'Personnes n’ayant pas encore accepté la politique de confidentialité',
+  ],
+  'Active Code of Ethics sanctions': ['Sanciones activas del Código Ético', 'عقوبات نشطة لمدونة الأخلاقيات', 'Действующие санкции Этического кодекса', 'Sanctions actives du Code d’éthique'],
+  'Blocked security attempts in the last 7 days': [
+    'Intentos de seguridad bloqueados en los últimos 7 días',
+    'محاولات أمنية محظورة خلال آخر 7 أيام',
+    'Заблокированные попытки за последние 7 дней',
+    'Tentatives bloquées ces 7 derniers jours',
+  ],
+  'Review now': ['Revisar ahora', 'راجع الآن', 'Проверить сейчас', 'Examiner maintenant'],
+  'Open AutoFlow': ['Abrir AutoFlow', 'فتح AutoFlow', 'Открыть AutoFlow', 'Ouvrir AutoFlow'],
+  Answer: ['Responder', 'الرد', 'Ответить', 'Répondre'],
+  'See accounts': ['Ver cuentas', 'عرض الحسابات', 'Посмотреть учётные записи', 'Voir les comptes'],
+  View: ['Ver', 'عرض', 'Посмотреть', 'Voir'],
+  Check: ['Comprobar', 'تحقق', 'Проверить', 'Vérifier'],
+}
+
+const pick = (index) => Object.fromEntries(Object.entries(TEXTS).map(([key, values]) => [key, values[index]]))
+export const presidentialEs = pick(0)
+export const presidentialAr = pick(1)
+export const presidentialRu = pick(2)
+export const presidentialFr = pick(3)

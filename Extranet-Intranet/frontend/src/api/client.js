@@ -24,6 +24,13 @@ api.interceptors.response.use(
       data.message = `${translate('Something went wrong on the server.')} ${translate('Reference: {ref}', { ref: data.request_id })}`
     }
     if (error.response?.status === 403 && data?.code === 'CONSENT_REQUIRED') requireConsent()
+    // Admin, HR and Finance must set up two-step sign-in first: send them to the setup page
+    // instead of leaving every screen half-empty.
+    if (error.response?.status === 403 && data?.code === 'MFA_SETUP_REQUIRED' && typeof window !== 'undefined'
+      && !window.location.pathname.endsWith('/security')) {
+      const portal = window.location.pathname.startsWith('/extranet') ? 'extranet' : 'intranet'
+      window.location.assign(`/${portal}/security?required=1`)
+    }
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       clearSession()
       if (!window.location.pathname.startsWith('/login')) {

@@ -11,6 +11,7 @@ import { openHelp } from '../help/helpEvents'
 import Avatar from './Avatar'
 import { useCurrentUser } from './avatarStore'
 import './ProfileMenu.css'
+import { roleLabel as roleName } from '../../../../utils/roles'
 
 const ADMIN_ROLES = ['admin', 'tech_admin', 'hr']
 
@@ -89,7 +90,7 @@ function ProfileMenu({ portal = 'intranet', roleLabel }) {
         <Avatar userId={user?.id} version={user?.avatar_version} name={user?.name} />
         <div className="profile-copy">
           <strong><bdi>{user?.name || t('Guest')}</bdi></strong>
-          <span>{roleLabel || (user?.role ? t(user.role) : t('No role assigned'))}</span>
+          <span>{roleLabel || (user?.role ? t(roleName(user.role)) : t('No role assigned'))}</span>
         </div>
         <span className="profile-chevron" aria-hidden="true">⌄</span>
       </button>
@@ -105,7 +106,7 @@ function ProfileMenu({ portal = 'intranet', roleLabel }) {
             <div className="pm-who">
               <strong><bdi>{user?.name}</bdi></strong>
               <span><bdi>{user?.email}</bdi></span>
-              <small>{roleLabel || (user?.role ? t(user.role) : '')}{user?.organization ? <> · <bdi>{user.organization}</bdi></> : ''}</small>
+              <small>{roleLabel || (user?.role ? t(roleName(user.role)) : '')}{user?.organization ? <> · <bdi>{user.organization}</bdi></> : ''}</small>
               <span className="pm-photo-actions">
                 <button type="button" onClick={() => fileInput.current?.click()} disabled={busy}>{t(user?.avatar_version ? 'Change photo' : 'Add a photo')}</button>
                 {user?.avatar_version && <button type="button" onClick={removePhoto} disabled={busy}>{t('Remove')}</button>}

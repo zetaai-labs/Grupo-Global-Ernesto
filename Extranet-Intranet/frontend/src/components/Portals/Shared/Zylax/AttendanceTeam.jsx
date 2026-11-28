@@ -6,6 +6,7 @@ import { translateServer } from '../../../../i18n/serverMessages'
 import { downloadFromApi } from '../../../../utils/download'
 import { duration } from '../clock/clockStore'
 import './AttendanceTeam.css'
+import { roleLabel } from '../../../../utils/roles'
 
 const LEADS = ['admin', 'hr', 'manager']
 const HR = ['admin', 'hr']
@@ -117,7 +118,7 @@ function AttendanceTeam() {
                 <tbody>
                   {shown.map((row) => (
                     <tr key={row.id}>
-                      <td><strong>{row.name}</strong><small>{t(row.role)}</small></td>
+                      <td><strong>{row.name}</strong><small>{t(roleLabel(row.role))}</small></td>
                       <td>
                         <span className={`at-pill ${STATES[row.state][1]}`}>{t(STATES[row.state][0])}</span>
                         {row.late && <span className="at-flag">{t('Late')}</span>}

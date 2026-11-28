@@ -2,7 +2,7 @@
 import { NavLink } from 'react-router-dom'
 import { getUser } from '../../../api/auth'
 import { useT } from '../../../i18n'
-import { visibleNavigation } from '../Shared/navigation'
+import { sidebarNavigation } from '../Shared/navigation'
 import { openHelp } from '../Shared/help/helpEvents'
 
 
@@ -17,7 +17,7 @@ function ExtranetSidebar() {
   const t = useT()
   const role = String(getUser()?.role || '').toLowerCase()
   const workspaceLabel = WORKSPACE_LABELS[role] || 'EXTERNAL WORKSPACE'
-  const navigation = visibleNavigation('extranet', role)
+  const navigation = sidebarNavigation('extranet', role)
 
   return (
     <aside className="portal-sidebar">

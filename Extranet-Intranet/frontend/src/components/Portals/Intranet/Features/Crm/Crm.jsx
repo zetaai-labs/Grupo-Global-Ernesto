@@ -5,6 +5,7 @@ import { useT, dateLocale } from '../../../../../i18n'
 import './Crm.css'
 import { translateServer } from '../../../../../i18n/serverMessages'
 import { AiSummaryButton } from '../../../Shared/AiAssistant'
+import { roleLabel } from '../../../../../utils/roles'
 
 const STAGE_LABELS = {
   LEAD: 'Lead',
@@ -167,7 +168,7 @@ function Crm() {
           <input type="number" min="0" step="1000" value={form.estimated_value_eur} onChange={(e) => setForm({ ...form, estimated_value_eur: e.target.value })} placeholder={t('Estimated value (EUR)')} />
           <select value={form.assigned_manager} onChange={(e) => setForm({ ...form, assigned_manager: e.target.value })} aria-label={t('Account manager')}>
             <option value="">{t('Assign to me')}</option>
-            {managers.map((person) => <option key={person.id} value={person.id}>{person.name} ({person.role})</option>)}
+            {managers.map((person) => <option key={person.id} value={person.id}>{person.name} ({t(roleLabel(person.role))})</option>)}
           </select>
           <textarea value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder={t('First note (optional)')} rows="2" />
           <div className="crm-actions">

@@ -4,6 +4,7 @@ import { getUser } from '../../../../../api/auth'
 import { useT, dateLocale } from '../../../../../i18n'
 import './Projects.css'
 import { translateServer } from '../../../../../i18n/serverMessages'
+import { roleLabel } from '../../../../../utils/roles'
 
 const CORRIDOR_LABELS = {
   SPAIN_EU_INDIA: 'Spain – EU – India',
@@ -238,7 +239,7 @@ function Projects() {
               {selected.can_manage && (
                 <select value="" aria-label={t('Add team member')} onChange={(e) => e.target.value && call(() => api.post(`/projects/${selected.project_id}/members`, { user_id: Number(e.target.value) }), t('Team member added.'))}>
                   <option value="">{t('Add team member…')}</option>
-                  {staff.filter((person) => !selected.members.some((member) => member.id === person.id)).map((person) => <option key={person.id} value={person.id}>{person.name} ({person.role})</option>)}
+                  {staff.filter((person) => !selected.members.some((member) => member.id === person.id)).map((person) => <option key={person.id} value={person.id}>{person.name} ({t(roleLabel(person.role))})</option>)}
                 </select>
               )}
             </section>

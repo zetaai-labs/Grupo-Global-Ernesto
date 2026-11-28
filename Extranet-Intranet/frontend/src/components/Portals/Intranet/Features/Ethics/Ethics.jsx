@@ -5,6 +5,7 @@ import { getUser } from '../../../../../api/auth'
 import { useT, dateLocale } from '../../../../../i18n'
 import './Ethics.css'
 import { translateServer } from '../../../../../i18n/serverMessages'
+import { roleLabel } from '../../../../../utils/roles'
 
 const TIER_LABELS = {
   TIER_1_BASIC: 'Tier 1 — Basic',
@@ -138,7 +139,7 @@ function Ethics() {
             <h3>{t('Issue a sanction')}</h3>
             <select value={form.user_id} onChange={(e) => setForm({ ...form, user_id: e.target.value })} required aria-label={t('User')}>
               <option value="">{t('Choose user…')}</option>
-              {registerData.people.filter((person) => person.role !== 'admin' && person.id !== user?.id && person.status !== 'expelled').map((person) => <option key={person.id} value={person.id}>{person.name} ({person.role})</option>)}
+              {registerData.people.filter((person) => person.role !== 'admin' && person.id !== user?.id && person.status !== 'expelled').map((person) => <option key={person.id} value={person.id}>{person.name} ({t(roleLabel(person.role))})</option>)}
             </select>
             <select value={form.tier} onChange={(e) => setForm({ ...form, tier: e.target.value })} aria-label={t('Tier')}>
               <option value="1">{t(SANCTION_LABELS[1])}</option>
@@ -188,7 +189,7 @@ function Ethics() {
                 <tbody>
                   {registerData.people.map((person) => (
                     <tr key={person.id}>
-                      <td>{person.name}</td><td className="mono">{person.role_code}</td><td>{person.organization || '—'}</td>
+                      <td>{person.name}</td><td>{person.role ? t(roleLabel(person.role)) : person.role_code}</td><td>{person.organization || '—'}</td>
                       <td>{t(TIER_LABELS[person.required_tier])}</td>
                       <td><span className={`eth-pill ${person.compliant ? 'ok' : 'warn'}`}>{person.compliant ? t('Signed') : t('Pending')}</span></td>
                       <td>{person.status}{person.active_sanctions ? ` · ${person.active_sanctions} ⚠` : ''}</td>
